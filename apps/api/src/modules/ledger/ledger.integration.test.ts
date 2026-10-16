@@ -5,7 +5,7 @@ import pg from 'pg';
 import { LedgerService } from './service.js';
 import { seedCore, seedId } from './seed.js';
 import { walletSummary } from './wallet.js';
-import { buildApp } from '../../app.js';
+import { buildApp } from '../../build-app.js';
 import { createDb } from '../../db/client.js';
 import { createAdapters } from '../../adapters/index.js';
 import { loadEnv } from '../../config/env.js';

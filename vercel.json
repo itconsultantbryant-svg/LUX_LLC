@@ -5,7 +5,8 @@
       "root": "apps/api",
       "framework": "fastify",
       "entrypoint": "src/index.ts",
-      "installCommand": "pnpm install --frozen-lockfile && pnpm --filter @healthwallet/shared build"
+      "installCommand": "pnpm install --frozen-lockfile && pnpm --filter @healthwallet/shared build",
+      "buildCommand": "pnpm --filter @healthwallet/shared build"
     },
     "web": {
       "root": "apps/web",

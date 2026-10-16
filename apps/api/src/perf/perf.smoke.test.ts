@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import pg from 'pg';
-import { buildApp } from '../app.js';
+import { buildApp } from '../build-app.js';
 import { createDb } from '../db/client.js';
 import { createAdapters } from '../adapters/index.js';
 import { loadEnv } from '../config/env.js';

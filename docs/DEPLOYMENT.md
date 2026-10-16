@@ -74,9 +74,20 @@ during the service's `installCommand`. There is no separate backend deploy step
 and no function URL to capture.
 
 > **Entrypoint note:** the service sets `entrypoint` explicitly. Vercel's Fastify
-> auto-detection would otherwise select `apps/api/src/app.ts` (the `buildApp`
-> factory, which imports `fastify` but never listens) ahead of `src/index.ts`,
-> producing `FUNCTION_INVOCATION_FAILED` on every route.
+> auto-detection would otherwise select the `buildApp` factory (which imports
+> `fastify` but never listens) ahead of `src/index.ts`, producing
+> `FUNCTION_INVOCATION_FAILED` on every route. For that reason the factory lives
+> in `apps/api/src/build-app.ts` (not `src/app.ts`), and `package.json#main`
+> points at `src/index.ts`.
+>
+> **Build-command note:** without an explicit `buildCommand`, Vercel runs the
+> service's `build` script (`tsc` → `apps/api/dist`). `dist/app.js` then wins
+> entrypoint detection and is shipped as the handler — overriding the
+> `entrypoint` bundle and failing at runtime with
+> `Cannot use import statement outside a module`. The `api` service therefore
+> sets `buildCommand` to only build `@healthwallet/shared`, so Vercel's own
+> bundler emits the `src/index.ts` entry (as ESM, per `"type": "module"`) instead
+> of the `tsc` output.
 
 Before the first `api` deploy, apply migrations to the production database (§6)
 using the **unpooled** connection string:
@@ -112,8 +123,10 @@ Vercel project settings:
   detected).
 - Each service declares its own build/runtime settings in `vercel.json`; in
   services mode there is no top-level build config. The `api` service builds
-  `@healthwallet/shared` in its `installCommand` and lets Vercel bundle the
-  `src/index.ts` entrypoint; the `web` service uses the Vite defaults
+  `@healthwallet/shared` in its `installCommand`, sets `buildCommand` to only
+  build that shared package (so Vercel's bundler — not the `tsc` `build` script —
+  produces the function, see the entrypoint/build notes in §4), and lets Vercel
+  bundle the `src/index.ts` entrypoint; the `web` service uses the Vite defaults
   (`outputDirectory: dist`).
 
 Environment variables (Vercel project → Settings → Environment Variables):

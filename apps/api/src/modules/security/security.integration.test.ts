@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import type { FastifyInstance, InjectOptions } from 'fastify';
-import { buildApp } from '../../app.js';
+import { buildApp } from '../../build-app.js';
 import { createDb } from '../../db/client.js';
 import { createAdapters } from '../../adapters/index.js';
 import { loadEnv } from '../../config/env.js';

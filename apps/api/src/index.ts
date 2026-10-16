@@ -1,5 +1,5 @@
 import { createAdapters } from './adapters/index.js';
-import { buildApp } from './app.js';
+import { buildApp } from './build-app.js';
 import { loadEnv } from './config/env.js';
 import { createDbFromEnv } from './db/client.js';
 
