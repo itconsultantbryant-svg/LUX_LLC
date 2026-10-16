@@ -67,10 +67,16 @@ values are embedded in the browser bundle.
 
 ## 4. Prepare the backend (`api` service)
 
-The `api` service is the Fastify app in `apps/api`. Vercel builds it (`pnpm
---filter @healthwallet/shared build && pnpm --filter @healthwallet/api build`)
-and runs `apps/api/dist/index.js` as a Function. There is no separate backend
-deploy step and no function URL to capture.
+The `api` service is the Fastify app in `apps/api`. Vercel bundles
+`apps/api/src/index.ts` (declared as the service `entrypoint`) as a single
+Function on Fluid compute; the `@healthwallet/shared` workspace package is built
+during the service's `installCommand`. There is no separate backend deploy step
+and no function URL to capture.
+
+> **Entrypoint note:** the service sets `entrypoint` explicitly. Vercel's Fastify
+> auto-detection would otherwise select `apps/api/src/app.ts` (the `buildApp`
+> factory, which imports `fastify` but never listens) ahead of `src/index.ts`,
+> producing `FUNCTION_INVOCATION_FAILED` on every route.
 
 Before the first `api` deploy, apply migrations to the production database (§6)
 using the **unpooled** connection string:
@@ -95,18 +101,20 @@ APP_ENV=production pnpm deploy:check /path/to/production.env.local   # offline; 
 Vercel deploys the whole repository as a single project with two services
 (declared in `vercel.json`):
 
-| Service | Root       | Framework | Public paths                  | Notes                                                        |
-| ------- | ---------- | --------- | ----------------------------- | ------------------------------------------------------------ |
-| `api`   | `apps/api` | Fastify   | `/api/*`, `/health`, `/ready` | Runs `apps/api/dist/index.js` as a Function on Fluid compute |
-| `web`   | `apps/web` | Vite      | everything else (`/`)         | Static build to `apps/web/dist`, SPA fallback                |
+| Service | Root       | Framework | Public paths                  | Notes                                                       |
+| ------- | ---------- | --------- | ----------------------------- | ----------------------------------------------------------- |
+| `api`   | `apps/api` | Fastify   | `/api/*`, `/health`, `/ready` | Runs `apps/api/src/index.ts` as a Function on Fluid compute |
+| `web`   | `apps/web` | Vite      | everything else (`/`)         | Static build to `apps/web/dist`, SPA fallback               |
 
 Vercel project settings:
 
 - **Root Directory:** repository root (so `vercel.json` and both services are
   detected).
-- Each service declares its own `installCommand`, `buildCommand`, and
-  `outputDirectory` in `vercel.json`; in services mode there is no top-level
-  build config.
+- Each service declares its own build/runtime settings in `vercel.json`; in
+  services mode there is no top-level build config. The `api` service builds
+  `@healthwallet/shared` in its `installCommand` and lets Vercel bundle the
+  `src/index.ts` entrypoint; the `web` service uses the Vite defaults
+  (`outputDirectory: dist`).
 
 Environment variables (Vercel project → Settings → Environment Variables):
 
