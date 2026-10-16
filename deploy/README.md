@@ -3,19 +3,18 @@
 Tools and references for deploying HealthWallet Liberia. The full procedure is
 in [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
 
-| File               | Purpose                                                             |
-| ------------------ | ------------------------------------------------------------------- |
-| `demo.env.example` | Reference environment for a labelled demo (Neon function + Vercel). |
-| `local-demo.sh`    | Set up, seed, run, and verify a labelled synthetic demo locally.    |
-| `verify-demo.mjs`  | Smoke-verify a running demo through its public origin.              |
+| File               | Purpose                                                          |
+| ------------------ | ---------------------------------------------------------------- |
+| `demo.env.example` | Reference environment for a labelled demo deployment.            |
+| `local-demo.sh`    | Set up, seed, run, and verify a labelled synthetic demo locally. |
+| `verify-demo.mjs`  | Smoke-verify a running demo through its public origin.           |
 
-The deploy configuration itself lives at the repository root so Vercel and the
-Neon Function pick it up:
+The deploy configuration lives at the repository root so Vercel picks it up as a
+single project with two [services](https://vercel.com/docs/services):
 
-| File            | Purpose                                                         |
-| --------------- | --------------------------------------------------------------- |
-| `vercel.json`   | Vercel build/output, SPA fallback, and security headers.        |
-| `middleware.ts` | Vercel Edge Middleware: same-origin proxy to the Neon Function. |
+| File          | Purpose                                                                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `vercel.json` | Vercel **services** config: `api` (Fastify, `apps/api`) and `web` (Vite, `apps/web`), public rewrites, SPA fallback, and security headers. |
 
 ## Local demo
 

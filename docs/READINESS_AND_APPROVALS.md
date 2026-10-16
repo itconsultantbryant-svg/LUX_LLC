@@ -27,7 +27,7 @@ Evidence-backed. Each item is reproducible with the commands shown.
 | T-08 | Verified restore                              | drill 2026-10-15: 75/75 tables + row parity (`BACKUP_AND_ROLLBACK.md` §3) | ✅     |
 | T-09 | Labelled demo runs end to end                 | `pnpm demo:local` → `deploy/verify-demo.mjs` 12/12 checks                 | ✅     |
 | T-10 | Health and readiness checks                   | `GET /health`, `GET /ready`                                               | ✅     |
-| T-11 | Deployment config (Vercel + Neon)             | `vercel.json`, `middleware.ts`, `docs/DEPLOYMENT.md`                      | ✅     |
+| T-11 | Deployment config (Vercel services)           | `vercel.json` (`api` + `web`), `docs/DEPLOYMENT.md`                       | ✅     |
 | T-12 | Monitoring and incident response defined      | `docs/MONITORING.md`, `docs/INCIDENT_RESPONSE.md`                         | ✅     |
 | T-13 | Production config preflight                   | `APP_ENV=production pnpm deploy:check`                                    | ✅     |
 

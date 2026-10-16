@@ -134,15 +134,20 @@ The Account and Account Security pages support configurable phone verification, 
 
 See [development handoff](docs/DEVELOPMENT_HANDOFF.md) for implementation status, verification limits, and the next development steps.
 
-## Current Neon development setup
+## Current deployment setup
 
-The API is deployed on Neon Functions with a Neon PostgreSQL database. The local frontend uses the server-only proxy configuration in the root `.env.local`:
+One Vercel project hosts the `web` frontend (static Vite build) and the `api`
+backend (Fastify), backed by Neon PostgreSQL. See [Deployment](docs/DEPLOYMENT.md).
+For local development, either run both apps with `pnpm dev` (local API), or point
+the Vite dev proxy at a Neon Function using the server-only values in the root
+`.env.local`:
 
 ```bash
 pnpm dev:web
 ```
 
-Open http://127.0.0.1:5173. See [Neon development](docs/NEON_DEVELOPMENT.md) for deployment identifiers and verification details. The earlier `pnpm dev` instructions start a local API and are for the alternative fully local setup.
+Open http://127.0.0.1:5173. See [Neon development](docs/NEON_DEVELOPMENT.md) for
+the optional Neon Function workflow (a legacy alternative to the Vercel service).
 
 ### LUX brand and device support
 
@@ -154,9 +159,9 @@ Production builds include an installable web app manifest and a branded offline
 notice. Installation requires HTTPS (or localhost) and browser support. Account
 and API responses are never cached by the service worker; account actions require
 internet access. This is a responsive web app, not an App Store/Play Store native
-binary. Deploy the frontend on HTTPS with a server-side proxy to the Neon Function;
-keep `ORIGIN_SECRET` on the server. The local development URL is only accessible on
-this computer by default.
+binary. Deploy on HTTPS as a Vercel project with the `web` and `api` services; the
+browser only talks to the same origin, so no secret reaches the client. The local
+development URL is only accessible on this computer by default.
 
 For browser layout checks, start Chrome with `--headless
 --remote-debugging-port=9223 --user-data-dir=/tmp/lux-browser-check`, start the web

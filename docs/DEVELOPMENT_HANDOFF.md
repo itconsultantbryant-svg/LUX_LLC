@@ -349,3 +349,34 @@ institutional metrics). The deployed function predates a few routes (e.g. public
   measured, and an honest roadmap to an AI-first (~90%) operating model. The in-app
   `/journey` page gained an iconised step list and "What AI does / never does" panel.
 - All work stays on sandbox adapters; the live-model swap remains an adapter change.
+
+## Deployment pivot: Vercel Services (2026-10-16)
+
+The repository now deploys as a single Vercel project with two
+[services](https://vercel.com/docs/services) instead of a static web build plus a
+separate Neon Function proxy.
+
+- `vercel.json` declares `api` (`apps/api`, Fastify) and `web` (`apps/web`, Vite),
+  with public rewrites `/api/(.*)`, `/health`, `/ready` → `api` and `/(.*)` → `web`.
+  `web` carries the SPA fallback; security headers and asset cache rules stay at
+  the top level.
+- The API runs as a standard Fastify server: Vercel builds `apps/api` and runs
+  `apps/api/dist/index.js` as a Function on Fluid compute. **`middleware.ts` was
+  removed** — the top-level rewrites replace the Edge proxy, and the app's own
+  session cookies, CSRF, and origin checks protect it.
+- **No service bindings are used.** The `web` service is a static SPA with no
+  server; the only cross-service call is browser → API through the public
+  `/api/*` rewrite (bindings are server-to-server only).
+- `ORIGIN_SECRET` and `NEON_FUNCTION_URL` are now legacy: they remain only for the
+  optional Neon Function backend ([NEON_DEVELOPMENT.md](NEON_DEVELOPMENT.md)).
+  `deploy:check` still requires `ORIGIN_SECRET`; retire that requirement when the
+  Neon path is removed.
+- Docs updated: [DEPLOYMENT.md](DEPLOYMENT.md) (§1, §3–§5, §7, §8, §10),
+  [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md),
+  [READINESS_AND_APPROVALS.md](READINESS_AND_APPROVALS.md), `deploy/README.md`,
+  and the README.
+
+Verify locally with `vercel dev` (runs both services with the same routing). The
+one item to confirm on first deploy is that the `api` service builds the shared
+workspace package (`pnpm --filter @healthwallet/shared build` runs before the API
+build, per `vercel.json`).

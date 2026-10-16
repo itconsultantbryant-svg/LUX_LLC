@@ -1,10 +1,28 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm build:shared && pnpm --filter @healthwallet/web build",
-  "outputDirectory": "apps/web/dist",
-  "rewrites": [{ "source": "/((?!api/|health$|ready$).*)", "destination": "/index.html" }],
+  "services": {
+    "api": {
+      "root": "apps/api",
+      "framework": "fastify",
+      "entrypoint": "dist/index.js",
+      "installCommand": "pnpm install --frozen-lockfile",
+      "buildCommand": "pnpm --filter @healthwallet/shared build && pnpm --filter @healthwallet/api build"
+    },
+    "web": {
+      "root": "apps/web",
+      "framework": "vite",
+      "installCommand": "pnpm install --frozen-lockfile",
+      "buildCommand": "pnpm --filter @healthwallet/shared build && pnpm --filter @healthwallet/web build",
+      "outputDirectory": "dist",
+      "rewrites": [{ "source": "/((?!health$|ready$|api/).*)", "destination": "/index.html" }]
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "api" } },
+    { "source": "/health", "destination": { "service": "api" } },
+    { "source": "/ready", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ],
   "headers": [
     {
       "source": "/(.*)",
