@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDemo, money } from '../features/demo';
 import { Feedback } from '../components/Feedback';
+import { Icon } from '../components/icons/Icon';
 export function HistoryPage() {
   const { state } = useDemo();
   const [filter, setFilter] = useState('All');
@@ -12,7 +13,9 @@ export function HistoryPage() {
     <section className="workspace">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Your records</p>
+          <p className="eyebrow">
+            <Icon name="activity" size={15} /> Your records
+          </p>
           <h1>History</h1>
           <p>Follow your payments, savings, and support requests.</p>
         </div>

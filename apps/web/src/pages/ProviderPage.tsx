@@ -4,6 +4,7 @@ import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { formatMinor } from '../lib/money';
 import type { Provider } from '../lib/provider';
 import { Feedback } from '../components/Feedback';
+import { Icon } from '../components/icons/Icon';
 import { InvoiceEditor } from '../components/InvoiceEditor';
 import { BillWorkspace } from '../components/BillWorkspace';
 import { ProviderQr } from '../components/ProviderQr';
@@ -101,7 +102,9 @@ export function ProviderPage() {
     <section className="workspace flow-layout">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Institutional access</p>
+          <p className="eyebrow">
+            <Icon name="hospital" size={15} /> Institutional access
+          </p>
           <h1>Healthcare provider portal</h1>
           <p>
             Organization membership and a recently verified authenticator are required. Every bill

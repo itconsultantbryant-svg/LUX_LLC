@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiGet } from '../lib/api';
 import { Feedback } from '../components/Feedback';
+import { Icon } from '../components/icons/Icon';
 
 type CountRow = { status: string; count: number };
 type CountByMode = CountRow & { adapter_mode: string };
@@ -50,7 +51,9 @@ export function InstitutionalMetricsPage() {
     <section className="workspace flow-layout">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Institutional console</p>
+          <p className="eyebrow">
+            <Icon name="sparkles" size={15} /> Institutional console
+          </p>
           <h1>Journey metrics</h1>
           <p>
             Counts are computed from the platform database for the AI extraction, review, funding,

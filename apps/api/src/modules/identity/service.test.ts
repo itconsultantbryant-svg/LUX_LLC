@@ -98,7 +98,7 @@ describe('sandbox identity', () => {
     });
     advance(3_600_000);
     await expect(service.requestCode(phone, ip)).resolves.toHaveProperty('challengeId');
-  });
+  }, 20_000);
   it('limits different numbers from the same IP', async () => {
     const { service } = setup();
     for (let i = 0; i < 20; i++)

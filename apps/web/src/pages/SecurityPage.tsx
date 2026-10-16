@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../lib/api';
 import { Feedback } from '../components/Feedback';
+import { Icon } from '../components/icons/Icon';
 type Session = {
   userId: string;
   authMethod: string;
@@ -89,7 +90,9 @@ export function SecurityPage() {
   return (
     <section className="workspace">
       <div>
-        <p className="eyebrow">Your account</p>
+        <p className="eyebrow">
+          <Icon name="shield" size={15} /> Your account
+        </p>
         <h1>Profile, security & access</h1>
         <p>Permissions are checked by the server. Demo previews never grant access.</p>
         <Link className="text-link" to="/account">

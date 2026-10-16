@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { apiGet, apiPost } from '../lib/api';
 import { formatMinor } from '../lib/money';
 import { Feedback } from '../components/Feedback';
+import { Icon } from '../components/icons/Icon';
 
 type Finding = { code: string; severity: string; message: string; field: string | null };
 type ReviewCase = {
@@ -67,7 +68,9 @@ export function InstitutionalReviewsPage() {
     <section className="workspace flow-layout">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Institutional console</p>
+          <p className="eyebrow">
+            <Icon name="check-circle" size={15} /> Institutional console
+          </p>
           <h1>Review queue</h1>
           <p>
             Documents the AI read and could not fully confirm. Decide to validate the bill, reject

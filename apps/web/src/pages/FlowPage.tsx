@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Feedback } from '../components/Feedback';
+import { Icon } from '../components/icons/Icon';
 import { money, parseAmount, useDemo, type Flow } from '../features/demo';
 const copy = {
   pay: {
@@ -83,7 +84,9 @@ export function FlowPage({ flow }: { flow: Flow }) {
     <section className="workspace flow-layout">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Healthcare wallet</p>
+          <p className="eyebrow">
+            <Icon name="credit-card" size={15} /> Healthcare wallet
+          </p>
           <h1>{config.title}</h1>
           <p>{config.intro}</p>
         </div>

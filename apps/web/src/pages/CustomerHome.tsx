@@ -12,7 +12,9 @@ export function CustomerHome() {
     <section className="workspace">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Your healthcare, planned ahead</p>
+          <p className="eyebrow">
+            <Icon name="heart" size={15} /> Your healthcare, planned ahead
+          </p>
           <h1>{state.active ? 'Welcome to your demo wallet' : 'Your health. Your next step.'}</h1>
           <p>Prepare for care, pay with confidence, and ask for support.</p>
         </div>
@@ -156,7 +158,9 @@ export function CustomerHome() {
         </DashboardCard>
       )}
       <details className="panel guidance">
-        <summary>Optional savings guidance</summary>
+        <summary>
+          <Icon name="trending-up" size={18} /> Optional savings guidance
+        </summary>
         <h2>Start with an amount that fits your day</h2>
         <p>
           Choose a small regular amount after your essential expenses. You can review your plan

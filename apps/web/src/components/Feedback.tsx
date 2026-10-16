@@ -1,5 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { webConfig } from '../config';
+import { Icon, type IconName } from './icons/Icon';
+
+const feedbackIcons: Record<'loading' | 'empty' | 'success' | 'error' | 'unavailable', IconName> = {
+  loading: 'refresh',
+  empty: 'info',
+  success: 'check-circle',
+  error: 'alert-circle',
+  unavailable: 'help-circle',
+};
+
 export function Feedback({
   kind = 'empty',
   title,
@@ -16,7 +26,10 @@ export function Feedback({
       aria-live={kind === 'error' ? 'assertive' : 'polite'}
       aria-busy={kind === 'loading'}
     >
-      <strong>{title}</strong>
+      <span className="feedback__head">
+        <Icon name={feedbackIcons[kind]} size={18} />
+        <strong>{title}</strong>
+      </span>
       {children && <div>{children}</div>}
     </div>
   );

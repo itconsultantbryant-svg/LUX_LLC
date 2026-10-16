@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { apiPost } from '../lib/api';
 import { webConfig } from '../config';
+import { Icon, type IconName } from '../components/icons/Icon';
 import './JourneyPage.css';
 
 type ExtractResponse = {
@@ -18,15 +19,31 @@ type ExtractResponse = {
   };
 };
 
-const STEPS = [
-  'Save or receive support',
-  'Submit a healthcare bill',
-  `${webConfig.aiEngine} extracts and checks`,
-  'You review the details',
-  'Eligible funding is determined',
-  'Authorized payment proceeds',
-  'Receipt and audit records',
-] as const;
+const STEPS: Array<{ label: string; icon: IconName }> = [
+  { label: 'Save or receive support', icon: 'wallet' },
+  { label: 'Submit a healthcare bill', icon: 'receipt' },
+  { label: `${webConfig.aiEngine} extracts and checks`, icon: 'sparkles' },
+  { label: 'You review the details', icon: 'eye' },
+  { label: 'Eligible funding is determined', icon: 'trending-up' },
+  { label: 'Authorized payment proceeds', icon: 'shield-check' },
+  { label: 'Receipt and audit records', icon: 'file-text' },
+];
+
+const AI_DOES = [
+  'Reads the uploaded document and extracts the bill fields',
+  'Shows the exact evidence for every extracted value',
+  'Compares the document with the bill and flags conflicts',
+  'Highlights uncertainty instead of guessing',
+  'Explains an already-computed funding plan',
+];
+
+const AI_NEVER = [
+  'Decides that treatment actually happened',
+  'Authorizes or moves money',
+  'Invents values, coverage, balances, or approvals',
+  'Obeys instructions written inside a document',
+  'Suppresses a review that a person should make',
+];
 
 export function JourneyPage() {
   const [hint, setHint] = useState('Consultation total 250.00 LRD');
@@ -62,9 +79,41 @@ export function JourneyPage() {
 
       <ol className="journey__steps">
         {STEPS.map((step) => (
-          <li key={step}>{step}</li>
+          <li key={step.label}>
+            <span className="journey__step-label">
+              <Icon name={step.icon} size={17} />
+              {step.label}
+            </span>
+          </li>
         ))}
       </ol>
+
+      <div className="journey__ai">
+        <section className="journey__ai-col journey__ai-col--does">
+          <h2>
+            <Icon name="sparkles" size={20} /> What AI does
+          </h2>
+          <ul>
+            {AI_DOES.map((item) => (
+              <li key={item}>
+                <Icon name="check-circle" size={16} /> {item}
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className="journey__ai-col journey__ai-col--never">
+          <h2>
+            <Icon name="shield-check" size={20} /> What AI never does
+          </h2>
+          <ul>
+            {AI_NEVER.map((item) => (
+              <li key={item}>
+                <Icon name="x" size={16} /> {item}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
 
       <div className="journey__lab">
         <h2>Try sandbox extraction</h2>

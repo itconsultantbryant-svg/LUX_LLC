@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { apiGet, apiPost } from '../lib/api';
 import { formatMinor, decimalMinor } from '../lib/money';
 import { Feedback } from '../components/Feedback';
+import { Icon } from '../components/icons/Icon';
 import { FeeDisclosure } from '../components/FeeDisclosure';
 type Capabilities = {
   available: boolean;
@@ -178,7 +179,9 @@ export function FundingPage({ mode }: { mode: 'save' | 'support' | 'history' | '
     <section className="workspace flow-layout">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">HealthWallet funding</p>
+          <p className="eyebrow">
+            <Icon name="wallet" size={15} /> HealthWallet funding
+          </p>
           <h1>{title}</h1>
           <p>Pending payments are not available to spend. Every currency is tracked separately.</p>
         </div>

@@ -76,7 +76,9 @@ export function InstitutionalPage() {
   if (!workspace)
     return (
       <section className="workspace">
-        <p className="eyebrow">Institutional access</p>
+        <p className="eyebrow">
+          <Icon name="building" size={15} /> Institutional access
+        </p>
         <h1>A workspace for your team</h1>
         <p>Providers, reviewers, sponsors, and partners use organization-assigned access.</p>
         <Feedback kind="unavailable" title="Sign in with your organization invitation">
@@ -128,7 +130,9 @@ export function InstitutionalPage() {
     <section className="workspace">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Institutional workspace</p>
+          <p className="eyebrow">
+            <Icon name="building" size={15} /> Institutional workspace
+          </p>
           <h1>{workspace.name}</h1>
           <p>{workspace.intro}</p>
         </div>

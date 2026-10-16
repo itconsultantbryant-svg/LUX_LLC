@@ -4,6 +4,7 @@ import { apiGet, apiPost } from '../lib/api';
 import type { Provider } from '../lib/provider';
 import { formatMinor } from '../lib/money';
 import { Feedback } from '../components/Feedback';
+import { Icon } from '../components/icons/Icon';
 import { ProviderScanner } from '../components/ProviderQr';
 import { InvoiceEditor } from '../components/InvoiceEditor';
 import { BillWorkspace } from '../components/BillWorkspace';
@@ -74,7 +75,9 @@ export function CarePage() {
     <section className="workspace flow-layout">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Healthcare bills</p>
+          <p className="eyebrow">
+            <Icon name="receipt" size={15} /> Healthcare bills
+          </p>
           <h1>Pay for Care</h1>
           <p>
             Select a verified provider, review your bill, and confirm the amount before requesting

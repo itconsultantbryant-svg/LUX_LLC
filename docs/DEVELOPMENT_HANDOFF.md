@@ -327,3 +327,25 @@ Verified end-to-end through the Vite proxy: `/health` and `/ready` return 200 an
 shared `Icon` component and dashboard cards (icons on nav, cards, stat rows, and
 institutional metrics). The deployed function predates a few routes (e.g. public
 `/api/fees`) and should be redeployed from current source when convenient.
+
+## Productionisation pass — icons, live status, AI documentation (2026-10-16)
+
+- **Flaky test fixed.** `apps/api/src/modules/identity/service.test.ts` repeated
+  memory-hard scrypt derivations exceeded the 5s default timeout under the parallel
+  worker pool. Added `testTimeout`/`hookTimeout` 20s in `apps/api/vitest.config.ts`
+  and an explicit 20s timeout on the per-phone limit test. `pnpm check` is green
+  (80 tests pass, api + web build).
+- **Icon system expanded.** `apps/web/src/components/icons/Icon.tsx` now supports
+  multi-subpath icons and carries 48 glyphs. Icon tiles
+  (`dashboard-card__icon`, `stat-card__icon`, `metric-panel__icon`) use a shared
+  gradient/ring token with a hover lift. Icons were added to the home heading,
+  guidance, feedback notices (with an animated loading glyph), and the eyebrow of
+  Care, Funding, History, Flow, Institutional, Provider, and Security pages.
+- **Live status.** `StatusPage` now auto-refreshes `/health` + `/ready` every 30s
+  (paused when the tab is hidden, refreshed on return) with a "Live" indicator and
+  last-updated time; manual retry retained.
+- **AI explanation.** New [AI usage](AI_USAGE.md) documents the LUX HealthTrust
+  pipeline, the guardrails that forbid fabrication/authorization, how AI quality is
+  measured, and an honest roadmap to an AI-first (~90%) operating model. The in-app
+  `/journey` page gained an iconised step list and "What AI does / never does" panel.
+- All work stays on sandbox adapters; the live-model swap remains an adapter change.

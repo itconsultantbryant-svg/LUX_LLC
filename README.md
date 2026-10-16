@@ -94,6 +94,7 @@ See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) and
 | Roles & permissions        | [docs/ROLE_PERMISSION_MATRIX.md](./docs/ROLE_PERMISSION_MATRIX.md)                           |
 | Screen inventory           | [docs/SCREEN_INVENTORY.md](./docs/SCREEN_INVENTORY.md)                                       |
 | Architecture               | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                                               |
+| How AI is used             | [docs/AI_USAGE.md](./docs/AI_USAGE.md)                                                       |
 | Implementation backlog     | [docs/IMPLEMENTATION_BACKLOG.md](./docs/IMPLEMENTATION_BACKLOG.md)                           |
 | Assumptions & integrations | [docs/ASSUMPTIONS_AND_INTEGRATIONS.md](./docs/ASSUMPTIONS_AND_INTEGRATIONS.md)               |
 | Payment journey acceptance | [docs/ACCEPTANCE_CRITERIA_PAYMENT_JOURNEY.md](./docs/ACCEPTANCE_CRITERIA_PAYMENT_JOURNEY.md) |
