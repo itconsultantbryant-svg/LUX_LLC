@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  foundational-checks:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: healthwallet
+          POSTGRES_PASSWORD: healthwallet
+          POSTGRES_DB: healthwallet_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U healthwallet -d healthwallet_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql://healthwallet:healthwallet@127.0.0.1:5432/healthwallet_test
+      AI_ADAPTER: sandbox
+      PAYMENT_ADAPTER: sandbox
+      MESSAGING_ADAPTER: sandbox
+      STORAGE_ADAPTER: local
+      STORAGE_LOCAL_ROOT: ./apps/api/storage
+      CORS_ORIGIN: http://localhost:5173
+      DEFAULT_CURRENCY: LRD
+      VITE_APP_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.3.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Migrate database
+        run: pnpm db:migrate
+
+      - name: Identity database integration tests
+        run: pnpm --filter @healthwallet/api test:db
+
+      - name: Ledger and authorization database integration tests
+        env:
+          LEDGER_DATABASE_TESTS: '1'
+          FUNDING_DATABASE_TESTS: '1'
+          PROVIDER_DATABASE_TESTS: '1'
+          SECURITY_DATABASE_TESTS: '1'
+          OPERATIONS_DATABASE_TESTS: '1'
+        run: pnpm --filter @healthwallet/api exec vitest run src/modules/providers/providers.integration.test.ts src/modules/funding/funding.integration.test.ts src/modules/ledger/ledger.integration.test.ts src/modules/security/security.integration.test.ts src/modules/operations/operations.integration.test.ts --testTimeout=120000 --hookTimeout=120000
+
+      - name: Build
+        run: pnpm build
+
+      - name: Secret scanning
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      - name: Repo secret hygiene check (block obvious committed secrets)
+        run: |
+          FAIL=0
+          for TOKEN in NEON_API_SECRET MFA_MASTER_KEY AI_API_KEY PAYMENT_API_KEY TWILIO_AUTH_TOKEN SMS_API_KEY; do
+            if grep -rnE "${TOKEN}\s*=\s*[A-Za-z0-9+/_-]{12,}" \
+                --include='*.ts' --include='*.tsx' --include='*.js' --include='*.mjs' --include='*.json' --include='*.yaml' --include='*.yml' \
+                --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.pnpm-store --exclude-dir=dist \
+                . 2>/dev/null | grep -v '\.test\.' | grep -v pnpm-lock.yaml; then
+              echo "::error::Potential ${TOKEN} value committed in source"
+              FAIL=1
+            fi
+          done
+          exit $FAIL
+
+      - name: API ready probe
+        run: |
+          pnpm --filter @healthwallet/api start &
+          API_PID=$!
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:4000/ready >/dev/null; then
+              curl -sf http://127.0.0.1:4000/health
+              kill $API_PID
+              exit 0
+            fi
+            sleep 1
+          done
+          kill $API_PID || true
+          echo "API failed readiness probe"
+          exit 1

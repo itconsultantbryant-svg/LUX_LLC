@@ -1,0 +1,17 @@
+.env-banner {
+  padding: 0.45rem 1rem;
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.env-banner--demo {
+  background: var(--lux-navy);
+  color: #e4ecf8;
+  border-bottom: 2px solid var(--lux-orange);
+}
+.env-banner--live {
+  background: var(--lux-orange-wash);
+  color: var(--lux-navy);
+  border-bottom: 2px solid var(--lux-orange);
+}

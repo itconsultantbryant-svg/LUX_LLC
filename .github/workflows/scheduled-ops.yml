@@ -1,0 +1,83 @@
+# Scheduled operations: backup, reconciliation, and retention.
+#
+# These run outside the request path. Enable this workflow by configuring the
+# repository secret DATABASE_URL (and DATABASE_URL_UNPOOLED for backups) in
+# repository settings. Until the secret exists the jobs fail fast and harmlessly.
+#
+# NOTE: GitHub Actions scheduled workflows can be delayed or coalesced under
+# load. For a strict 15-minute reconciliation cadence, prefer a dedicated
+# scheduler (a small cron container or your platform's scheduled jobs); this
+# workflow is the portable default.
+name: Scheduled operations
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # reconcile
+    - cron: '20 2 * * *' # retention (daily 02:20 UTC)
+    - cron: '30 2 * * *' # backup (daily 02:30 UTC)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:shared
+      - name: Run reconciliation
+        env:
+          APP_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm reconcile
+
+  retention:
+    if: github.event.schedule == '20 2 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:shared
+      - name: Run retention (dry run first, then apply)
+        env:
+          APP_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          STORAGE_ADAPTER: s3
+        run: |
+          pnpm --filter @healthwallet/api worker:retention -- --dry-run || true
+          pnpm retention
+
+  backup:
+    if: github.event.schedule == '30 2 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Back up the database (custom format)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_UNPOOLED }}
+        run: pnpm db:backup backups
+      - name: Upload the backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: healthwallet-backup-${{ github.run_id }}
+          path: backups/*.dump
+          retention-days: 30

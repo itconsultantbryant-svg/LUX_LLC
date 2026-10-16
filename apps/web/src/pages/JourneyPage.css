@@ -1,0 +1,144 @@
+.journey header h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  letter-spacing: -0.02em;
+}
+
+.journey header p {
+  color: var(--hw-muted);
+  max-width: 40rem;
+}
+
+.journey__steps {
+  margin: 1.5rem 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.journey__steps li {
+  background: var(--hw-panel);
+  border: 1px solid var(--hw-line);
+  border-radius: 0.9rem;
+  padding: 0.85rem 1rem;
+  font-weight: 600;
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.journey__steps li::before {
+  content: counter(step);
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: var(--lux-orange-wash);
+  color: var(--lux-navy);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+
+.journey__steps {
+  counter-reset: step;
+}
+
+.journey__lab {
+  margin-top: 1.5rem;
+  padding: 1.1rem;
+  border-radius: 1.2rem;
+  border: 1px solid var(--hw-line);
+  background: #fff;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.journey__lab h2 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.journey__lab p {
+  margin: 0;
+  color: var(--hw-muted);
+}
+
+.journey__lab label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.journey__lab textarea {
+  width: 100%;
+  border-radius: 0.8rem;
+  border: 1px solid var(--hw-line);
+  padding: 0.75rem;
+  background: #fff;
+  resize: vertical;
+}
+
+.journey__error {
+  color: var(--hw-coral);
+  font-weight: 600;
+}
+
+.journey__result {
+  border-top: 1px solid var(--hw-line);
+  padding-top: 0.9rem;
+}
+
+.journey__sim {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--lux-orange-ink);
+}
+
+.journey__result dl {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.journey__result dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--hw-muted);
+}
+
+.journey__result dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+}
+
+.journey__result ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--hw-muted);
+  font-size: 0.9rem;
+}
+
+.journey__steps li::before {
+  color: var(--lux-orange-ink);
+}
+.journey__result {
+  overflow-wrap: anywhere;
+}
+@media (min-width: 800px) {
+  .journey__steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .journey__lab {
+    padding: 2rem;
+  }
+  .journey__result dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

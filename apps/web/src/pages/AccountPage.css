@@ -1,0 +1,99 @@
+.account {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+.account form {
+  display: grid;
+  gap: 1rem;
+}
+.account h1,
+.account h2 {
+  font-family: var(--font-display);
+}
+.account input:not([type='checkbox']) {
+  width: 100%;
+  padding: 0.85rem;
+  border: 1px solid var(--hw-muted);
+  border-radius: 0.6rem;
+  background: white;
+}
+.account fieldset {
+  border: 1px solid var(--hw-line);
+  border-radius: 0.6rem;
+  padding: 1rem;
+}
+.account__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.account__check input {
+  margin-top: 0.35rem;
+  flex-shrink: 0;
+}
+.account__simulation,
+.account__code {
+  padding: 1rem;
+  background: var(--lux-orange-wash);
+  border-radius: 0.6rem;
+}
+.account__code strong {
+  letter-spacing: 0.15em;
+}
+.account__consents {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.account__consents li {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--hw-panel);
+  border: 1px solid var(--hw-line);
+  border-radius: 0.6rem;
+}
+.account dd {
+  margin: 0 0 1rem;
+  overflow-wrap: anywhere;
+}
+.account dt {
+  font-weight: 600;
+}
+.account__error {
+  color: #972d18;
+}
+.account button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.account :focus-visible {
+  outline: 3px solid var(--lux-navy);
+  outline-offset: 3px;
+}
+
+.account {
+  background: white;
+  padding: clamp(1rem, 4vw, 2.5rem);
+  border: 1px solid var(--lux-line);
+  border-radius: 1.25rem;
+  box-shadow: var(--hw-shadow);
+}
+.account h1 {
+  margin-top: 0;
+  font-size: clamp(1.6rem, 5vw, 2.3rem);
+}
+.account__check {
+  min-height: 44px;
+}
+.account legend {
+  max-width: 100%;
+  padding: 0 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.account :focus-visible {
+  outline-color: var(--lux-orange-ink);
+}

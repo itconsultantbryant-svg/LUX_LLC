@@ -1,0 +1,50 @@
+{
+  "datasetVersion": "journey-v1",
+  "generatedAt": "2026-10-15T23:38:48.709Z",
+  "command": "test:journey",
+  "counts": {
+    "extractionCases": 0,
+    "scenarios": 0,
+    "payments": 1,
+    "tasks": 8
+  },
+  "metrics": [
+    {
+      "id": "payment.reliability",
+      "label": "Payment reliability",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Attempted payments that reached the succeeded terminal state with a receipt, over all attempted payments."
+    },
+    {
+      "id": "payment.callback.idempotent",
+      "label": "Repeated-callback recovery",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Attempted payments where a replayed provider callback changed nothing, over all attempted payments."
+    },
+    {
+      "id": "payment.receipts",
+      "label": "Receipts issued for succeeded payments",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Succeeded payments that produced a receipt, over all succeeded payments."
+    },
+    {
+      "id": "tasks.completion",
+      "label": "User task completion",
+      "numerator": 8,
+      "denominator": 8,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Seeded end-to-end user tasks that completed the expected outcome, over all seeded tasks."
+    }
+  ],
+  "reviewNotSuppressed": true
+}

@@ -1,0 +1,51 @@
+{
+  "name": "healthwallet-liberia",
+  "private": true,
+  "version": "0.1.0",
+  "description": "HealthWallet Liberia powered by LUX HealthTrust \u2014 healthcare financing platform foundation",
+  "packageManager": "pnpm@11.3.0",
+  "scripts": {
+    "dev": "pnpm build:shared && pnpm -r --parallel --filter @healthwallet/shared --filter @healthwallet/api --filter @healthwallet/web run dev",
+    "dev:api": "pnpm build:shared && pnpm --filter @healthwallet/api dev",
+    "dev:web": "pnpm build:shared && pnpm --filter @healthwallet/web dev",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm build:shared && pnpm -r run typecheck",
+    "lint": "pnpm -r run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm build:shared && pnpm -r run test",
+    "db:up": "pnpm --filter @healthwallet/api db:up",
+    "db:generate": "pnpm --filter @healthwallet/api db:generate",
+    "db:migrate": "pnpm --filter @healthwallet/api db:migrate",
+    "db:studio": "pnpm --filter @healthwallet/api db:studio",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "build:shared": "pnpm --filter @healthwallet/shared build",
+    "db:seed": "pnpm --filter @healthwallet/api db:seed",
+    "reconcile": "pnpm --filter @healthwallet/api worker:reconcile",
+    "retention": "pnpm --filter @healthwallet/api worker:retention",
+    "db:backup": "pnpm --filter @healthwallet/api db:backup",
+    "db:restore": "pnpm --filter @healthwallet/api db:restore",
+    "audit:check": "pnpm --filter @healthwallet/api audit:check",
+    "test:ledger": "node apps/api/scripts/run-ledger-tests.mjs",
+    "test:funding": "node apps/api/scripts/run-funding-tests.mjs",
+    "test:providers": "node apps/api/scripts/run-provider-tests.mjs",
+    "test:validation": "node apps/api/scripts/run-validation-tests.mjs",
+    "test:assistance": "node apps/api/scripts/run-assistance-tests.mjs",
+    "test:security": "node apps/api/scripts/run-security-tests.mjs",
+    "test:operations": "node apps/api/scripts/run-operations-tests.mjs",
+    "test:partners": "node apps/api/scripts/run-partners-tests.mjs",
+    "test:evaluation": "node apps/api/scripts/run-evaluation-tests.mjs",
+    "test:journey": "node apps/api/scripts/run-journey-tests.mjs",
+    "deploy:check": "pnpm --filter @healthwallet/api check:production",
+    "demo:local": "bash deploy/local-demo.sh",
+    "demo:local:keep": "bash deploy/local-demo.sh --keep"
+  },
+  "devDependencies": {
+    "@neon/config": "^1.8.4",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

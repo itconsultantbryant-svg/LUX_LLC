@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "HealthWallet Liberia | LUX AI",
+  "short_name": "HealthWallet",
+  "description": "Your healthcare companion, powered by LUX HealthTrust.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fc",
+  "theme_color": "#001539",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,5 @@
+CREATE UNIQUE INDEX "membership_org_user_role_unique" ON "organization_memberships" USING btree ("organization_id","user_id","role");--> statement-breakpoint
+ALTER TABLE "organization_memberships" ADD CONSTRAINT "membership_role_valid" CHECK ("organization_memberships"."role" IN ('provider_staff','provider_manager','organization_admin','program_manager','reviewer','finance_operator','partner_officer'));--> statement-breakpoint
+ALTER TABLE "organization_memberships" ADD CONSTRAINT "membership_status_valid" CHECK ("organization_memberships"."status" IN ('active','suspended','revoked'));--> statement-breakpoint
+ALTER TABLE "organizations" ADD CONSTRAINT "organization_kind_valid" CHECK ("organizations"."kind" IN ('provider','sponsor','partner'));--> statement-breakpoint
+ALTER TABLE "organizations" ADD CONSTRAINT "organization_status_valid" CHECK ("organizations"."status" IN ('pending','approved','rejected','suspended'));

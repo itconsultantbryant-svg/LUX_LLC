@@ -1,0 +1,240 @@
+{
+  "datasetVersion": "evaluation-v1",
+  "generatedAt": "2026-10-15T23:37:26.452Z",
+  "command": "test:evaluation",
+  "counts": {
+    "extractionCases": 11,
+    "scenarios": 7,
+    "payments": 0,
+    "tasks": 0
+  },
+  "metrics": [
+    {
+      "id": "extraction.accuracy.overall",
+      "label": "Extraction accuracy — all labeled critical fields",
+      "numerator": 39,
+      "denominator": 39,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Correctly extracted critical fields divided by all labeled critical fields across cases."
+    },
+    {
+      "id": "extraction.accuracy.providerName",
+      "label": "Extraction accuracy — providerName",
+      "numerator": 7,
+      "denominator": 7,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Correctly extracted (including correctly absent) providerName divided by evaluation cases that label providerName."
+    },
+    {
+      "id": "extraction.accuracy.customerName",
+      "label": "Extraction accuracy — customerName",
+      "numerator": 4,
+      "denominator": 4,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Correctly extracted (including correctly absent) customerName divided by evaluation cases that label customerName."
+    },
+    {
+      "id": "extraction.accuracy.billReference",
+      "label": "Extraction accuracy — billReference",
+      "numerator": 4,
+      "denominator": 4,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Correctly extracted (including correctly absent) billReference divided by evaluation cases that label billReference."
+    },
+    {
+      "id": "extraction.accuracy.serviceDate",
+      "label": "Extraction accuracy — serviceDate",
+      "numerator": 4,
+      "denominator": 4,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Correctly extracted (including correctly absent) serviceDate divided by evaluation cases that label serviceDate."
+    },
+    {
+      "id": "extraction.accuracy.currency",
+      "label": "Extraction accuracy — currency",
+      "numerator": 10,
+      "denominator": 10,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Correctly extracted (including correctly absent) currency divided by evaluation cases that label currency."
+    },
+    {
+      "id": "extraction.accuracy.totalAmountMinor",
+      "label": "Extraction accuracy — totalAmountMinor",
+      "numerator": 10,
+      "denominator": 10,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Correctly extracted (including correctly absent) totalAmountMinor divided by evaluation cases that label totalAmountMinor."
+    },
+    {
+      "id": "extraction.false_positive",
+      "label": "Incorrectly flagged clean cases (false positives)",
+      "numerator": 0,
+      "denominator": 2,
+      "value": 0,
+      "unit": "rate",
+      "definition": "Clean cases (ground truth: no review needed) that were nonetheless routed to review, over all clean cases."
+    },
+    {
+      "id": "uncertainty.routing",
+      "label": "Uncertain cases routed to a person",
+      "numerator": 3,
+      "denominator": 3,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Cases classified uncertain (unreadable / ambiguous / low confidence) that required review, over all uncertain cases."
+    },
+    {
+      "id": "review.workload",
+      "label": "Human-review workload (extraction layer)",
+      "numerator": 9,
+      "denominator": 11,
+      "value": 0.8181818181818182,
+      "unit": "rate",
+      "definition": "Extraction cases that required human review, over all extraction cases.",
+      "notes": "A high workload is not inherently bad; necessary review must never be suppressed."
+    },
+    {
+      "id": "automation.eligible",
+      "label": "Eligible cases processed without manual review",
+      "numerator": 2,
+      "denominator": 2,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Cases with ground truth \"no review needed\" that were processed without review, over all such eligible cases."
+    },
+    {
+      "id": "automation.all",
+      "label": "All cases processed without manual review",
+      "numerator": 2,
+      "denominator": 11,
+      "value": 0.18181818181818182,
+      "unit": "rate",
+      "definition": "Extraction cases processed without review, over all extraction cases (including ones that should have been reviewed)."
+    },
+    {
+      "id": "ai.latency.p50",
+      "label": "AI extraction latency — p50",
+      "numerator": 1,
+      "denominator": 11,
+      "value": 1,
+      "unit": "milliseconds",
+      "definition": "Median wall-clock duration of AI extraction calls, over all AI-involving extraction cases."
+    },
+    {
+      "id": "ai.latency.p95",
+      "label": "AI extraction latency — p95",
+      "numerator": 306,
+      "denominator": 11,
+      "value": 306,
+      "unit": "milliseconds",
+      "definition": "95th-percentile wall-clock duration of AI extraction calls, over all AI-involving extraction cases."
+    },
+    {
+      "id": "duplicate.exact.detection",
+      "label": "Exact-duplicate detection",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Scenario class \"exact_duplicate\" detected by the deterministic pipeline divided by all seeded \"exact_duplicate\" scenarios."
+    },
+    {
+      "id": "duplicate.near.detection",
+      "label": "Near-duplicate detection",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Scenario class \"near_duplicate\" detected by the deterministic pipeline divided by all seeded \"near_duplicate\" scenarios."
+    },
+    {
+      "id": "arithmetic.detection",
+      "label": "Arithmetic validation detection",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Scenario class \"arithmetic\" detected by the deterministic pipeline divided by all seeded \"arithmetic\" scenarios."
+    },
+    {
+      "id": "provider.detection",
+      "label": "Unverified-provider detection",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Scenario class \"provider\" detected by the deterministic pipeline divided by all seeded \"provider\" scenarios."
+    },
+    {
+      "id": "funding.detection",
+      "label": "Insufficient-funding detection",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Scenario class \"funding\" detected by the deterministic pipeline divided by all seeded \"funding\" scenarios."
+    },
+    {
+      "id": "restriction.detection",
+      "label": "Funding-restriction detection",
+      "numerator": 1,
+      "denominator": 1,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Scenario class \"restriction\" detected by the deterministic pipeline divided by all seeded \"restriction\" scenarios."
+    },
+    {
+      "id": "routing.agreement",
+      "label": "Routing agreement with approved policy",
+      "numerator": 7,
+      "denominator": 7,
+      "value": 1,
+      "unit": "rate",
+      "definition": "Seeded scenarios whose validation route equals the approved-policy route, over all seeded scenarios."
+    },
+    {
+      "id": "escalation.validation",
+      "label": "Cases escalated to human review (validation layer)",
+      "numerator": 3,
+      "denominator": 7,
+      "value": 0.42857142857142855,
+      "unit": "rate",
+      "definition": "Seeded validation scenarios routed to await_review, over all seeded scenarios. Escalation is not inherently bad; necessary review must never be suppressed."
+    },
+    {
+      "id": "suspicious.missed",
+      "label": "Missed suspicious cases (false negatives)",
+      "numerator": 0,
+      "denominator": 15,
+      "value": 0,
+      "unit": "rate",
+      "definition": "Suspicious cases (ground truth: needs a person) that were neither flagged nor detected, over all suspicious cases."
+    },
+    {
+      "id": "automation.incorrect",
+      "label": "Incorrect automated outcomes",
+      "numerator": 0,
+      "denominator": 3,
+      "value": 0,
+      "unit": "rate",
+      "definition": "Automated (no-human) passes whose ground truth says a person was needed, over all decisions made without a human in the loop."
+    },
+    {
+      "id": "workflow.ai",
+      "label": "Workflows involving AI",
+      "numerator": 11,
+      "denominator": 18,
+      "value": 0.6111111111111112,
+      "unit": "rate",
+      "definition": "Evaluated workflows where an AI adapter participated, over all evaluated workflows."
+    }
+  ],
+  "reviewNotSuppressed": true
+}

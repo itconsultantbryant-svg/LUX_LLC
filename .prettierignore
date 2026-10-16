@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+coverage
+pnpm-lock.yaml
+apps/api/storage
+apps/api/.data
+docs/evaluation
+*.png
+*.jpg
+*.webp
+.pnpm-store
