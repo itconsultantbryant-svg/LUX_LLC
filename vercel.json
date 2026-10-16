@@ -4,15 +4,12 @@
     "api": {
       "root": "apps/api",
       "framework": "fastify",
-      "entrypoint": "dist/index.js",
-      "installCommand": "pnpm install --frozen-lockfile",
-      "buildCommand": "pnpm --filter @healthwallet/shared build && pnpm --filter @healthwallet/api build"
+      "installCommand": "pnpm install --frozen-lockfile && pnpm --filter @healthwallet/shared build"
     },
     "web": {
       "root": "apps/web",
       "framework": "vite",
-      "installCommand": "pnpm install --frozen-lockfile",
-      "buildCommand": "pnpm --filter @healthwallet/shared build && pnpm --filter @healthwallet/web build",
+      "installCommand": "pnpm install --frozen-lockfile && pnpm --filter @healthwallet/shared build",
       "outputDirectory": "dist",
       "rewrites": [{ "source": "/((?!health$|ready$|api/).*)", "destination": "/index.html" }]
     }
