@@ -104,6 +104,7 @@ bytes.
 | Hybrid validation  | `apps/api/src/modules/validation/*`            | 12 checks; two are AI-sourced, one external (placeholder), the rest deterministic                                      |
 | Funding assistance | `apps/api/src/modules/assistance/*`            | **No AI.** Fully deterministic eligibility; AI may only explain a computed plan                                        |
 | Grounded assistant | `apps/api/src/modules/assistant/service.ts`    | **No model.** Deterministic templates grounded in authorized records                                                   |
+| Chat assistant     | `apps/api/src/modules/chat/*`                  | **No model.** Deterministic intent classifier + templates; approval-gated actions; location-ranked providers           |
 | Evaluation         | `apps/api/src/evaluation/*`                    | Runs the real pipeline; computes metrics with explicit denominators                                                    |
 
 ### The two AI checks in validation
@@ -126,6 +127,26 @@ auto-accept (`packages/shared/src/validation.ts`).
 `prepare_support_request`) by reading authorized records and formatting them.
 `generatedBy` is always `'deterministic'`. Consequential actions are only **prepared**
 and require an explicit, separately verified confirmation.
+
+### The conversational chat assistant is also not a model
+
+The floating assistant and the `/assistant` page are backed by
+`apps/api/src/modules/chat/*`. There is no LLM:
+
+- `modules/chat/intent.ts` classifies a message with deterministic rules
+  (`greeting`, `emergency`, `add_funds`, `briefing`, `fees`, `support`, `bills`,
+  `pay`, `wallet`, `provider`) and extracts amounts in minor units. It is unit-tested.
+- `modules/chat/service.ts` answers from the customer's authorized records, reads an
+  uploaded bill through the AI extraction adapter, and can rank verified providers from
+  the customer's stored location.
+- Consequential requests (`add_funds`, `request_support`) are **prepared** as an
+  `assistant_confirmations` row with an expiry. Nothing executes until the customer
+  approves it through `POST /api/chat/confirm`; the executed action is idempotent and
+  audited. The assistant never authorizes a payment or moves money on its own.
+
+Location (`modules/proximity/service.ts`) is used **only** to rank verified providers the
+customer can reach, including emergency care. It is opt-in, stored on the customer's own
+account, never shared with sponsors or advertisers, and clearable at any time.
 
 ---
 
@@ -166,16 +187,21 @@ Migration-backed tables (`apps/api/src/db/schema.ts`):
 
 HTTP surface (AI-relevant):
 
-| Endpoint                                                          | Purpose                                          |
-| ----------------------------------------------------------------- | ------------------------------------------------ |
-| `POST /api/bills/:id/extract`                                     | Runs extraction (calls the AI adapter)           |
-| `GET /api/care/bills/:id/extraction`                              | Customer/provider view of the extracted result   |
-| `POST /api/care/bills/:id/extraction-review`                      | Human corrections                                |
-| `POST /api/bills/:id/validate`                                    | Hybrid validation (consumes stored AI output)    |
-| `GET /api/admin/reviews`, `POST /api/admin/reviews/:id/:decision` | Human review queue                               |
-| `GET /api/admin/metrics`                                          | Runs/review counts and journey metrics           |
-| `POST /api/assistant/ask`, `POST /api/assistant/confirm`          | Grounded assistant                               |
-| `POST /api/ai/sandbox-extract`                                    | Demo-only sandbox extraction (404 in production) |
+| Endpoint                                                          | Purpose                                              |
+| ----------------------------------------------------------------- | ---------------------------------------------------- |
+| `POST /api/bills/:id/extract`                                     | Runs extraction (calls the AI adapter)               |
+| `GET /api/care/bills/:id/extraction`                              | Customer/provider view of the extracted result       |
+| `POST /api/care/bills/:id/extraction-review`                      | Human corrections                                    |
+| `POST /api/bills/:id/validate`                                    | Hybrid validation (consumes stored AI output)        |
+| `GET /api/admin/reviews`, `POST /api/admin/reviews/:id/:decision` | Human review queue                                   |
+| `GET /api/admin/metrics`                                          | Runs/review counts and journey metrics               |
+| `POST /api/assistant/ask`, `POST /api/assistant/confirm`          | Grounded assistant                                   |
+| `GET/POST /api/chat/history`, `/api/chat/briefing`                | Conversational assistant transcript/briefing         |
+| `POST /api/chat/send`                                             | One chat turn (text, bill upload, optional location) |
+| `POST /api/chat/confirm`                                          | Execute a prepared chat action (idempotent)          |
+| `GET/POST/DELETE /api/customers/location`                         | Opt-in customer location for proximity ranking       |
+| `GET /api/providers/nearby`                                       | Verified providers, nearest first (emergency filter) |
+| `POST /api/ai/sandbox-extract`                                    | Demo-only sandbox extraction (404 in production)     |
 
 ---
 

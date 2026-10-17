@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import pg from 'pg';
 import { LedgerService } from '../modules/ledger/service.js';
-import { seedCore } from '../modules/ledger/seed.js';
+import { seedCore, seedProviders } from '../modules/ledger/seed.js';
 import { loadEnv } from '../config/env.js';
 import { createAdapters } from '../adapters/index.js';
 config({ quiet: true });
@@ -18,6 +18,7 @@ if (
 const pool = new pg.Pool({ connectionString: url });
 try {
   const result = await seedCore(new LedgerService(pool), env.APP_ENV);
+  const providers = await seedProviders(new LedgerService(pool), env.APP_ENV);
   await createAdapters(env).storage.putObject({
     key: 'demo/seed-core-v1.txt',
     bytes: Buffer.from('SYNTHETIC care document\n'),
@@ -26,7 +27,7 @@ try {
   console.log(
     'Synthetic core data is ready. No real funds, usable sessions or platform administrator was created.',
   );
-  console.log(JSON.stringify(result));
+  console.log(JSON.stringify({ ...result, providers }));
 } finally {
   await pool.end();
 }

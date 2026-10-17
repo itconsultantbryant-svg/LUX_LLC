@@ -10,3 +10,4 @@ export * from './payments.js';
 export * from './assistant.js';
 export * from './partners.js';
 export * from './chat.js';
+export * from './location.js';

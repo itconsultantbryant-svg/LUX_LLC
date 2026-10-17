@@ -147,3 +147,140 @@ export async function seedCore(ledger: LedgerService, appEnv: string) {
     };
   });
 }
+
+type SyntheticProvider = {
+  key: string;
+  name: string;
+  license: string;
+  latitude: number;
+  longitude: number;
+  emergency: boolean;
+  services: string[];
+};
+
+/**
+ * Synthetic, clearly fictional providers with coordinates so "care you can
+ * reach" suggestions have something to rank. No real facility, licence, or
+ * accreditation is represented.
+ */
+export async function seedProviders(ledger: LedgerService, appEnv: string) {
+  if (!['development', 'demo', 'test'].includes(appEnv))
+    throw new Error('Synthetic provider seed is disabled outside development, demo and test.');
+  const id = seedId;
+  const rows: SyntheticProvider[] = [
+    {
+      key: 'jfk',
+      name: 'SYNTHETIC John F. Kennedy Medical Center',
+      license: 'SYNTH-JFK',
+      latitude: 6.2905,
+      longitude: -10.7686,
+      emergency: true,
+      services: ['emergency', 'outpatient', 'maternity'],
+    },
+    {
+      key: 'redemption',
+      name: 'SYNTHETIC Redemption Hospital',
+      license: 'SYNTH-REDEMPTION',
+      latitude: 6.3156,
+      longitude: -10.8072,
+      emergency: true,
+      services: ['emergency', 'outpatient', 'pediatrics'],
+    },
+    {
+      key: 'stjoseph',
+      name: 'SYNTHETIC St. Joseph Catholic Hospital',
+      license: 'SYNTH-STJOSEPH',
+      latitude: 6.2833,
+      longitude: -10.7769,
+      emergency: true,
+      services: ['emergency', 'maternity', 'diagnostics'],
+    },
+    {
+      key: 'sinkor',
+      name: 'SYNTHETIC Sinkor Community Clinic',
+      license: 'SYNTH-SINKOR',
+      latitude: 6.2921,
+      longitude: -10.777,
+      emergency: false,
+      services: ['outpatient', 'diagnostics'],
+    },
+    {
+      key: 'paynesville',
+      name: 'SYNTHETIC Paynesville Health Center',
+      license: 'SYNTH-PAYNESVILLE',
+      latitude: 6.2798,
+      longitude: -10.7167,
+      emergency: false,
+      services: ['outpatient', 'pediatrics'],
+    },
+    {
+      key: 'waterside',
+      name: 'SYNTHETIC Waterside Community Pharmacy',
+      license: 'SYNTH-PHARMACY',
+      latitude: 6.3164,
+      longitude: -10.8097,
+      emergency: false,
+      services: ['pharmacy'],
+    },
+  ];
+  return ledger.operation(
+    'synthetic:providers:v2',
+    'synthetic_seed',
+    { version: 1 },
+    async (client) => {
+      const reviewer = id('reviewer');
+      const verifier = id('verifier');
+      for (const row of rows) {
+        await client.query(
+          `INSERT INTO organizations(id,name,kind,registration_number,created_by,status)
+           VALUES($1,$2,'provider',$3,$4,'approved') ON CONFLICT (id) DO NOTHING`,
+          [id(`provider-org:${row.key}`), row.name, `${row.license}-ORG`, reviewer],
+        );
+        await client.query(
+          `INSERT INTO providers(id,organization_id,legal_name,license_number,status,latitude,longitude,emergency_ready,services)
+           VALUES($1,$2,$3,$4,'verified',$5,$6,$7,$8) ON CONFLICT (id) DO NOTHING`,
+          [
+            id(`provider:${row.key}`),
+            id(`provider-org:${row.key}`),
+            row.name,
+            row.license,
+            row.latitude,
+            row.longitude,
+            row.emergency,
+            row.services,
+          ],
+        );
+      }
+      // The original synthetic clinic gets a location and service tags too.
+      await client.query(
+        `UPDATE providers SET latitude=6.288,longitude=-10.772,emergency_ready=false,services=ARRAY['outpatient','consultation'] WHERE id=$1`,
+        [id('provider')],
+      );
+      // The verification guard requires an independent platform_admin reviewer.
+      // We grant that role only for the duration of this transaction so no
+      // PlatformAdmin persists in the seeded database.
+      await client.query(
+        `INSERT INTO users(id,phone_e164,display_name) VALUES($1,'+999700000009','SYNTHETIC Independent Verifier') ON CONFLICT (id) DO NOTHING`,
+        [verifier],
+      );
+      await client.query(
+        `INSERT INTO user_roles(user_id,role) VALUES($1,'platform_admin') ON CONFLICT DO NOTHING`,
+        [verifier],
+      );
+      // Registry-check verification so these appear in the verified directory.
+      const providerIds = [...rows.map((r) => id(`provider:${r.key}`)), id('provider')];
+      await client.query(
+        `INSERT INTO provider_verification_records(provider_id,reviewer_user_id,status,note,method,evidence_reference,valid_until,verified_details)
+         SELECT p.id,$1,'verified','SYNTHETIC registry check; not real accreditation','registry_check','SYNTHETIC-EVIDENCE',now()+interval '1 year',
+                jsonb_build_object('legalName',p.legal_name,'licenseNumber',p.license_number,'address',p.address)
+         FROM providers p
+         WHERE p.id = ANY($2::uuid[])`,
+        [verifier, providerIds],
+      );
+      await client.query(`DELETE FROM user_roles WHERE user_id=$1 AND role='platform_admin'`, [
+        verifier,
+      ]);
+      return { providers: rows.length + 1, synthetic: true };
+    },
+  );
+}

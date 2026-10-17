@@ -1,0 +1,141 @@
+.topup {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.topup__head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.topup__head h2 {
+  margin: 0.1rem 0 0;
+}
+
+.topup__spinner {
+  flex: 0 0 auto;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  border: 3px solid var(--lux-orange-wash);
+  border-top-color: var(--lux-orange);
+  animation: topup-spin 0.9s linear infinite;
+}
+
+.topup__spinner[data-phase='done'] {
+  border-color: #1f9d6b;
+  border-top-color: #1f9d6b;
+  animation: none;
+}
+
+.topup__spinner[data-phase='failed'] {
+  border-color: var(--hw-coral);
+  border-top-color: var(--hw-coral);
+  animation: none;
+}
+
+@keyframes topup-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.topup__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.topup__step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.92rem;
+  color: var(--hw-muted);
+}
+
+.topup__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  border: 2px solid var(--lux-line);
+  background: var(--hw-panel);
+  color: #fff;
+}
+
+.topup__step.is-active {
+  color: var(--lux-navy);
+  font-weight: 700;
+}
+
+.topup__step.is-active .topup__dot {
+  border-color: var(--lux-orange);
+  box-shadow: 0 0 0 4px var(--lux-orange-wash);
+}
+
+.topup__step.is-done .topup__dot {
+  border-color: #1f9d6b;
+  background: #1f9d6b;
+}
+
+.topup__success {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.7rem;
+  background: #e7f6ee;
+  color: #14684a;
+  font-weight: 600;
+}
+
+.topup__error {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--hw-coral);
+  border-radius: 0.7rem;
+  background: #fdecea;
+  color: var(--hw-coral);
+  font-weight: 600;
+}
+
+.topup__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.9rem;
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.7rem;
+  background: var(--lux-canvas);
+  font-size: 0.9rem;
+}
+
+.topup__facts dt {
+  color: var(--hw-muted);
+  font-weight: 600;
+}
+
+.topup__facts dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
+
+.topup__note {
+  margin: 0;
+  color: var(--hw-muted);
+  font-size: 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topup__spinner {
+    animation: none;
+  }
+}

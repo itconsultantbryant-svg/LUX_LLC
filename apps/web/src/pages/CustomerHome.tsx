@@ -1,4 +1,5 @@
 import { FundingActivity } from '../components/FundingActivity';
+import { NearbyCare } from '../components/NearbyCare';
 import { WalletBalance } from '../components/WalletBalance';
 import { Link } from 'react-router-dom';
 import { useDemo, money } from '../features/demo';
@@ -122,6 +123,7 @@ export function CustomerHome() {
           </DashboardCard>
         )}
       </div>
+      {!state.active && <NearbyCare />}
       {!state.active && <FundingActivity />}
       {state.active && (
         <DashboardCard

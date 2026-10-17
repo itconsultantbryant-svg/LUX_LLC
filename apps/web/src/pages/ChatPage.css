@@ -4,10 +4,115 @@
   padding-bottom: 3rem;
 }
 
+.chat__toolbar,
 .chat__voice-toggles {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.chat__toolbar .is-active {
+  border-color: var(--lux-orange);
+  background: var(--lux-orange-wash);
+}
+
+.chat__notice {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--hw-green, #1f9d6b);
+  border-radius: 0.7rem;
+  background: #e7f6ee;
+  color: #14684a;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.chat__loading {
+  padding: 1rem 0;
+}
+
+.chat__used-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0;
+  color: var(--hw-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.chat__providers {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat__provider {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--hw-line);
+  border-radius: 0.75rem;
+  background: var(--lux-canvas);
+}
+
+.chat__provider-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.chat__provider-meta {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  color: var(--lux-navy);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.chat__provider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.chat__approval {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+
+.chat__mic {
+  position: relative;
+  overflow: hidden;
+}
+
+.chat__mic-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(226, 122, 45, 0.35), transparent 70%);
+  transform-origin: center;
+  transition: transform 0.08s linear;
+  pointer-events: none;
+}
+
+.chat__mic.is-listening {
+  border-color: var(--hw-coral);
+  background: #fdecea;
+  color: var(--hw-coral);
+}
+
+.chat__mic svg {
+  position: relative;
 }
 
 .chat__voice-toggles .is-active {

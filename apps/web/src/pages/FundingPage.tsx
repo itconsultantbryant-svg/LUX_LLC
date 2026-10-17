@@ -5,6 +5,7 @@ import { formatMinor, decimalMinor } from '../lib/money';
 import { Feedback } from '../components/Feedback';
 import { Icon } from '../components/icons/Icon';
 import { FeeDisclosure } from '../components/FeeDisclosure';
+import { OrangeTopUp, type TopUpPayment } from '../components/OrangeTopUp';
 type Capabilities = {
   available: boolean;
   currencies: string[];
@@ -71,6 +72,9 @@ type Support = {
 export function FundingPage({ mode }: { mode: 'save' | 'support' | 'history' | 'contribute' }) {
   const location = useLocation();
   const token = location.hash.slice(1);
+  const query = new URLSearchParams(location.search);
+  const topupId = query.get('topup');
+  const autoTopUp = query.get('auto') === '1';
   const [data, setData] = useState<Snapshot>();
   const [support, setSupport] = useState<Support>();
   const [error, setError] = useState('');
@@ -126,6 +130,9 @@ export function FundingPage({ mode }: { mode: 'save' | 'support' | 'history' | '
     if (quote) reviewHeading.current?.focus();
   }, [quote]);
   const caps = support?.capabilities ?? data?.capabilities;
+  const topupPayment: TopUpPayment | undefined = topupId
+    ? data?.payments.find((p) => p.id === topupId)
+    : undefined;
   async function action(work: () => Promise<void>) {
     if (lock.current) return;
     lock.current = true;
@@ -219,6 +226,19 @@ export function FundingPage({ mode }: { mode: 'save' | 'support' | 'history' | '
         </aside>
       )}
       {mode === 'save' && <FeeDisclosure />}
+      {mode === 'save' &&
+        topupId &&
+        !loading &&
+        (topupPayment ? (
+          <OrangeTopUp payment={topupPayment} onComplete={refresh} auto={autoTopUp} />
+        ) : (
+          <Feedback kind="error" title="We could not find that top-up">
+            <p>
+              It may have expired or belongs to a different account. Start a new top-up from Add
+              money.
+            </p>
+          </Feedback>
+        ))}
       {(mode === 'save' || mode === 'contribute') && caps && (
         <>
           {support && (

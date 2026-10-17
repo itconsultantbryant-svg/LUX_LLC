@@ -330,6 +330,26 @@ export const customerProfiles = pgTable('customer_profiles', {
   preferredLanguage: varchar('preferred_language', { length: 20 }).notNull().default('en'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+// Latest device location the customer agreed to share, used only to rank
+// reachable providers. One row per user; refreshed on sign-in and on demand.
+export const customerLocations = pgTable(
+  'customer_locations',
+  {
+    userId: uuid('user_id')
+      .primaryKey()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    latitude: numeric('latitude', { precision: 9, scale: 6 }).notNull(),
+    longitude: numeric('longitude', { precision: 9, scale: 6 }).notNull(),
+    accuracyMeters: integer('accuracy_meters'),
+    label: varchar('label', { length: 120 }),
+    source: varchar('source', { length: 30 }).notNull().default('browser'),
+    capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    check('customer_location_latitude_valid', sql`${t.latitude} BETWEEN -90 AND 90`),
+    check('customer_location_longitude_valid', sql`${t.longitude} BETWEEN -180 AND 180`),
+  ],
+);
 export const dependents = pgTable('dependents', {
   id: uuid('id').defaultRandom().primaryKey(),
   guardianUserId: uuid('guardian_user_id')
@@ -398,6 +418,16 @@ export const providers = pgTable(
     licenseNumber: text('license_number').notNull(),
     status: text('status').notNull().default('pending'),
     address: jsonb('address').notNull().default({}),
+    // Coordinates and service tags power "care you can reach" suggestions.
+    // Kept separate from `address` so verification digests stay stable.
+    latitude: numeric('latitude', { precision: 9, scale: 6 }),
+    longitude: numeric('longitude', { precision: 9, scale: 6 }),
+    emergencyReady: boolean('emergency_ready').notNull().default(false),
+    services: text('services')
+      .array()
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     createdAt: created(),
   },
   (t) => [

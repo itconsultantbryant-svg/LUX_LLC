@@ -1,0 +1,130 @@
+.chat-widget {
+  position: fixed;
+  right: clamp(0.75rem, 3vw, 1.75rem);
+  bottom: clamp(0.75rem, 3vw, 1.75rem);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.chat-widget__fab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.05rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--lux-orange);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(226, 122, 45, 0.4);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.chat-widget__fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(226, 122, 45, 0.45);
+}
+
+.chat-widget__fab-label {
+  font-size: 0.9rem;
+}
+
+.chat-widget__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(26rem, calc(100vw - 1.5rem));
+  height: min(36rem, calc(100vh - 7rem));
+  border: 1px solid var(--hw-line);
+  border-radius: 1.1rem;
+  background: var(--hw-panel);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+  animation: chat-widget-in 0.18s ease-out;
+}
+
+@keyframes chat-widget-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-widget__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.8rem 0.9rem;
+  border-bottom: 1px solid var(--hw-line);
+  background: linear-gradient(120deg, var(--lux-orange-wash), var(--hw-panel));
+}
+
+.chat-widget__title {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 800;
+  color: var(--lux-navy);
+}
+
+.chat-widget__subtitle {
+  margin: 0.1rem 0 0;
+  font-size: 0.75rem;
+  color: var(--hw-muted);
+}
+
+.chat-widget__close {
+  padding-inline: 0.55rem;
+}
+
+.chat-widget__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  overflow-y: auto;
+}
+
+.chat-widget__body .chat__log {
+  max-height: none;
+  overflow: visible;
+}
+
+.chat-widget__body .chat__composer {
+  position: static;
+}
+
+.chat-widget__body .chat__bubble {
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .chat-widget__panel {
+    width: calc(100vw - 1.5rem);
+    height: min(32rem, calc(100vh - 6rem));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-widget__panel {
+    animation: none;
+  }
+
+  .chat-widget__fab:hover {
+    transform: none;
+  }
+}

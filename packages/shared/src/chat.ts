@@ -1,6 +1,38 @@
 import { z } from 'zod';
+import { LocationInputSchema, NearbyProviderSchema } from './location.js';
 
 export const CHAT_MAX_DOCUMENT_CHARS = 700_000;
+
+/**
+ * Client-side instructions the assistant can ask the app to perform without an
+ * approval gate (read-only or navigational). Consequential actions always go
+ * through a `ChatConfirmation` instead.
+ */
+export const CHAT_ITEM_INTENTS = ['find_providers', 'show_briefing', 'open_wallet'] as const;
+export const ChatItemIntentSchema = z.enum(CHAT_ITEM_INTENTS);
+export type ChatItemIntent = z.infer<typeof ChatItemIntentSchema>;
+
+/**
+ * Actions the assistant can execute after the customer explicitly approves.
+ * Every execution is idempotent and audited; the assistant never moves money on
+ * its own.
+ */
+export const CHAT_ACTION_KINDS = [
+  'request_support',
+  'add_funds',
+  'reserve_funds',
+  'confirm_bill',
+] as const;
+export const ChatActionKindSchema = z.enum(CHAT_ACTION_KINDS);
+export type ChatActionKind = z.infer<typeof ChatActionKindSchema>;
+
+export const ChatConfirmationSchema = z.object({
+  id: z.string(),
+  action: ChatActionKindSchema,
+  summary: z.string().min(1).max(400),
+  expiresAt: z.string(),
+});
+export type ChatConfirmation = z.infer<typeof ChatConfirmationSchema>;
 
 export const ChatDocumentSchema = z.object({
   contentType: z
@@ -18,6 +50,8 @@ export const ChatSendRequestSchema = z
   .object({
     text: z.string().trim().max(2000).optional(),
     document: ChatDocumentSchema.optional(),
+    /** Optional latest device location so the assistant can suggest reachable care. */
+    location: LocationInputSchema.optional(),
   })
   .strict()
   .refine((value) => Boolean(value.text?.trim()) || Boolean(value.document), {
@@ -33,6 +67,10 @@ export const ChatItemSchema = z.object({
   action: z
     .object({ label: z.string().min(1).max(60), href: z.string().min(1).max(200) })
     .optional(),
+  /** Present when the item needs an explicit approval before it runs. */
+  confirmation: ChatConfirmationSchema.optional(),
+  /** Present when the item asks the app to run a read-only client instruction. */
+  intent: ChatItemIntentSchema.optional(),
 });
 
 export const ChatMessageContentSchema = z.object({
@@ -53,6 +91,10 @@ export const ChatMessageContentSchema = z.object({
     })
     .optional(),
   items: z.array(ChatItemSchema).optional(),
+  /** Structured, verified providers the assistant surfaced (nearest first). */
+  providers: z.array(NearbyProviderSchema).optional(),
+  /** True when the reply used the customer's stored location to rank providers. */
+  usedLocation: z.boolean().optional(),
 });
 
 export const ChatMessageSchema = z.object({
@@ -80,6 +122,23 @@ export const ChatSendResponseSchema = z.object({
   simulationLabel: z.string(),
 });
 export type ChatSendResponse = z.infer<typeof ChatSendResponseSchema>;
+
+export const ChatConfirmRequestSchema = z
+  .object({ confirmationId: z.string().min(1).max(80) })
+  .strict();
+export type ChatConfirmRequest = z.infer<typeof ChatConfirmRequestSchema>;
+
+export const ChatConfirmResponseSchema = z.object({
+  id: z.string(),
+  action: ChatActionKindSchema,
+  status: z.enum(['executed', 'needs_screen']),
+  message: z.string(),
+  /** Deep link to the screen that completes the action, when required. */
+  redirect: z.string().nullable(),
+  /** Follow-up assistant message persisted and appended to the transcript. */
+  assistant: ChatMessageSchema.nullable(),
+});
+export type ChatConfirmResponse = z.infer<typeof ChatConfirmResponseSchema>;
 
 export type ChatItem = z.infer<typeof ChatItemSchema>;
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;

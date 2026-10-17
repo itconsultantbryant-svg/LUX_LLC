@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { webConfig } from '../config';
 import { Brand } from './Brand';
+import { ChatWidget } from './ChatWidget';
 import { InstallApp } from './InstallApp';
 import { useDemo } from '../features/demo';
 import { useAuth } from '../features/auth-context';
@@ -122,6 +123,7 @@ export function AppShell() {
       <main ref={main} id="main-content" tabIndex={-1} className="shell__main">
         <Outlet />
       </main>
+      <ChatWidget />
       <footer className="shell__footer">
         <div className="shell__footer-top">
           <Brand compact />
