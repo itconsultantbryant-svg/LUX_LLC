@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type {
   ChatBriefingResponse,
   ChatConfirmResponse,
+  ChatDocumentReview,
   ChatHistoryResponse,
   ChatItem,
   ChatMessage,
@@ -81,6 +82,33 @@ function ProviderCards({ providers }: { providers: NearbyProvider[] }) {
   );
 }
 
+const VERDICT_META: Record<
+  ChatDocumentReview['status'],
+  { label: string; icon: 'check-circle' | 'clock' | 'alert-triangle' | 'help-circle' }
+> = {
+  verified: { label: 'Valid bill', icon: 'check-circle' },
+  expired: { label: 'Expired verification', icon: 'clock' },
+  unverified: { label: 'Not verified', icon: 'alert-triangle' },
+  unknown: { label: 'Provider unrecognized', icon: 'help-circle' },
+};
+
+function DocumentVerdict({ review }: { review: ChatDocumentReview }) {
+  const meta = VERDICT_META[review.status];
+  const provider = review.matchedProviderName ?? review.providerName;
+  return (
+    <div className={`chat__verdict chat__verdict--${review.status}`} role="status">
+      <span className="chat__verdict-badge">
+        <Icon name={meta.icon} size={14} /> {meta.label}
+      </span>
+      <div className="chat__verdict-body">
+        {provider && <strong>{provider}</strong>}
+        <p>{review.notes}</p>
+        {review.validUntil && <small>Valid until {review.validUntil.slice(0, 10)}</small>}
+      </div>
+    </div>
+  );
+}
+
 export function ChatExperience({
   variant = 'page',
   onClose,
@@ -146,7 +174,9 @@ export function ChatExperience({
         setMessages((previous) => [...previous, response.user, response.assistant]);
         setSimulationLabel(response.simulationLabel);
         setAttachment(null);
-        if (aloud) readAloud(response.assistant.content.text);
+        // Always read document findings aloud, even when the toggle is off, so
+        // the bill verdict is spoken back to the customer.
+        if (aloud || payload.document) readAloud(response.assistant.content.text);
       } catch (caught) {
         if (caught instanceof ApiError && caught.status === 401) setNotSignedIn(true);
         else setError(caught instanceof Error ? caught.message : 'Your message was not delivered.');
@@ -366,6 +396,9 @@ export function ChatExperience({
                 <dt>Confidence</dt>
                 <dd>{Math.round(message.content.extraction.confidence * 100)}%</dd>
               </dl>
+            )}
+            {message.content.documentReview && (
+              <DocumentVerdict review={message.content.documentReview} />
             )}
             {message.content.providers && message.content.providers.length > 0 && (
               <ProviderCards providers={message.content.providers} />

@@ -73,12 +73,32 @@ export const ChatItemSchema = z.object({
   intent: ChatItemIntentSchema.optional(),
 });
 
+export const CHAT_PROVIDER_STATUSES = ['verified', 'expired', 'unverified', 'unknown'] as const;
+
+/**
+ * The assistant's read on an uploaded provider bill: which provider it belongs
+ * to and whether that provider is currently verified. `unknown` means no
+ * directory provider matched the name; `unverified` means a match exists but its
+ * registry verification is not currently valid; `expired` means it was verified
+ * but the validity window has passed.
+ */
+export const ChatDocumentReviewSchema = z.object({
+  providerName: z.string().nullable(),
+  status: z.enum(CHAT_PROVIDER_STATUSES),
+  matchedProviderId: z.string().nullable(),
+  matchedProviderName: z.string().nullable(),
+  validUntil: z.string().nullable(),
+  notes: z.string(),
+});
+export type ChatDocumentReview = z.infer<typeof ChatDocumentReviewSchema>;
+
 export const ChatMessageContentSchema = z.object({
   text: z.string(),
   disclaimer: z.string().max(400).optional(),
   document: z
     .object({ contentType: z.string().max(60), byteSize: z.number().int().nonnegative() })
     .optional(),
+  documentReview: ChatDocumentReviewSchema.optional(),
   extraction: z
     .object({
       providerName: z.string().nullable(),

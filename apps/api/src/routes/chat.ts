@@ -20,7 +20,13 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
     if (e instanceof IdentityError) return reply.code(e.statusCode).send({ message: e.message });
     if (e instanceof z.ZodError)
       return reply.code(400).send({ message: 'Check the supplied fields and try again.' });
-    app.log.error({ errorType: e instanceof Error ? e.name : 'Unknown' }, 'Chat operation failed');
+    app.log.error(
+      {
+        errorType: e instanceof Error ? e.name : 'Unknown',
+        errorMessage: e instanceof Error ? e.message : String(e),
+      },
+      'Chat operation failed',
+    );
     return reply.code(503).send({ message: 'The assistant is temporarily unavailable.' });
   });
 

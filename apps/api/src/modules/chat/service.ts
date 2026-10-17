@@ -1,9 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import {
   ASSISTANT_DISCLAIMER,
   FEE_SCHEDULE,
   type AiExtractionResult,
   type ChatActionKind,
   type ChatConfirmation,
+  type ChatDocumentReview,
   type ChatItemIntent,
   type LocationInput,
   type NearbyProvider,
@@ -18,6 +20,7 @@ import { FundingService } from '../funding/service.js';
 import { AssistanceService } from '../assistance/service.js';
 import { getLocation, nearbyProviders, upsertLocation } from '../proximity/service.js';
 import { classifyIntent, extractAmountMinor } from './intent.js';
+import { assessProvider, type ProviderCandidate } from './provider-match.js';
 
 const SIMULATION_LABEL =
   'SIMULATION — sandbox assistant; no real money moves and nothing is verified.';
@@ -56,6 +59,7 @@ export type ChatMessageContent = {
   text: string;
   disclaimer?: string;
   document?: { contentType: string; byteSize: number };
+  documentReview?: ChatDocumentReview;
   extraction?: ChatExtractionSummary;
   items?: ChatItem[];
   providers?: NearbyProvider[];
@@ -436,8 +440,10 @@ export class ChatService {
       throw new IdentityError(415, 'Upload a PDF, PNG, JPEG, or plain-text provider bill.');
     const bytes = this.decode(document.base64);
 
+    // Storage keys must match the private-object pattern enforced by the
+    // adapters (`private/<uuid>`), which blocks path traversal.
     const stored = await this.adapters.storage.putObject({
-      key: `chat/${a.actor.id}/${Date.now()}-bill`,
+      key: `private/${randomUUID()}`,
       bytes,
       contentType,
     });
@@ -474,6 +480,8 @@ export class ChatService {
       };
     }
 
+    const review = await this.reviewProvider(a, extraction.fields.providerName);
+
     const lines: string[] = ['I read that provider bill. Here is what I found:'];
     if (extraction.fields.providerName) lines.push(`Provider: ${extraction.fields.providerName}.`);
     if (extraction.fields.totalAmountMinor != null && extraction.fields.currency)
@@ -495,23 +503,85 @@ export class ChatService {
       lines.push(
         `These fields were ambiguous and need your confirmation: ${extraction.ambiguous.join(', ')}.`,
       );
+
+    const verdict: Record<ChatDocumentReview['status'], string> = {
+      verified: `Provider check: ${review.notes} I am treating this bill as valid.`,
+      expired: `Provider check: ${review.notes} I am treating this bill as expired, so do not pay it until the provider is re-verified.`,
+      unverified: `Provider check: ${review.notes} I am treating this bill as invalid for payment for now.`,
+      unknown: `Provider check: ${review.notes} I am treating this bill as unverified.`,
+    };
+    lines.push(verdict[review.status]);
     lines.push(
-      `Review it on the Pay for Care screen to confirm the details, then I can help you fund or pay it. ${SIMULATION_LABEL}`,
+      review.status === 'verified'
+        ? `Review it on the Pay for Care screen to confirm the details, then I can help you fund or pay it. ${SIMULATION_LABEL}`
+        : `You can open Pay for Care to review or challenge this bill, but I will not prepare a payment for an expired or unverified provider. ${SIMULATION_LABEL}`,
     );
+
+    const items: ChatItem[] =
+      review.status === 'verified'
+        ? [
+            {
+              kind: 'action',
+              title: 'Confirm this bill',
+              detail: 'Open Pay for Care to confirm the extracted details and continue.',
+              action: { label: 'Open Pay for Care', href: '/pay' },
+            },
+          ]
+        : [
+            {
+              kind: 'alert',
+              title:
+                review.status === 'expired'
+                  ? 'Provider verification expired'
+                  : 'Provider is not verified',
+              detail: review.notes,
+              action: { label: 'Open Pay for Care', href: '/pay' },
+            },
+          ];
 
     return {
       text: lines.join(' '),
       document: { contentType, byteSize: bytes.length },
+      documentReview: review,
       extraction: summary,
-      items: [
-        {
-          kind: 'action',
-          title: 'Confirm this bill',
-          detail: 'Open Pay for Care to confirm the extracted details and continue.',
-          action: { label: 'Open Pay for Care', href: '/pay' },
-        },
-      ],
+      items,
     };
+  }
+
+  /**
+   * Match the provider named on a bill against the directory and report whether
+   * it is verified, expired, unverified, or unknown. Deterministic — no model.
+   */
+  private async reviewProvider(
+    a: Access,
+    providerName: string | null,
+  ): Promise<ChatDocumentReview> {
+    const rows = (
+      await a.client.query<{
+        id: string;
+        legal_name: string;
+        status: string;
+        verification_status: string | null;
+        method: string | null;
+        valid_until: Date | null;
+      }>(
+        `SELECT p.id,p.legal_name,p.status,v.status AS verification_status,v.method,v.valid_until
+         FROM providers p
+         LEFT JOIN LATERAL (
+           SELECT status,method,valid_until FROM provider_verification_records
+           WHERE provider_id=p.id ORDER BY created_at DESC,id DESC LIMIT 1
+         ) v ON true`,
+      )
+    ).rows;
+    const candidates: ProviderCandidate[] = rows.map((row) => ({
+      id: row.id,
+      legalName: row.legal_name,
+      providerStatus: row.status,
+      verificationStatus: row.verification_status,
+      method: row.method,
+      validUntil: row.valid_until,
+    }));
+    return assessProvider(providerName, candidates, new Date());
   }
 
   private async handleText(a: Access, text: string): Promise<ChatMessageContent> {
