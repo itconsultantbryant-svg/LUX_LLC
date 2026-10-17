@@ -43,7 +43,9 @@ export const ChatDocumentSchema = z.object({
       { message: 'Upload a PDF, PNG, JPEG, or plain-text provider bill.' },
     ),
   filename: z.string().trim().max(200).optional(),
-  base64: z.string().min(4).max(CHAT_MAX_DOCUMENT_CHARS),
+  base64: z.string().min(4).max(CHAT_MAX_DOCUMENT_CHARS, {
+    message: 'That image is too large. Try a smaller photo or a PDF under 512 KB.',
+  }),
 });
 
 export const ChatSendRequestSchema = z

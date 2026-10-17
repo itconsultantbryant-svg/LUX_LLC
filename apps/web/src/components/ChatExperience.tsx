@@ -38,17 +38,58 @@ function readAloud(text: string) {
   window.speechSynthesis.speak(utterance);
 }
 
-function fileToBase64(file: File): Promise<string> {
+// Keep well under the API's 700k base64 ceiling (≈512 KB).
+const MAX_DOCUMENT_CHARS = 640_000;
+
+function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      const value = typeof reader.result === 'string' ? reader.result : '';
-      const comma = value.indexOf(',');
-      resolve(comma >= 0 ? value.slice(comma + 1) : value);
+      if (typeof reader.result === 'string') resolve(reader.result);
+      else reject(new Error('We could not read that file.'));
     };
     reader.onerror = () => reject(new Error('We could not read that file.'));
     reader.readAsDataURL(file);
   });
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  const value = await fileToDataUrl(file);
+  const comma = value.indexOf(',');
+  return comma >= 0 ? value.slice(comma + 1) : value;
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('We could not read that image.'));
+    image.src = src;
+  });
+}
+
+/**
+ * Phone cameras produce multi-megabyte photos that exceed the upload ceiling,
+ * and iPhones often hand us HEIC. Re-encode (and downsample) any image to JPEG
+ * in the browser so the bill always fits, then hand the server a small payload.
+ */
+async function shrinkImage(file: File): Promise<{ contentType: string; base64: string }> {
+  const image = await loadImage(await fileToDataUrl(file));
+  let maxSide = 1600;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('We could not process that image on this device.');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const encoded = canvas.toDataURL('image/jpeg', 0.72);
+    const base64 = encoded.slice(encoded.indexOf(',') + 1);
+    if (base64.length <= MAX_DOCUMENT_CHARS) return { contentType: 'image/jpeg', base64 };
+    maxSide = Math.round(maxSide * 0.75);
+  }
+  throw new Error('That image is too large. Try a smaller photo or a PDF under 512 KB.');
 }
 
 function ProviderCards({ providers }: { providers: NearbyProvider[] }) {
@@ -246,8 +287,16 @@ export function ChatExperience({
       if (busy) return;
       setError(null);
       try {
-        const base64 = await fileToBase64(file);
-        await send({ document: { contentType: file.type || 'application/pdf', base64 } });
+        let document: { contentType: string; base64: string };
+        if (file.type.startsWith('image/')) {
+          document = await shrinkImage(file);
+        } else {
+          const base64 = await fileToBase64(file);
+          if (base64.length > MAX_DOCUMENT_CHARS)
+            throw new Error('That file is too large. Keep it under 512 KB.');
+          document = { contentType: file.type || 'application/pdf', base64 };
+        }
+        await send({ document });
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'That file could not be uploaded.');
       }

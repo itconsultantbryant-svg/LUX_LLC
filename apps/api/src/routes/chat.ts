@@ -19,7 +19,9 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
   app.setErrorHandler((e, _r, reply) => {
     if (e instanceof IdentityError) return reply.code(e.statusCode).send({ message: e.message });
     if (e instanceof z.ZodError)
-      return reply.code(400).send({ message: 'Check the supplied fields and try again.' });
+      return reply.code(400).send({
+        message: e.issues[0]?.message ?? 'Check the supplied fields and try again.',
+      });
     app.log.error(
       {
         errorType: e instanceof Error ? e.name : 'Unknown',
