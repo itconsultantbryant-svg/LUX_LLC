@@ -17,20 +17,22 @@ missing. This script demonstrates that honestly.
 
 ## Reviewer console setup (once)
 
-The API requires MFA for institutional operations. In development, provision one user:
+The API requires MFA for institutional operations. In development, provision one user
+in a single step:
 
 ```bash
-pnpm --filter @healthwallet/api exec tsx -e '
-import pg from "pg";
-import { randomBytes } from "node:crypto";
-import { tokenHash, hashOpcode } from "./apps/api/src/modules/identity/service.ts";
-// insert user + platform_admin role + an auth session with mfa_verified_at now()
-// then open the console with that session cookie
-'
+pnpm seed:admin
 ```
 
-Alternative: complete MFA enrollment through `/account/security` in the UI for an
-existing authorized reviewer, then use the Review queue link under **More**.
+This grants `customer`, `reviewer`, and `platform_admin` to the seed phone
+(`+999700000003` by default), creates an 8-hour sandbox session with MFA already
+verified, and prints the `hw_session` cookie to paste into the browser on the app
+origin. It refuses to run against production or a non-dev database and creates no
+funds or settlement. Open `/institutional/reviews` and `/institutional/metrics`.
+
+Alternative: sign in through `/account` with any phone (the sandbox code is shown
+on screen) and complete MFA enrollment through `/account/security` for an existing
+authorized reviewer, then use the Review queue link under **More**.
 
 ## Walkthrough
 

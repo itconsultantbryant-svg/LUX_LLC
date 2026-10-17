@@ -8,6 +8,7 @@ import {
 import { ApiError, apiGet, apiPost } from '../lib/api';
 import { Link, useLocation } from 'react-router-dom';
 import { isDemoLike } from '../config';
+import { useAuth } from '../features/auth-context';
 import './AccountPage.css';
 
 type ProfileResponse = { profile: IdentityProfile; simulation: boolean };
@@ -18,6 +19,7 @@ const CONSENT_LABELS = {
 
 export function AccountPage() {
   const location = useLocation();
+  const { refresh: refreshAuth } = useAuth();
   const requestedReturn: unknown = location.state?.returnTo;
   const returnTo =
     typeof requestedReturn === 'string' &&
@@ -116,6 +118,7 @@ export function AccountPage() {
       setServiceTerms(false);
       setHealthData(false);
       setNotice(data.simulation ? 'Signed in to your sandbox account.' : 'Signed in.');
+      await refreshAuth();
     });
   }
 
@@ -205,6 +208,7 @@ export function AccountPage() {
                 await apiPost('/api/auth/logout', {});
                 setProfile(null);
                 setNotice('You are signed out.');
+                await refreshAuth();
               })
             }
           >

@@ -25,6 +25,20 @@ that user's sessions (forcing a fresh MFA sign-in), and records an audit event.
 After the first administrator exists, all further role changes go through the
 authorized role-management API.
 
+**Development shortcut.** In a non-production environment you can seed a
+ready-to-use administrator without a manual MFA enrolment:
+
+```bash
+pnpm seed:admin            # default phone +999700000003
+pnpm seed:admin +2317...   # or a specific E.164 phone
+```
+
+It grants `customer`, `reviewer`, and `platform_admin`, creates an 8-hour
+sandbox session with MFA already verified, prints the `hw_session` cookie for
+the reviewer console (`/institutional/reviews`, `/institutional/metrics`), and
+refuses to run against production or a non-dev database. It never fabricates
+funds or settlement.
+
 ## 2. Access and onboarding
 
 | Task                    | Endpoint                                    |

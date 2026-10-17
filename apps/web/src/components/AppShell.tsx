@@ -4,6 +4,7 @@ import { webConfig } from '../config';
 import { Brand } from './Brand';
 import { InstallApp } from './InstallApp';
 import { useDemo } from '../features/demo';
+import { useAuth } from '../features/auth-context';
 import { NetworkNotice } from './Feedback';
 import { EnvironmentBanner } from './EnvironmentBanner';
 import { Icon, type IconName } from './icons/Icon';
@@ -20,6 +21,7 @@ const links: Array<{ to: string; label: string; icon: IconName }> = [
 export function AppShell() {
   const location = useLocation();
   const { state, dispatch } = useDemo();
+  const { signedIn, profile, signOut } = useAuth();
   const secondary = useRef<HTMLDetailsElement>(null);
   const main = useRef<HTMLElement>(null);
   const lastPath = useRef(location.pathname);
@@ -66,10 +68,25 @@ export function AppShell() {
           </summary>
           <nav aria-label="Secondary">
             <NavLink to="/account">
-              <Icon name="user" size={18} /> Profile & sign in
+              <Icon name="user" size={18} />{' '}
+              {signedIn ? `Signed in · ${profile?.phone ?? 'Account'}` : 'Profile & sign in'}
             </NavLink>
+            {signedIn && (
+              <button
+                type="button"
+                onClick={() => {
+                  void signOut();
+                  if (secondary.current) secondary.current.open = false;
+                }}
+              >
+                Sign out
+              </button>
+            )}
             <NavLink to="/account/security">
               <Icon name="shield" size={18} /> Security & organization access
+            </NavLink>
+            <NavLink to="/assistant">
+              <Icon name="message-circle" size={18} /> LUX assistant
             </NavLink>
             <NavLink to="/institutional">
               <Icon name="building" size={18} /> Institutional access

@@ -2,12 +2,14 @@ import { FundingActivity } from '../components/FundingActivity';
 import { WalletBalance } from '../components/WalletBalance';
 import { Link } from 'react-router-dom';
 import { useDemo, money } from '../features/demo';
+import { useAuth } from '../features/auth-context';
 import { Feedback } from '../components/Feedback';
 import { DashboardCard } from '../components/DashboardCard';
 import { Icon } from '../components/icons/Icon';
 
 export function CustomerHome() {
   const { state, dispatch, allowed } = useDemo();
+  const { signedIn, profile } = useAuth();
   return (
     <section className="workspace">
       <div className="page-heading">
@@ -20,7 +22,8 @@ export function CustomerHome() {
         </div>
         {!state.active && (
           <Link className="btn btn--ghost" to="/account">
-            <Icon name="user" size={18} /> Customer sign in
+            <Icon name="user" size={18} />
+            {signedIn ? `Signed in · ${profile?.phone ?? 'Your account'}` : 'Customer sign in'}
           </Link>
         )}
       </div>

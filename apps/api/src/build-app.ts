@@ -20,6 +20,7 @@ import { validationRoutes } from './routes/validation.js';
 import { assistanceRoutes } from './routes/assistance.js';
 import { paymentsRoutes } from './routes/payments.js';
 import { assistantRoutes } from './routes/assistant.js';
+import { chatRoutes } from './routes/chat.js';
 import { governanceRoutes } from './routes/governance.js';
 import { partnerRoutes } from './routes/partners.js';
 import { healthRoutes } from './routes/health.js';
@@ -142,6 +143,7 @@ export async function buildApp(deps: { env: Env; pool: pg.Pool; db: Db; adapters
   await app.register(assistanceRoutes);
   await app.register(paymentsRoutes);
   await app.register(assistantRoutes);
+  await app.register(chatRoutes);
   await app.register(governanceRoutes);
   await app.register(partnerRoutes);
   await app.register(accountRoutes);

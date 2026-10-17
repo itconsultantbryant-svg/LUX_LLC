@@ -1402,6 +1402,26 @@ export const assistantConfirmations = pgTable(
   ],
 );
 
+// Conversation history for the LUX assistant chatbot. `content` holds the
+// rendered text plus any structured payload (extraction results, suggested
+// actions) so the transcript can be replayed to the client without re-deriving it.
+export const chatMessages = pgTable(
+  'chat_messages',
+  {
+    id: recordId(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: text('role').notNull(),
+    content: jsonb('content').$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: created(),
+  },
+  (t) => [
+    check('chat_message_role_valid', sql`${t.role} IN ('user','assistant')`),
+    index('chat_message_user_idx').on(t.userId, t.createdAt),
+  ],
+);
+
 // P3-09: program change proposals that require a distinct approver.
 export const programApprovals = pgTable(
   'program_approvals',

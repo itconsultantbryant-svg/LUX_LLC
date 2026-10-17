@@ -22,9 +22,7 @@ describe('normalizeApiBaseUrl', () => {
 
   it('strips a trailing /api so /api paths are not doubled', () => {
     expect(normalizeApiBaseUrl('https://luxllc.vercel.app/api')).toBe('https://luxllc.vercel.app');
-    expect(normalizeApiBaseUrl('https://luxllc.vercel.app/api/')).toBe(
-      'https://luxllc.vercel.app',
-    );
+    expect(normalizeApiBaseUrl('https://luxllc.vercel.app/api/')).toBe('https://luxllc.vercel.app');
     expect(normalizeApiBaseUrl('/api')).toBe('');
     expect(normalizeApiBaseUrl('/api/')).toBe('');
   });

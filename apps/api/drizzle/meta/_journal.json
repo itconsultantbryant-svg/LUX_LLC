@@ -92,6 +92,13 @@
       "when": 1792078994586,
       "tag": "0012_security_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792300000000,
+      "tag": "0013_chat_messages",
+      "breakpoints": true
     }
   ]
 }
