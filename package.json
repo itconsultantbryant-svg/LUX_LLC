@@ -22,6 +22,7 @@
     "build:shared": "pnpm --filter @healthwallet/shared build",
     "db:seed": "pnpm --filter @healthwallet/api db:seed",
     "seed:admin": "pnpm --filter @healthwallet/api seed:admin",
+    "seed:admin:neon": "node apps/api/scripts/seed-neon-admin.mjs",
     "reconcile": "pnpm --filter @healthwallet/api worker:reconcile",
     "retention": "pnpm --filter @healthwallet/api worker:retention",
     "db:backup": "pnpm --filter @healthwallet/api db:backup",

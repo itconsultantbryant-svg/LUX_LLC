@@ -8,6 +8,7 @@ coverage
 .env
 .env.local
 .env.*.local
+.env.neon
 *.env.local
 !.env.example
 !.env.*.example
