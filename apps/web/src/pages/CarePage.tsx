@@ -54,6 +54,30 @@ export function CarePage() {
       active = false;
     };
   }, [version]);
+  // Keep the provider directory live so a newly verified provider appears
+  // without a manual reload, without disturbing the selected provider or bills.
+  useEffect(() => {
+    let active = true;
+    const timer = setInterval(() => {
+      void Promise.all([
+        apiGet<{ providers: Provider[] }>('/api/providers/directory'),
+        apiGet<{ bills: typeof bills }>('/api/care/bills'),
+      ])
+        .then(([p, b]) => {
+          if (active) {
+            setProviders(p.providers);
+            setBills(b.bills);
+          }
+        })
+        .catch(() => {
+          /* transient; the next poll recovers */
+        });
+    }, 15000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, []);
   const p = providers.find((p) => p.id === providerId);
   async function act(work: () => Promise<void>) {
     if (lock.current) return;

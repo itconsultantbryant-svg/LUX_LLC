@@ -838,5 +838,22 @@ describe.skipIf(process.env.SECURITY_DATABASE_TESTS !== '1')(
       );
       expect(prod.statusCode).toBe(503);
     });
+    it('prefers an independent administrator for password sign-in', async () => {
+      // The organization-owning administrator cannot independently review
+      // providers, so password sign-in must skip it when an unfettered
+      // platform_admin exists.
+      const tied = await actor({ globalRole: 'platform_admin' });
+      await organization(tied, 'approved');
+      const independent = await actor({ globalRole: 'platform_admin' });
+      await pool.query("UPDATE users SET created_at='2000-01-01T00:00:00Z' WHERE id=$1", [tied.id]);
+      await pool.query("UPDATE users SET created_at='2000-01-02T00:00:00Z' WHERE id=$1", [
+        independent.id,
+      ]);
+      const ok = await request(undefined, 'POST', '/api/auth/admin-login', {
+        password: app.ctx.env.ADMIN_PASSWORD,
+      });
+      expect(ok.statusCode, ok.body).toBe(200);
+      expect(ok.json().profile.id).toBe(independent.id);
+    });
   },
 );

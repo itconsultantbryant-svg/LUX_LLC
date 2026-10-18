@@ -131,7 +131,12 @@ export const providerRoutes: FastifyPluginAsync = async (app) => {
     return {
       providers: (
         await a.client.query(
-          'SELECT p.*,o.name AS organization_name FROM providers p JOIN organizations o ON o.id=p.organization_id ORDER BY p.created_at DESC LIMIT 100',
+          `SELECT p.*,o.name AS organization_name,o.status AS organization_status,
+                  (o.created_by=$1 OR EXISTS(SELECT 1 FROM organization_memberships m
+                    WHERE m.organization_id=o.id AND m.user_id=$1)) AS self_owned
+             FROM providers p JOIN organizations o ON o.id=p.organization_id
+            ORDER BY (o.status<>'approved'), (p.status='verified'), p.created_at DESC LIMIT 200`,
+          [a.actor.id],
         )
       ).rows,
     };
@@ -150,6 +155,19 @@ export const providerRoutes: FastifyPluginAsync = async (app) => {
     const p = (await a.client.query('SELECT * FROM providers WHERE id=$1 FOR UPDATE', [id(r)]))
       .rows[0];
     if (!p) throw missing();
+    const org = (
+      await a.client.query<{ status: string }>('SELECT status FROM organizations WHERE id=$1', [
+        p.organization_id,
+      ])
+    ).rows[0];
+    // The customer directory only shows providers whose organization is
+    // approved, so verifying a provider under a pending organization would
+    // silently hide it. Make the dependency explicit instead of failing quietly.
+    if (b.status === 'verified' && org?.status !== 'approved')
+      throw new IdentityError(
+        409,
+        'Approve this provider’s organization before verifying the provider, so it becomes visible to customers.',
+      );
     const conflict = await a.client.query(
       'SELECT id FROM organizations WHERE id=$1 AND (created_by=$2 OR EXISTS(SELECT 1 FROM organization_memberships WHERE organization_id=$1 AND user_id=$2))',
       [p.organization_id, a.actor.id],

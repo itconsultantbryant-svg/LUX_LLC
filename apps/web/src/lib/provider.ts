@@ -14,6 +14,9 @@ export type Provider = {
   legal_name: string;
   license_number: string;
   status: string;
+  organization_name?: string;
+  organization_status?: string;
+  self_owned?: boolean;
   address: { line?: string; phone?: string };
   valid_until?: string;
 };

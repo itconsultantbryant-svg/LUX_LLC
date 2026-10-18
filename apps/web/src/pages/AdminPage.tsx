@@ -23,6 +23,8 @@ type Provider = {
   legal_name: string;
   license_number: string;
   organization_name: string;
+  organization_status: string;
+  self_owned: boolean;
   status: string;
   created_at: string;
 };
@@ -96,6 +98,18 @@ export function AdminPage() {
     return () => {
       active = false;
     };
+  }, [isAdmin, refresh]);
+
+  // Keep the console live: newly submitted providers and organization reviews
+  // appear without a manual reload. Mutations still refresh immediately.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const timer = setInterval(() => {
+      void refresh().catch(() => {
+        /* transient; the next poll and manual actions recover */
+      });
+    }, 15000);
+    return () => clearInterval(timer);
   }, [isAdmin, refresh]);
 
   async function act(work: () => Promise<void>) {
@@ -247,77 +261,99 @@ export function AdminPage() {
             <article className="panel">
               <h2>Provider verification</h2>
               <p>
-                Verification requires registry evidence and an expiry. You cannot verify providers
-                you own.
+                Verification requires registry evidence and an expiry, and the provider’s
+                organization must already be approved so customers can see it. You cannot verify
+                providers you own.
               </p>
               <ul className="activity-list">
-                {providers.map((provider) => (
-                  <li key={provider.id}>
-                    <div>
-                      <strong>{provider.legal_name}</strong>
-                      <p>
-                        {provider.organization_name} · licence {provider.license_number} ·{' '}
-                        {provider.status}
-                      </p>
-                    </div>
-                    {provider.status !== 'verified' && (
-                      <div className="button-row">
-                        <button
-                          className="btn btn--primary"
-                          disabled={busy || note.trim().length < 5}
-                          onClick={() =>
-                            void act(async () => {
-                              await apiPost(`/api/admin/providers/${provider.id}/reviews`, {
-                                status: 'verified',
-                                note,
-                                evidenceReference: `registry-${provider.id.slice(0, 8)}`,
-                                validDays: Number(validDays),
-                              });
-                              setNote('');
-                              await refresh();
-                              setNotice(`${provider.legal_name} verified.`);
-                            })
-                          }
-                        >
-                          Verify
-                        </button>
-                        <button
-                          className="btn btn--ghost"
-                          disabled={busy || note.trim().length < 5}
-                          onClick={() =>
-                            void act(async () => {
-                              await apiPost(`/api/admin/providers/${provider.id}/reviews`, {
-                                status: 'rejected',
-                                note,
-                                evidenceReference: `registry-${provider.id.slice(0, 8)}`,
-                                validDays: Number(validDays),
-                              });
-                              setNote('');
-                              await refresh();
-                              setNotice(`${provider.legal_name} rejected.`);
-                            })
-                          }
-                        >
-                          Reject
-                        </button>
+                {providers.map((provider) => {
+                  const orgApproved = provider.organization_status === 'approved';
+                  const decisionReady =
+                    note.trim().length >= 8 &&
+                    !provider.self_owned &&
+                    Number.isInteger(Number(validDays)) &&
+                    Number(validDays) >= 1 &&
+                    Number(validDays) <= 365;
+                  return (
+                    <li key={provider.id}>
+                      <div>
+                        <strong>{provider.legal_name}</strong>
+                        <p>
+                          {provider.organization_name} · organization {provider.organization_status}{' '}
+                          · licence {provider.license_number} · {provider.status}
+                        </p>
+                        {!orgApproved && (
+                          <small>
+                            Approve the organization in the Organizations section before verifying.
+                          </small>
+                        )}
+                        {provider.self_owned && (
+                          <small>
+                            An independent verifier must review an organization you own.
+                          </small>
+                        )}
                       </div>
-                    )}
-                  </li>
-                ))}
+                      {provider.status !== 'verified' && (
+                        <div className="button-row">
+                          <button
+                            className="btn btn--primary"
+                            disabled={busy || !decisionReady || !orgApproved}
+                            onClick={() =>
+                              void act(async () => {
+                                await apiPost(`/api/admin/providers/${provider.id}/reviews`, {
+                                  status: 'verified',
+                                  note,
+                                  evidenceReference: `registry-${provider.id.slice(0, 8)}`,
+                                  validDays: Number(validDays),
+                                });
+                                setNote('');
+                                await refresh();
+                                setNotice(`${provider.legal_name} verified.`);
+                              })
+                            }
+                          >
+                            Verify
+                          </button>
+                          <button
+                            className="btn btn--ghost"
+                            disabled={busy || !decisionReady}
+                            onClick={() =>
+                              void act(async () => {
+                                await apiPost(`/api/admin/providers/${provider.id}/reviews`, {
+                                  status: 'rejected',
+                                  note,
+                                  evidenceReference: `registry-${provider.id.slice(0, 8)}`,
+                                  validDays: Number(validDays),
+                                });
+                                setNote('');
+                                await refresh();
+                                setNotice(`${provider.legal_name} rejected.`);
+                              })
+                            }
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
               <div className="app-form">
-                <label htmlFor="prov-note">Review note (required for a decision)</label>
+                <label htmlFor="prov-note">Review note (at least 8 characters)</label>
                 <input
                   id="prov-note"
-                  minLength={5}
+                  minLength={8}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                 />
-                <label htmlFor="valid-days">Verification valid for (days)</label>
+                <label htmlFor="valid-days">Verification valid for (1–365 days)</label>
                 <input
                   id="valid-days"
                   inputMode="numeric"
                   pattern="[0-9]+"
+                  min={1}
+                  max={365}
                   value={validDays}
                   onChange={(e) => setValidDays(e.target.value.replace(/\D/g, '').slice(0, 3))}
                 />

@@ -255,7 +255,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
            (SELECT count(*) FROM users WHERE suspended_at IS NULL)::text AS customers,
            (SELECT count(*) FROM organizations WHERE status='pending')::text AS pending_organizations,
            (SELECT count(*) FROM organizations WHERE status='approved')::text AS approved_organizations,
-           (SELECT count(*) FROM providers WHERE status<>'verified')::text AS pending_providers,
+           (SELECT count(*) FROM providers WHERE status='pending')::text AS pending_providers,
            (SELECT count(*) FROM providers WHERE status='verified')::text AS verified_providers,
            (SELECT count(*) FROM disputes WHERE status NOT IN ('resolved','withdrawn'))::text AS open_disputes,
            (SELECT count(*) FROM transaction_receipts WHERE status='completed')::text AS unread_receipts,

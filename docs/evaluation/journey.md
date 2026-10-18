@@ -1,7 +1,7 @@
 # LUX evaluation report
 
 - Dataset version: `journey-v1`
-- Generated: 2026-10-18T12:48:51.504Z
+- Generated: 2026-10-18T13:28:41.138Z
 - Cases: 0 extraction, 0 validation scenarios, 1 payments, 8 tasks
 - Necessary review not suppressed: **yes**
 

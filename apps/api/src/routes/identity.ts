@@ -162,7 +162,13 @@ export const identityRoutes: FastifyPluginAsync<{ service?: IdentityService }> =
           ? `SELECT u.id FROM users u JOIN user_roles r ON r.user_id=u.id
               WHERE r.role='platform_admin' AND u.suspended_at IS NULL AND u.phone_e164=$1 LIMIT 1`
           : `SELECT u.id FROM users u JOIN user_roles r ON r.user_id=u.id
-              WHERE r.role='platform_admin' AND u.suspended_at IS NULL ORDER BY u.created_at, u.id LIMIT 1`,
+              WHERE r.role='platform_admin' AND u.suspended_at IS NULL
+              ORDER BY EXISTS(
+                SELECT 1 FROM organizations o
+                 WHERE o.created_by=u.id
+                    OR EXISTS(SELECT 1 FROM organization_memberships m
+                               WHERE m.organization_id=o.id AND m.user_id=u.id)
+              ), u.created_at, u.id LIMIT 1`,
         app.ctx.env.ADMIN_PHONE ? [app.ctx.env.ADMIN_PHONE] : [],
       )
     ).rows[0];

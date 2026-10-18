@@ -25,7 +25,7 @@ pnpm seed:admin
 ```
 
 This grants `customer`, `reviewer`, and `platform_admin` to the seed phone
-(`+999700000003` by default), creates an 8-hour sandbox session with MFA already
+(`+999700000009` by default), creates an 8-hour sandbox session with MFA already
 verified, and prints the `hw_session` cookie to paste into the browser on the app
 origin. It refuses to run against production or a non-dev database and creates no
 funds or settlement. Open `/institutional/reviews` and `/institutional/metrics`.

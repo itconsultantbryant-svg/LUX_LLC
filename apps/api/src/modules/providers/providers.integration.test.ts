@@ -226,6 +226,44 @@ describe.skipIf(process.env.PROVIDER_DATABASE_TESTS !== '1')(
         manager.id,
       ]);
     });
+    it('refuses to verify a provider until its organization is approved', async () => {
+      const pendingOrg = randomUUID();
+      await pool.query(
+        "INSERT INTO organizations(id,name,kind,registration_number,created_by,status) VALUES($1,'SYNTHETIC pending provider','provider','TEST-ONLY-PENDING',$2,'pending')",
+        [pendingOrg, manager.id],
+      );
+      const pendingProvider = randomUUID();
+      await pool.query(
+        "INSERT INTO providers(id,organization_id,legal_name,license_number,status) VALUES($1,$2,'SYNTHETIC Pending Clinic','TEST-PENDING-LIC','pending')",
+        [pendingProvider, pendingOrg],
+      );
+      const blocked = await post(
+        `/api/admin/providers/${pendingProvider}/reviews`,
+        {
+          status: 'verified',
+          note: 'Independent review before organization approval',
+          evidenceReference: 'TEST pending evidence reference',
+          validDays: 90,
+        },
+        verifier,
+      );
+      expect(blocked.statusCode, blocked.body).toBe(409);
+      await pool.query("UPDATE organizations SET status='approved' WHERE id=$1", [pendingOrg]);
+      const allowed = await post(
+        `/api/admin/providers/${pendingProvider}/reviews`,
+        {
+          status: 'verified',
+          note: 'Independent review after organization approval',
+          evidenceReference: 'TEST approved evidence reference',
+          validDays: 90,
+        },
+        verifier,
+      );
+      expect(allowed.statusCode, allowed.body).toBe(200);
+      // Restore the pending state so this throwaway provider does not leak into
+      // the shared directory used by later cases in this file.
+      await pool.query("UPDATE organizations SET status='pending' WHERE id=$1", [pendingOrg]);
+    });
     it('associates the exact customer once, calculates total and blocks cross-organization access', async () => {
       const b = await createBill();
       const replay = await post('/api/provider/bills', b.body);

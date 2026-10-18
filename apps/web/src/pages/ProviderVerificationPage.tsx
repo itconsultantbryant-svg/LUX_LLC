@@ -30,6 +30,7 @@ export function ProviderVerificationPage() {
       active = false;
     };
   }, [version]);
+  const chosen = providers.find((p) => p.id === selected);
   return (
     <section className="workspace flow-layout">
       <h1>Provider verification review</h1>
@@ -83,9 +84,19 @@ export function ProviderVerificationPage() {
           {providers.map((p) => (
             <option key={p.id} value={p.id}>
               {p.legal_name} · {p.license_number} · {p.status}
+              {p.organization_status ? ` · organization ${p.organization_status}` : ''}
             </option>
           ))}
         </select>
+        {chosen?.organization_status && chosen.organization_status !== 'approved' && (
+          <p>
+            This provider’s organization is <strong>{chosen.organization_status}</strong>. It must
+            be approved before a verification will make the provider visible to customers.
+          </p>
+        )}
+        {chosen?.self_owned && (
+          <p>An independent verifier must review a provider from an organization you own.</p>
+        )}
         <label htmlFor="verification-decision">Decision</label>
         <select
           id="verification-decision"
@@ -130,7 +141,15 @@ export function ProviderVerificationPage() {
           <input type="checkbox" required /> I personally checked the external evidence and am
           independent of this provider.
         </label>
-        <button className="btn btn--primary" disabled={busy || !selected}>
+        <button
+          className="btn btn--primary"
+          disabled={
+            busy ||
+            !selected ||
+            chosen?.self_owned ||
+            (status === 'verified' && chosen?.organization_status !== 'approved')
+          }
+        >
           {busy ? 'Recording review…' : 'Record verification decision'}
         </button>
       </form>

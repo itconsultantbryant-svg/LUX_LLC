@@ -120,7 +120,16 @@ export function ProviderScanner({ onSelect }: { onSelect: (id: string) => void }
       frame();
     } catch (e) {
       stop();
-      setError(e instanceof Error ? e.message : 'Camera access failed. Use the directory instead.');
+      const denied =
+        e instanceof DOMException &&
+        (e.name === 'NotAllowedError' || e.name === 'SecurityError' || e.name === 'NotFoundError');
+      setError(
+        denied
+          ? 'Camera permission is blocked. Allow camera access for this site, then retry, or upload a QR image / paste the provider link.'
+          : e instanceof Error
+            ? e.message
+            : 'Camera access failed. Use the directory instead.',
+      );
     } finally {
       setBusy(false);
     }

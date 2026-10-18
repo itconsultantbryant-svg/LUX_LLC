@@ -29,7 +29,7 @@ authorized role-management API.
 ready-to-use administrator without a manual MFA enrolment:
 
 ```bash
-pnpm seed:admin            # default phone +999700000003
+pnpm seed:admin            # default phone +999700000009
 pnpm seed:admin +2317...   # or a specific E.164 phone
 ```
 

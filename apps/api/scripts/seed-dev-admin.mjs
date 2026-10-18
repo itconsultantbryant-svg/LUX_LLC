@@ -16,7 +16,10 @@ import pg from 'pg';
 config({ quiet: true });
 
 const SESSION_SECONDS = 8 * 60 * 60;
-const DEFAULT_PHONE = '+999700000003';
+// The seeded customer/reviewer (+999700000003) owns the synthetic provider
+// organizations, so it can never pass the independent-verification rule. The
+// standalone administrator is a separate, organization-free identity.
+const DEFAULT_PHONE = '+999700000009';
 const phone = process.argv[2] ?? DEFAULT_PHONE;
 if (!/^\+[1-9][0-9]{7,14}$/.test(phone))
   throw new Error(`Usage: node scripts/seed-dev-admin.mjs [+E164 phone], got "${phone}"`);
