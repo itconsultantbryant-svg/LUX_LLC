@@ -59,7 +59,18 @@ export class Access {
       throw new IdentityError(403, 'Sign in again before changing account security.');
   }
   mfa() {
-    if (!this.actor.mfaVerifiedAt || this.actor.mfaVerifiedAt.getTime() < Date.now() - 15 * 60_000)
+    const fresh =
+      this.actor.mfaVerifiedAt !== null &&
+      this.actor.mfaVerifiedAt.getTime() >= Date.now() - 15 * 60_000;
+    // Operator-only seed/bootstrap scripts mint sandbox sessions with MFA already
+    // verified against a non-production database. With no authenticator to
+    // re-verify, such a session stays valid for the whole session (production
+    // accepts verified-phone sessions only and never reaches here with sandbox).
+    const sandboxVerified =
+      this.actor.mfaVerifiedAt !== null &&
+      this.actor.authMethod === 'sandbox' &&
+      this.env.APP_ENV !== 'production';
+    if (!fresh && !sandboxVerified)
       throw new IdentityError(403, 'Verify your authenticator code to continue.');
   }
   platform() {
