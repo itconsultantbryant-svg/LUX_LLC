@@ -1,6 +1,6 @@
 {
   "datasetVersion": "evaluation-v1",
-  "generatedAt": "2026-10-15T23:37:26.452Z",
+  "generatedAt": "2026-10-18T12:42:12.774Z",
   "command": "test:evaluation",
   "counts": {
     "extractionCases": 11,
@@ -130,9 +130,9 @@
     {
       "id": "ai.latency.p95",
       "label": "AI extraction latency — p95",
-      "numerator": 306,
+      "numerator": 17,
       "denominator": 11,
-      "value": 306,
+      "value": 17,
       "unit": "milliseconds",
       "definition": "95th-percentile wall-clock duration of AI extraction calls, over all AI-involving extraction cases."
     },

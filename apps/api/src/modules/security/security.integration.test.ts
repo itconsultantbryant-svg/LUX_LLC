@@ -665,5 +665,178 @@ describe.skipIf(process.env.SECURITY_DATABASE_TESTS !== '1')(
           .status,
       ).toBe('suspended');
     });
+    it('manages wallet PINs, universal receipts and the notification feed with strict isolation', async () => {
+      const owner = await actor(),
+        other = await actor(),
+        admin = await actor({ globalRole: 'platform_admin' });
+
+      // --- Wallet PIN ------------------------------------------------------
+      expect((await request(owner, 'GET', '/api/customers/pin')).json().set).toBe(false);
+      expect((await request(owner, 'POST', '/api/customers/pin', { pin: '12a4' })).statusCode).toBe(
+        400,
+      );
+      const set = await request(owner, 'POST', '/api/customers/pin', { pin: '2468' });
+      expect(set.statusCode, set.body).toBe(200);
+      expect(set.json().set).toBe(true);
+      const stored = (
+        await pool.query('SELECT pin_hash FROM user_pins WHERE user_id=$1', [owner.id])
+      ).rows[0].pin_hash as string;
+      expect(stored).not.toContain('2468');
+      expect(stored.startsWith('scrypt$')).toBe(true);
+      expect((await request(owner, 'GET', '/api/customers/pin')).json().set).toBe(true);
+      expect(
+        (await request(owner, 'POST', '/api/customers/pin/verify', { pin: '2468' })).statusCode,
+      ).toBe(200);
+      expect(
+        (await request(owner, 'POST', '/api/customers/pin/verify', { pin: '0000' })).statusCode,
+      ).toBe(403);
+      // Changing requires the current PIN; the new PIN then verifies.
+      expect((await request(owner, 'POST', '/api/customers/pin', { pin: '1111' })).statusCode).toBe(
+        403,
+      );
+      expect(
+        (await request(owner, 'POST', '/api/customers/pin', { pin: '1111', currentPin: '2468' }))
+          .statusCode,
+      ).toBe(200);
+      expect(
+        (await request(owner, 'POST', '/api/customers/pin/verify', { pin: '1111' })).statusCode,
+      ).toBe(200);
+      // Each customer's PIN is independent and unauthenticated reads fail.
+      expect((await request(other, 'GET', '/api/customers/pin')).json().set).toBe(false);
+      expect((await request(undefined, 'GET', '/api/customers/pin')).statusCode).toBe(401);
+
+      // --- Universal receipts ---------------------------------------------
+      const ownerReceipt = randomUUID();
+      const strangerReceipt = randomUUID();
+      await pool.query(
+        `INSERT INTO transaction_receipts(id,number,kind,direction,status,from_user_id,from_label,to_user_id,to_label,amount_minor,currency)
+         VALUES($1,'LUX-DEP-TEST-OWNER','deposit','credit','completed',NULL,'Orange Money',$2,'Synthetic owner',5000,'LRD')`,
+        [ownerReceipt, owner.id],
+      );
+      await pool.query(
+        `INSERT INTO transaction_receipts(id,number,kind,direction,status,from_user_id,from_label,to_user_id,to_label,amount_minor,currency)
+         VALUES($1,'LUX-PAY-TEST-STRANGER','payment','debit','completed',$2,'Synthetic stranger',$2,'Synthetic stranger',5000,'LRD')`,
+        [strangerReceipt, other.id],
+      );
+      const listed = await request(owner, 'GET', '/api/receipts');
+      expect(listed.statusCode, listed.body).toBe(200);
+      const numbers = listed.json().receipts.map((r: { number: string }) => r.number);
+      expect(numbers).toContain('LUX-DEP-TEST-OWNER');
+      expect(numbers).not.toContain('LUX-PAY-TEST-STRANGER');
+      expect((await request(owner, 'GET', `/api/receipts/${strangerReceipt}`)).statusCode).toBe(
+        404,
+      );
+      expect((await request(owner, 'GET', `/api/receipts/${ownerReceipt}`)).statusCode).toBe(200);
+
+      // Admin oversight requires the platform role.
+      expect((await request(owner, 'GET', '/api/admin/receipts')).statusCode).toBe(403);
+      const oversight = await request(admin, 'GET', '/api/admin/receipts');
+      expect(oversight.statusCode, oversight.body).toBe(200);
+      expect(oversight.json().receipts.length).toBeGreaterThanOrEqual(2);
+
+      // Revoke cancels standing; reverse records the opposite movement once.
+      const revoked = await request(admin, 'POST', `/api/admin/receipts/${ownerReceipt}/revoke`, {
+        reason: 'Synthetic revocation reason',
+      });
+      expect(revoked.statusCode, revoked.body).toBe(200);
+      expect(revoked.json().receipt.status).toBe('revoked');
+      const reversal = await request(
+        admin,
+        'POST',
+        `/api/admin/receipts/${strangerReceipt}/reverse`,
+        { reason: 'Synthetic reversal reason' },
+      );
+      expect(reversal.statusCode, reversal.body).toBe(200);
+      expect(reversal.json().receipt.kind).toBe('reversal');
+      expect(reversal.json().receipt.reversalOfId).toBe(strangerReceipt);
+      const reversedRow = (
+        await pool.query('SELECT status,reversed_by_id FROM transaction_receipts WHERE id=$1', [
+          strangerReceipt,
+        ])
+      ).rows[0];
+      expect(reversedRow.status).toBe('reversed');
+      expect(reversedRow.reversed_by_id).not.toBeNull();
+      expect(
+        (
+          await request(admin, 'POST', `/api/admin/receipts/${strangerReceipt}/reverse`, {
+            reason: 'Synthetic double reversal attempt',
+          })
+        ).statusCode,
+      ).toBe(409);
+
+      // --- Notification feed ----------------------------------------------
+      await pool.query(
+        `INSERT INTO notifications(user_id,channel,template,payload,status,idempotency_key,delivered_at)
+         VALUES($1,'in_app','deposit.confirmed','{"title":"Top-up complete","body":"Funds added"}','delivered',$2,now())`,
+        [owner.id, `test-notify-owner-${owner.id}`],
+      );
+      await pool.query(
+        `INSERT INTO notifications(user_id,channel,template,payload,status,idempotency_key,delivered_at)
+         VALUES($1,'in_app','deposit.confirmed','{"title":"Private","body":"Other account"}','delivered',$2,now())`,
+        [other.id, `test-notify-other-${other.id}`],
+      );
+      const feed = await request(owner, 'GET', '/api/notifications');
+      expect(feed.statusCode, feed.body).toBe(200);
+      expect(feed.json().notifications).toHaveLength(1);
+      expect(feed.json().unread).toBe(1);
+      expect((await request(owner, 'GET', '/api/notifications/unread-count')).json().unread).toBe(
+        1,
+      );
+      const notificationId = feed.json().notifications[0].id as string;
+      expect(
+        (await request(owner, 'POST', `/api/notifications/${notificationId}/read`, {})).statusCode,
+      ).toBe(200);
+      expect((await request(owner, 'GET', '/api/notifications/unread-count')).json().unread).toBe(
+        0,
+      );
+      // Another customer's notification cannot be marked read.
+      const otherNotification = (
+        await pool.query('SELECT id FROM notifications WHERE user_id=$1', [other.id])
+      ).rows[0].id as string;
+      expect(
+        (await request(owner, 'POST', `/api/notifications/${otherNotification}/read`, {}))
+          .statusCode,
+      ).toBe(404);
+      await pool.query(
+        `INSERT INTO notifications(user_id,channel,template,payload,status,idempotency_key,delivered_at)
+         VALUES($1,'in_app','deposit.confirmed','{"title":"More","body":"More"}','delivered',$2,now())`,
+        [owner.id, `test-notify-owner2-${owner.id}`],
+      );
+      expect((await request(owner, 'POST', '/api/notifications/read-all', {})).statusCode).toBe(
+        200,
+      );
+      expect((await request(owner, 'GET', '/api/notifications/unread-count')).json().unread).toBe(
+        0,
+      );
+
+      // --- Admin overview --------------------------------------------------
+      expect((await request(owner, 'GET', '/api/admin/overview')).statusCode).toBe(403);
+      const overview = await request(admin, 'GET', '/api/admin/overview');
+      expect(overview.statusCode, overview.body).toBe(200);
+      expect(typeof overview.json().customers).toBe('number');
+      expect(Array.isArray(overview.json().flags)).toBe(true);
+    });
+    it('offers password administrator sign-in outside production only', async () => {
+      await actor({ globalRole: 'platform_admin' });
+      const wrong = await request(undefined, 'POST', '/api/auth/admin-login', {
+        password: 'not-the-right-password',
+      });
+      expect(wrong.statusCode).toBe(401);
+      const ok = await request(undefined, 'POST', '/api/auth/admin-login', {
+        password: app.ctx.env.ADMIN_PASSWORD,
+      });
+      expect(ok.statusCode, ok.body).toBe(200);
+      expect(ok.headers['set-cookie']).toBeDefined();
+      // A production build never exposes the password endpoint; the identity
+      // onRequest gate already refuses sandbox sign-in with 503.
+      const prod = await request(
+        undefined,
+        'POST',
+        '/api/auth/admin-login',
+        { password: app.ctx.env.ADMIN_PASSWORD },
+        production,
+      );
+      expect(prod.statusCode).toBe(503);
+    });
   },
 );

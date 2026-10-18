@@ -6,7 +6,7 @@ import {
   type OtpChallengeResponse,
 } from '@healthwallet/shared';
 import { ApiError, apiGet, apiPost } from '../lib/api';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { isDemoLike } from '../config';
 import { useAuth } from '../features/auth-context';
 import './AccountPage.css';
@@ -19,6 +19,7 @@ const CONSENT_LABELS = {
 
 export function AccountPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { refresh: refreshAuth } = useAuth();
   const requestedReturn: unknown = location.state?.returnTo;
   const returnTo =
@@ -42,6 +43,7 @@ export function AccountPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -119,6 +121,16 @@ export function AccountPage() {
       setHealthData(false);
       setNotice(data.simulation ? 'Signed in to your sandbox account.' : 'Signed in.');
       await refreshAuth();
+    });
+  }
+
+  async function adminLogin(event: FormEvent) {
+    event.preventDefault();
+    await perform(async () => {
+      await apiPost<ProfileResponse>('/api/auth/admin-login', { password: adminPassword });
+      setAdminPassword('');
+      await refreshAuth();
+      navigate('/admin');
     });
   }
 
@@ -323,6 +335,31 @@ export function AccountPage() {
                 : 'Send verification code'}
           </button>
         </form>
+      )}
+      {!profile && !checking && available && (
+        <details className="account__admin">
+          <summary>Administrator sign-in</summary>
+          <p>
+            For platform administrators. This password sign-in is available outside production only;
+            in production, administrators authenticate with a verified phone number and an
+            authenticator code.
+          </p>
+          <form onSubmit={(event) => void adminLogin(event)}>
+            <label htmlFor="admin-password">Administrator password</label>
+            <input
+              id="admin-password"
+              type="password"
+              autoComplete="off"
+              required
+              value={adminPassword}
+              onChange={(event) => setAdminPassword(event.target.value)}
+              disabled={busy}
+            />
+            <button className="btn btn--primary" type="submit" disabled={busy}>
+              Sign in as administrator
+            </button>
+          </form>
+        </details>
       )}
       {error ? (
         <p role="alert" className="account__error">

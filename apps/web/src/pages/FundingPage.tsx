@@ -86,6 +86,7 @@ export function FundingPage({ mode }: { mode: 'save' | 'support' | 'history' | '
   const [amount, setAmount] = useState('');
   const [goalId, setGoalId] = useState('');
   const [international, setInternational] = useState(false);
+  const [pin, setPin] = useState('');
   const [quote, setQuote] = useState<Payment>();
   const [receipt, setReceipt] = useState<Payment>();
   const [share, setShare] = useState('');
@@ -345,33 +346,59 @@ export function FundingPage({ mode }: { mode: 'save' | 'support' | 'history' | '
               </h2>
               <PaymentDetails payment={quote} />
               {quote.status === 'quoted' ? (
-                <div className="button-row">
-                  <button
-                    className="btn btn--primary"
-                    disabled={busy}
-                    onClick={() =>
-                      void action(async () => {
-                        setQuote(
-                          await apiPost<Payment>(`/api/funding/payments/${quote.id}/authorize`, {
-                            accepted: true,
-                          }),
-                        );
-                        setMessage(
-                          'Authorized. Waiting for payment confirmation; available funds have not increased.',
-                        );
-                      })
-                    }
-                  >
-                    Authorize {formatMinor(quote.totalMinor, quote.currency)}
-                  </button>
-                  <button
-                    className="btn btn--ghost"
-                    disabled={busy}
-                    onClick={() => setQuote(undefined)}
-                  >
-                    Change details
-                  </button>
-                </div>
+                <>
+                  <div className="app-form">
+                    <label htmlFor="orange-pin">Orange Money PIN</label>
+                    <input
+                      id="orange-pin"
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      pattern="[0-9]{4}"
+                      maxLength={4}
+                      required
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      aria-describedby="orange-pin-help"
+                    />
+                    <p id="orange-pin-help" className="muted">
+                      Enter the 4-digit PIN for your Orange Money wallet. The platform does not see
+                      or store it.
+                    </p>
+                  </div>
+                  <div className="button-row">
+                    <button
+                      className="btn btn--primary"
+                      disabled={busy}
+                      onClick={() =>
+                        void action(async () => {
+                          if (!/^\d{4}$/.test(pin)) {
+                            throw new Error('Enter your 4-digit Orange Money PIN.');
+                          }
+                          setQuote(
+                            await apiPost<Payment>(`/api/funding/payments/${quote.id}/authorize`, {
+                              accepted: true,
+                              pin,
+                            }),
+                          );
+                          setPin('');
+                          setMessage(
+                            'Authorized. Waiting for payment confirmation; available funds have not increased.',
+                          );
+                        })
+                      }
+                    >
+                      Authorize {formatMinor(quote.totalMinor, quote.currency)}
+                    </button>
+                    <button
+                      className="btn btn--ghost"
+                      disabled={busy}
+                      onClick={() => setQuote(undefined)}
+                    >
+                      Change details
+                    </button>
+                  </div>
+                </>
               ) : (
                 <>
                   <p>

@@ -1629,3 +1629,52 @@ export const accountDeletionRequests = pgTable(
     ),
   ],
 );
+
+// Health-wallet spending PIN. Stored only as a salted scrypt hash; the raw PIN
+// is never persisted. Separate from any Orange Money PIN, which this platform
+// never stores (the Orange PIN step is simulated at the adapter boundary).
+export const userPins = pgTable('user_pins', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  pinHash: text('pin_hash').notNull(),
+  failedAttempts: integer('failed_attempts').notNull().default(0),
+  lockedUntil: timestamp('locked_until', { withTimezone: true }),
+  createdAt: created(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Universal transaction receipt: one row per money movement (deposit, payment,
+// contribution, reversal) with a human-readable unique number, explicit from/to
+// parties, and evidence for tracking, revocation and reversal.
+export const transactionReceipts = pgTable(
+  'transaction_receipts',
+  {
+    id: recordId(),
+    number: text('number').notNull().unique(),
+    kind: text('kind').notNull(),
+    direction: text('direction').notNull(),
+    status: text('status').notNull().default('completed'),
+    fromUserId: uuid('from_user_id').references(() => users.id),
+    fromLabel: text('from_label').notNull(),
+    toUserId: uuid('to_user_id').references(() => users.id),
+    toLabel: text('to_label').notNull(),
+    amountMinor: minor('amount_minor').notNull(),
+    currency: currencyCode(),
+    reference: text('reference'),
+    detail: jsonb('detail').notNull().default({}),
+    reversalOfId: uuid('reversal_of_id'),
+    reversedById: uuid('reversed_by_id'),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedBy: uuid('revoked_by').references(() => users.id),
+    revokeReason: text('revoke_reason'),
+    issuedAt: timestamp('issued_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: created(),
+  },
+  (t) => [
+    check(
+      'transaction_receipt_valid',
+      sql`${t.kind} IN ('deposit','payment','contribution','transfer','reversal') AND ${t.direction} IN ('credit','debit') AND ${t.status} IN ('completed','revoked','reversed') AND ${t.amountMinor}>0`,
+    ),
+  ],
+);

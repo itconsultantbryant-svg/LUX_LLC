@@ -64,6 +64,15 @@ const EnvSchema = z
     RETENTION_AUDIT_DAYS: z.coerce.number().int().min(30).max(36500).default(2555),
     /** Enables the sandbox USSD menu. Off by default so the module is honestly unavailable. */
     USSD_SANDBOX_ENABLED: z.coerce.boolean().default(false),
+    /** Password for the platform-admin sign-in button. Only honoured outside
+     * production, where administrators sign in with a verified phone and MFA. */
+    ADMIN_PASSWORD: z.string().min(8).max(200).default('admin@LUX231'),
+    /** Which platform-admin account the password button signs in as. Falls back
+     * to the earliest platform administrator when unset. */
+    ADMIN_PHONE: z
+      .string()
+      .regex(/^\+[1-9]\d{7,14}$/)
+      .optional(),
   })
   .superRefine((value, ctx) => {
     if (value.APP_ENV === 'production') {

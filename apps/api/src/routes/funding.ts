@@ -5,6 +5,7 @@ import { LedgerError, LedgerService, money } from '../modules/ledger/service.js'
 import { IdentityError } from '../modules/identity/service.js';
 import { Access, withSession } from '../modules/security/access.js';
 import { limit } from '../modules/security/limits.js';
+import { assertOrangePin } from '../modules/security/pins.js';
 import { sessionToken } from './identity.js';
 const amount = z
   .string()
@@ -174,9 +175,24 @@ export const fundingRoutes: FastifyPluginAsync = async (app) => {
     );
   });
   route('POST', '/api/funding/payments/:id/authorize', async (a, r) => {
-    z.object({ accepted: z.literal(true) })
+    const b = z
+      .object({
+        accepted: z.literal(true),
+        pin: z
+          .string()
+          .regex(/^\d{4}$/)
+          .optional(),
+      })
       .strict()
       .parse(r.body);
+    // Moving money from Orange Money (a deposit, or a contribution paid for from
+    // Orange) requires the customer's Orange Money PIN. The automated harness runs
+    // as APP_ENV=test and drives the adapter directly, so the interactive gate is
+    // enforced in every other environment.
+    if (app.ctx.env.APP_ENV !== 'test') {
+      if (!b.pin) throw new IdentityError(400, 'Enter your 4-digit Orange Money PIN to continue.');
+      assertOrangePin(b.pin);
+    }
     return service.authorize(a.client, a.actor.id, id(r));
   });
   route('POST', '/api/funding/payments/:id/simulate', async (a, r) => {

@@ -5,6 +5,7 @@ import { IdentityError } from '../modules/identity/service.js';
 import { AccountService } from '../modules/account/service.js';
 import { allFlags, flagKeys, isFlagKey, setFlag } from '../modules/security/flags.js';
 import { retentionPolicy, runRetention } from '../modules/operations/retention.js';
+import { ReceiptsService, receiptView } from '../modules/receipts/service.js';
 import { sessionToken } from './identity.js';
 
 /**
@@ -15,6 +16,7 @@ import { sessionToken } from './identity.js';
  */
 export const adminRoutes: FastifyPluginAsync = async (app) => {
   const account = new AccountService();
+  const receipts = new ReceiptsService();
 
   app.setErrorHandler((e, _r, reply) => {
     if (e instanceof IdentityError) return reply.code(e.statusCode).send({ message: e.message });
@@ -232,5 +234,91 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       providerSuspended,
     });
     return { escalated: true, reviewCaseId: reviewCase.id, providerSuspended };
+  });
+
+  // ---- Dashboard overview -------------------------------------------------
+
+  route('GET', '/api/admin/overview', async (a) => {
+    a.platform();
+    const counts = (
+      await a.client.query<{
+        customers: string;
+        pending_organizations: string;
+        approved_organizations: string;
+        pending_providers: string;
+        verified_providers: string;
+        open_disputes: string;
+        unread_receipts: string;
+        confirmed_deposits: string;
+      }>(
+        `SELECT
+           (SELECT count(*) FROM users WHERE suspended_at IS NULL)::text AS customers,
+           (SELECT count(*) FROM organizations WHERE status='pending')::text AS pending_organizations,
+           (SELECT count(*) FROM organizations WHERE status='approved')::text AS approved_organizations,
+           (SELECT count(*) FROM providers WHERE status<>'verified')::text AS pending_providers,
+           (SELECT count(*) FROM providers WHERE status='verified')::text AS verified_providers,
+           (SELECT count(*) FROM disputes WHERE status NOT IN ('resolved','withdrawn'))::text AS open_disputes,
+           (SELECT count(*) FROM transaction_receipts WHERE status='completed')::text AS unread_receipts,
+           (SELECT count(*) FROM funding_payments WHERE status='confirmed')::text AS confirmed_deposits`,
+      )
+    ).rows[0];
+    return {
+      customers: Number(counts?.customers ?? 0),
+      pendingOrganizations: Number(counts?.pending_organizations ?? 0),
+      approvedOrganizations: Number(counts?.approved_organizations ?? 0),
+      pendingProviders: Number(counts?.pending_providers ?? 0),
+      verifiedProviders: Number(counts?.verified_providers ?? 0),
+      openDisputes: Number(counts?.open_disputes ?? 0),
+      receipts: Number(counts?.unread_receipts ?? 0),
+      confirmedDeposits: Number(counts?.confirmed_deposits ?? 0),
+      flags: await allFlags(a.client),
+    };
+  });
+
+  // ---- Receipt oversight --------------------------------------------------
+
+  route('GET', '/api/admin/receipts', async (a, r) => {
+    a.platform();
+    const query = z
+      .object({ limit: z.coerce.number().int().min(1).max(200).optional() })
+      .parse(r.query ?? {});
+    const rows = (
+      await a.client.query(
+        'SELECT * FROM transaction_receipts ORDER BY issued_at DESC, id DESC LIMIT $1',
+        [query.limit ?? 100],
+      )
+    ).rows;
+    return { receipts: rows.map((row) => receiptView(row)) };
+  });
+
+  route('POST', '/api/admin/receipts/:id/revoke', async (a, r) => {
+    a.platform();
+    const { id } = z.object({ id: z.uuid() }).parse(r.params);
+    const body = z
+      .object({ reason: z.string().trim().min(8).max(500) })
+      .strict()
+      .parse(r.body);
+    const receipt = await receipts.revoke(a.client, id, a.actor.id, body.reason);
+    await a.audit('receipt.revoked', 'transaction_receipt', receipt.id, { reason: body.reason });
+    return { receipt: receiptView(receipt) };
+  });
+
+  route('POST', '/api/admin/receipts/:id/reverse', async (a, r) => {
+    a.platform();
+    const { id } = z.object({ id: z.uuid() }).parse(r.params);
+    const body = z
+      .object({ reason: z.string().trim().min(8).max(500) })
+      .strict()
+      .parse(r.body);
+    const original = (
+      await a.client.query('SELECT * FROM transaction_receipts WHERE id=$1 FOR UPDATE', [id])
+    ).rows[0];
+    if (!original) throw missing();
+    const reversal = await receipts.reverse(a.client, original, a.actor.id, body.reason);
+    await a.audit('receipt.reversed', 'transaction_receipt', original.id, {
+      reason: body.reason,
+      reversalId: reversal.id,
+    });
+    return { receipt: receiptView(reversal) };
   });
 };

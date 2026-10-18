@@ -1,4 +1,6 @@
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { z } from 'zod';
 import {
   RecordConsentSchema,
   RequestOtpSchema,
@@ -6,7 +8,12 @@ import {
   CONSENT_VERSION,
   LIVE_CONSENT_VERSION,
 } from '@healthwallet/shared';
-import { IdentityError, IdentityService, SESSION_SECONDS } from '../modules/identity/service.js';
+import {
+  IdentityError,
+  IdentityService,
+  SESSION_SECONDS,
+  tokenHash,
+} from '../modules/identity/service.js';
 import { limit } from '../modules/security/limits.js';
 import { PostgresIdentityStore } from '../modules/identity/postgres.js';
 
@@ -132,5 +139,53 @@ export const identityRoutes: FastifyPluginAsync<{ service?: IdentityService }> =
     await service.logout(sessionToken(request));
     reply.header('Set-Cookie', cookie(request, '', 0));
     return { signedOut: true };
+  });
+
+  // Platform-admin password sign-in. This is the demo/operator convenience the
+  // brief asked for; it is hard-disabled in production, where an administrator
+  // signs in with a verified phone number and an authenticator code instead.
+  app.post('/api/auth/admin-login', async (request, reply) => {
+    if (app.ctx.env.APP_ENV === 'production')
+      return reply.code(404).send({ message: 'Not found.' });
+    await limit(app.ctx.pool, 'admin-login-ip', request.ip, 10, 900);
+    const body = z
+      .object({ password: z.string().min(1).max(200) })
+      .strict()
+      .parse(request.body);
+    const expected = Buffer.from(app.ctx.env.ADMIN_PASSWORD, 'utf8');
+    const supplied = Buffer.from(body.password, 'utf8');
+    const matches = expected.length === supplied.length && timingSafeEqual(expected, supplied);
+    if (!matches) throw new IdentityError(401, 'Incorrect administrator password.');
+    const admin = (
+      await app.ctx.pool.query<{ id: string }>(
+        app.ctx.env.ADMIN_PHONE
+          ? `SELECT u.id FROM users u JOIN user_roles r ON r.user_id=u.id
+              WHERE r.role='platform_admin' AND u.suspended_at IS NULL AND u.phone_e164=$1 LIMIT 1`
+          : `SELECT u.id FROM users u JOIN user_roles r ON r.user_id=u.id
+              WHERE r.role='platform_admin' AND u.suspended_at IS NULL ORDER BY u.created_at, u.id LIMIT 1`,
+        app.ctx.env.ADMIN_PHONE ? [app.ctx.env.ADMIN_PHONE] : [],
+      )
+    ).rows[0];
+    if (!admin)
+      throw new IdentityError(
+        503,
+        'No platform administrator is provisioned for password sign-in.',
+      );
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + SESSION_SECONDS * 1000);
+    await app.ctx.pool.query(
+      `INSERT INTO auth_sessions(token_hash,user_id,expires_at,auth_method,mfa_verified_at)
+       SELECT $1,$2,$3,'sandbox',now() WHERE EXISTS (SELECT 1 FROM users WHERE id=$2 AND suspended_at IS NULL)`,
+      [tokenHash(token), admin.id, expiresAt],
+    );
+    await app.ctx.pool.query(
+      "INSERT INTO audit_events(actor_user_id,event_type,entity_type,entity_id,payload) VALUES($1,'auth.admin_password_login','user',$1,'{}')",
+      [admin.id],
+    );
+    reply.header('Set-Cookie', cookie(request, token, SESSION_SECONDS));
+    return {
+      simulation: app.ctx.adapters.messaging.mode === 'sandbox',
+      profile: await service.profile(token),
+    };
   });
 };

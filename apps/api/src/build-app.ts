@@ -22,6 +22,9 @@ import { paymentsRoutes } from './routes/payments.js';
 import { assistantRoutes } from './routes/assistant.js';
 import { chatRoutes } from './routes/chat.js';
 import { locationRoutes } from './routes/location.js';
+import { pinRoutes } from './routes/pins.js';
+import { receiptRoutes } from './routes/receipts.js';
+import { notificationRoutes } from './routes/notifications.js';
 import { governanceRoutes } from './routes/governance.js';
 import { partnerRoutes } from './routes/partners.js';
 import { healthRoutes } from './routes/health.js';
@@ -90,6 +93,7 @@ export async function buildApp(deps: { env: Env; pool: pg.Pool; db: Db; adapters
     '/api/auth/config',
     '/api/auth/request-code',
     '/api/auth/verify-code',
+    '/api/auth/admin-login',
     '/api/auth/logout',
     '/api/meta',
     '/api/fees',
@@ -146,6 +150,9 @@ export async function buildApp(deps: { env: Env; pool: pg.Pool; db: Db; adapters
   await app.register(assistantRoutes);
   await app.register(chatRoutes);
   await app.register(locationRoutes);
+  await app.register(pinRoutes);
+  await app.register(receiptRoutes);
+  await app.register(notificationRoutes);
   await app.register(governanceRoutes);
   await app.register(partnerRoutes);
   await app.register(accountRoutes);

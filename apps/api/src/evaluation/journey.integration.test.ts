@@ -305,6 +305,22 @@ describe.skipIf(process.env.JOURNEY_DATABASE_TESTS !== '1')(
       });
       const replaySafe = replay.json().accepted === false;
 
+      // The confirm step also records one universal receipt and notifies the
+      // payer, so the movement shows in the customer's receipt feed.
+      const universal = await call('GET', '/api/receipts', cookie);
+      expect(universal.statusCode, universal.body).toBe(200);
+      const paymentReceipt = (universal.json().receipts as Array<Record<string, unknown>>).find(
+        (r) => r.kind === 'payment' && r.reference === intentId,
+      );
+      expect(paymentReceipt, 'payer sees a universal payment receipt').toBeTruthy();
+      const notices = await call('GET', '/api/notifications', cookie);
+      expect(notices.statusCode, notices.body).toBe(200);
+      expect(
+        (notices.json().notifications as Array<{ template: string }>).some(
+          (n) => n.template === 'payment.succeeded',
+        ),
+      ).toBe(true);
+
       payments.push({
         id: 'pay-clean-bill',
         label: 'A funded, confirmed bill is paid and a receipt is issued',

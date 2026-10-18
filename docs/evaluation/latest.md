@@ -1,7 +1,7 @@
 # LUX evaluation report
 
 - Dataset version: `evaluation-v1`
-- Generated: 2026-10-15T23:37:26.452Z
+- Generated: 2026-10-18T12:42:12.774Z
 - Cases: 11 extraction, 7 validation scenarios, 0 payments, 0 tasks
 - Necessary review not suppressed: **yes**
 
@@ -22,7 +22,7 @@ Every rate below states its numerator over its denominator. A number is never re
 | Eligible cases processed without manual review | 1.000 (2/2) | rate | Cases with ground truth "no review needed" that were processed without review, over all such eligible cases. |
 | All cases processed without manual review | 0.182 (2/11) | rate | Extraction cases processed without review, over all extraction cases (including ones that should have been reviewed). |
 | AI extraction latency — p50 | 1 ms | milliseconds | Median wall-clock duration of AI extraction calls, over all AI-involving extraction cases. |
-| AI extraction latency — p95 | 306 ms | milliseconds | 95th-percentile wall-clock duration of AI extraction calls, over all AI-involving extraction cases. |
+| AI extraction latency — p95 | 17 ms | milliseconds | 95th-percentile wall-clock duration of AI extraction calls, over all AI-involving extraction cases. |
 | Exact-duplicate detection | 1.000 (1/1) | rate | Scenario class "exact_duplicate" detected by the deterministic pipeline divided by all seeded "exact_duplicate" scenarios. |
 | Near-duplicate detection | 1.000 (1/1) | rate | Scenario class "near_duplicate" detected by the deterministic pipeline divided by all seeded "near_duplicate" scenarios. |
 | Arithmetic validation detection | 1.000 (1/1) | rate | Scenario class "arithmetic" detected by the deterministic pipeline divided by all seeded "arithmetic" scenarios. |

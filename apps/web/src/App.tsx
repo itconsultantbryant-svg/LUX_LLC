@@ -1,4 +1,3 @@
-import { ProviderPage } from './pages/ProviderPage';
 import { ProviderVerificationPage } from './pages/ProviderVerificationPage';
 import { CarePage } from './pages/CarePage';
 import { useReducer } from 'react';
@@ -18,6 +17,9 @@ import { InstitutionalMetricsPage } from './pages/InstitutionalMetricsPage';
 import { DemoContext, demoReducer, initialDemo } from './features/demo';
 import { AuthProvider } from './features/auth';
 import { ChatPage } from './pages/ChatPage';
+import { AdminPage } from './pages/AdminPage';
+import { NotificationsPage } from './pages/NotificationsPage';
+import { ReceiptsPage } from './pages/ReceiptsPage';
 import { isDemoDeployment } from './config';
 import './styles/workspace.css';
 
@@ -77,12 +79,15 @@ export function App() {
             />
             <Route
               path="institutional/provider"
-              element={state.active ? <InstitutionalPage /> : <ProviderPage />}
+              element={<Navigate to="/institutional" replace />}
             />
             <Route
               path="institutional/provider-verification"
               element={<ProviderVerificationPage />}
             />
+            <Route path="admin" element={<AdminPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="receipts" element={<ReceiptsPage />} />
             <Route path="institutional" element={<InstitutionalPage key="access" />} />
             <Route
               path="institutional/:role"

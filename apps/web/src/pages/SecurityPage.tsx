@@ -40,18 +40,23 @@ export function SecurityPage() {
   const [grants, setGrants] = useState<
     Array<{ id: string; caregiver_user_id: string; revoked_at: string | null }>
   >([]);
+  const [pinSet, setPinSet] = useState<boolean | null>(null);
+  const [currentPin, setCurrentPin] = useState('');
+  const [newPin, setNewPin] = useState('');
   const refresh = useCallback(async () => {
-    const [s, c, d, g] = await Promise.all([
+    const [s, c, d, g, p] = await Promise.all([
       apiGet<Session>('/api/security/session'),
       apiGet<Customer>('/api/customers/me'),
       apiGet<{ dependents: typeof dependents }>('/api/dependents'),
       apiGet<{ authorizations: typeof grants }>('/api/care-authorizations'),
+      apiGet<{ set: boolean }>('/api/customers/pin'),
     ]);
     setSession(s);
     setCustomer(c);
     setDisplayName(c.profile.display_name ?? '');
     setDependents(d.dependents);
     setGrants(g.authorizations);
+    setPinSet(p.set);
   }, []);
   useEffect(() => {
     let active = true;
@@ -207,6 +212,66 @@ export function SecurityPage() {
                 />
                 <button className="btn btn--primary" disabled={busy}>
                   Verify authenticator
+                </button>
+              </form>
+            </article>
+            <article className="panel">
+              <h2>Wallet PIN</h2>
+              <p>
+                Your 4-digit wallet PIN authorizes payments from your Health Wallet. It is stored
+                only as a salted hash and is separate from your Orange Money PIN.
+              </p>
+              <p>
+                Status: <strong>{pinSet ? 'Set' : 'Not set'}</strong>
+              </p>
+              <form
+                className="app-form"
+                onSubmit={(event) =>
+                  submit(event, async () => {
+                    if (!/^\d{4}$/.test(newPin)) {
+                      throw new Error('Enter a 4-digit PIN.');
+                    }
+                    await apiPost('/api/customers/pin', {
+                      pin: newPin,
+                      ...(pinSet ? { currentPin } : {}),
+                    });
+                    setNewPin('');
+                    setCurrentPin('');
+                    await refresh();
+                    setNotice(pinSet ? 'Wallet PIN updated.' : 'Wallet PIN set.');
+                  })
+                }
+              >
+                {pinSet && (
+                  <>
+                    <label htmlFor="current-pin">Current PIN</label>
+                    <input
+                      id="current-pin"
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      pattern="[0-9]{4}"
+                      maxLength={4}
+                      required
+                      value={currentPin}
+                      onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    />
+                  </>
+                )}
+                <label htmlFor="new-pin">{pinSet ? 'New PIN' : 'Choose a PIN'}</label>
+                <input
+                  id="new-pin"
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  pattern="[0-9]{4}"
+                  maxLength={4}
+                  required
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                />
+                <button className="btn btn--primary" disabled={busy}>
+                  {pinSet ? 'Change wallet PIN' : 'Set wallet PIN'}
                 </button>
               </form>
             </article>

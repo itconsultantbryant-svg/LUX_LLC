@@ -4,6 +4,7 @@ import { webConfig } from '../config';
 import { Brand } from './Brand';
 import { ChatWidget } from './ChatWidget';
 import { InstallApp } from './InstallApp';
+import { NotificationBell } from './NotificationBell';
 import { useDemo } from '../features/demo';
 import { useAuth } from '../features/auth-context';
 import { NetworkNotice } from './Feedback';
@@ -54,6 +55,7 @@ export function AppShell() {
             </NavLink>
           ))}
         </nav>
+        <NotificationBell />
         <details
           className="secondary-menu"
           ref={secondary}
@@ -88,6 +90,15 @@ export function AppShell() {
             </NavLink>
             <NavLink to="/assistant">
               <Icon name="message-circle" size={18} /> LUX assistant
+            </NavLink>
+            <NavLink to="/receipts">
+              <Icon name="receipt" size={18} /> Receipts
+            </NavLink>
+            <NavLink to="/notifications">
+              <Icon name="bell" size={18} /> Notifications
+            </NavLink>
+            <NavLink to="/admin">
+              <Icon name="shield" size={18} /> Admin console
             </NavLink>
             <NavLink to="/institutional">
               <Icon name="building" size={18} /> Institutional access

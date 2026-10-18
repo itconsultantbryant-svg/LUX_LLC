@@ -11,9 +11,21 @@ import type { PaymentAdapter, VerifiedPaymentCallback } from '../../adapters/typ
 import { IdentityError } from '../identity/service.js';
 import { Access } from '../security/access.js';
 import { LedgerService } from '../ledger/service.js';
+import { NotificationsService } from '../notifications/service.js';
+import { ReceiptsService } from '../receipts/service.js';
 import { billAccess, latest, ensurePayableIntent } from '../providers/service.js';
 
 const digest = (s: string) => createHash('sha256').update(s).digest('hex');
+
+const userLabel = async (client: pg.PoolClient, id: string): Promise<string> => {
+  const row = (
+    await client.query<{ label: string }>(
+      'SELECT COALESCE(display_name, phone_e164) AS label FROM users WHERE id=$1',
+      [id],
+    )
+  ).rows[0];
+  return row?.label ?? 'Member';
+};
 
 export type PaymentIntentRow = {
   id: string;
@@ -64,6 +76,8 @@ export function stateOf(row: Pick<PaymentIntentRow, 'status'>): PaymentState {
  * after which the ledger capture and the receipt are produced together.
  */
 export class PaymentsService {
+  readonly receipts = new ReceiptsService();
+  readonly notifications = new NotificationsService();
   constructor(
     readonly ledger: LedgerService,
     readonly adapter: PaymentAdapter,
@@ -395,6 +409,44 @@ export class PaymentsService {
         }),
       ],
     );
+    // Beyond the provider receipt, every money movement also gets one universal
+    // receipt and an in-app notification for the customer who paid.
+    const bill = (
+      await client.query<{ customer_user_id: string; provider_name: string }>(
+        'SELECT customer_user_id, provider_name FROM bills WHERE id=$1',
+        [intent.bill_id],
+      )
+    ).rows[0];
+    const universal = await this.receipts.issue(client, {
+      kind: 'payment',
+      direction: 'debit',
+      fromUserId: bill?.customer_user_id ?? null,
+      fromLabel: bill ? await userLabel(client, bill.customer_user_id) : 'Member',
+      toUserId: null,
+      toLabel: bill?.provider_name ?? 'Care provider',
+      amountMinor: intent.amount_minor,
+      currency: intent.currency,
+      reference: intent.id,
+      detail: {
+        paymentIntentId: intent.id,
+        billId: intent.bill_id,
+        simulation: intent.adapter_mode === 'sandbox',
+      },
+    });
+    if (bill)
+      await this.notifications.notify(client, {
+        userId: bill.customer_user_id,
+        template: 'payment.succeeded',
+        title: 'Payment complete',
+        body: `${universal.number} · ${intent.currency} ${intent.amount_minor} to ${bill.provider_name}.`,
+        data: {
+          receiptId: universal.id,
+          receiptNumber: universal.number,
+          paymentIntentId: intent.id,
+          billId: intent.bill_id,
+        },
+        idempotencyKey: `payment-succeeded:${intent.id}`,
+      });
   }
 
   /**
@@ -468,6 +520,49 @@ export class PaymentsService {
       refundId: refund.id,
       amountMinor,
     });
+    // Record the movement back as a universal receipt too: a full refund
+    // reverses the original receipt, a partial one issues a linked reversal.
+    const original = await this.receipts.byReference(a.client, intent.id);
+    const refundBill = (
+      await a.client.query<{ customer_user_id: string; provider_name: string }>(
+        'SELECT customer_user_id, provider_name FROM bills WHERE id=$1',
+        [intent.bill_id],
+      )
+    ).rows[0];
+    if (
+      original &&
+      original.status === 'completed' &&
+      original.amount_minor === String(amountMinor)
+    )
+      await this.receipts.reverse(a.client, original, a.actor.id, input.reason);
+    else
+      await this.receipts.issue(a.client, {
+        kind: 'reversal',
+        direction: 'credit',
+        fromUserId: null,
+        fromLabel: refundBill?.provider_name ?? 'Care provider',
+        toUserId: refundBill?.customer_user_id ?? null,
+        toLabel: refundBill ? await userLabel(a.client, refundBill.customer_user_id) : 'Member',
+        amountMinor: String(amountMinor),
+        currency: intent.currency,
+        reference: intent.id,
+        reversalOfId: original?.id ?? null,
+        detail: {
+          paymentIntentId: intent.id,
+          partial: true,
+          reason: input.reason,
+          originalNumber: original?.number ?? null,
+        },
+      });
+    if (refundBill)
+      await this.notifications.notify(a.client, {
+        userId: refundBill.customer_user_id,
+        template: 'payment.refunded',
+        title: 'Payment refunded',
+        body: `${intent.currency} ${amountMinor} returned to your Health Wallet.`,
+        data: { paymentIntentId: intent.id, amountMinor: String(amountMinor) },
+        idempotencyKey: `payment-refunded:${intent.id}`,
+      });
     const updated = (
       await a.client.query<PaymentIntentRow>('SELECT * FROM payment_intents WHERE id=$1', [
         intent.id,

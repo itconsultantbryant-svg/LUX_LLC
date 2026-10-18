@@ -3,6 +3,18 @@ import type pg from 'pg';
 import type { FundingAdapter, FundingEvent } from '../../adapters/funding.js';
 import { IdentityError } from '../identity/service.js';
 import { LedgerService, buckets, money } from '../ledger/service.js';
+import { ReceiptsService } from '../receipts/service.js';
+import { NotificationsService } from '../notifications/service.js';
+
+const labelFor = async (c: pg.PoolClient, id: string): Promise<string> => {
+  const row = (
+    await c.query<{ label: string }>(
+      'SELECT COALESCE(display_name, phone_e164) AS label FROM users WHERE id=$1',
+      [id],
+    )
+  ).rows[0];
+  return row?.label ?? 'Member';
+};
 const digest = (s: string) => createHash('sha256').update(s).digest('hex');
 export const restrictions =
   'Healthcare payments only; no cash withdrawal. Contributions do not grant access to medical records. Link expiry stops new authorizations; already authorized payments may still settle.';
@@ -11,6 +23,8 @@ export const simulationLabel =
 export const unavailable = () =>
   new IdentityError(404, 'This record or support link is unavailable, expired, or revoked.');
 export class FundingService {
+  readonly receipts = new ReceiptsService();
+  readonly notifications = new NotificationsService();
   constructor(
     readonly ledger: LedgerService,
     readonly adapter: FundingAdapter,
@@ -349,6 +363,43 @@ export class FundingService {
         [p.id, posted.journalId, allocation.id],
       )
     ).rows[0];
-    return this.view(updated);
+    // One universal receipt per money movement, plus an in-app notification.
+    const beneficiaryLabel = await labelFor(c, p.beneficiary_user_id);
+    const payerLabel = await labelFor(c, p.payer_user_id);
+    const source = p.kind === 'deposit' ? 'Orange Money' : payerLabel;
+    const receipt = await this.receipts.issue(c, {
+      kind: p.kind === 'deposit' ? 'deposit' : 'contribution',
+      direction: 'credit',
+      fromUserId: p.kind === 'deposit' ? null : p.payer_user_id,
+      fromLabel: source,
+      toUserId: p.beneficiary_user_id,
+      toLabel: beneficiaryLabel,
+      amountMinor: p.amount_minor,
+      currency: p.currency,
+      reference: p.adapter_reference,
+      detail: {
+        paymentId: p.id,
+        feeMinor: p.fee_minor,
+        simulation: p.adapter_mode === 'sandbox',
+      },
+    });
+    await this.notifications.notify(c, {
+      userId: p.payer_user_id,
+      template: p.kind === 'deposit' ? 'deposit.confirmed' : 'contribution.sent',
+      title: p.kind === 'deposit' ? 'Top-up complete' : 'Contribution sent',
+      body: `${receipt.number} · ${p.currency} ${p.amount_minor} to ${beneficiaryLabel}.`,
+      data: { receiptId: receipt.id, receiptNumber: receipt.number, paymentId: p.id },
+      idempotencyKey: `funding-confirmed:${p.id}`,
+    });
+    if (p.kind === 'contribution')
+      await this.notifications.notify(c, {
+        userId: p.beneficiary_user_id,
+        template: 'contribution.received',
+        title: 'Contribution received',
+        body: `${payerLabel} contributed ${p.currency} ${p.amount_minor}. Receipt ${receipt.number}.`,
+        data: { receiptId: receipt.id, receiptNumber: receipt.number, paymentId: p.id },
+        idempotencyKey: `funding-received:${p.id}`,
+      });
+    return { ...this.view(updated), receiptNumber: receipt.number, receiptId: receipt.id };
   }
 }

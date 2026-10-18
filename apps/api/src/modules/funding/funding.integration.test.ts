@@ -194,6 +194,29 @@ describe.skipIf(process.env.FUNDING_DATABASE_TESTS !== '1')(
       expect(receipt.statusCode).toBe(200);
       expect(receipt.json().receiptNumber).toBe(`HWF-${p.id}`);
       expect(receipt.json().settlementVerified).toBe(false);
+      // Confirmation also issues exactly one universal receipt and notifies the
+      // payer (and, for a contribution, the beneficiary).
+      const universal = (
+        await pool.query(
+          "SELECT kind,direction,to_user_id FROM transaction_receipts WHERE detail->>'paymentId'=$1",
+          [p.id],
+        )
+      ).rows;
+      expect(universal).toHaveLength(1);
+      expect(universal[0].kind).toBe('contribution');
+      expect(universal[0].direction).toBe('credit');
+      expect(universal[0].to_user_id).toBe(seedId('customer'));
+      const notices = (
+        await pool.query(
+          'SELECT user_id,template FROM notifications WHERE idempotency_key=$1 OR idempotency_key=$2',
+          [`funding-confirmed:${p.id}`, `funding-received:${p.id}`],
+        )
+      ).rows;
+      expect(notices).toHaveLength(2);
+      expect(notices.map((n) => n.template).sort()).toEqual([
+        'contribution.received',
+        'contribution.sent',
+      ]);
       await expect(
         pool.query("UPDATE funding_events SET outcome='failed' WHERE payment_id=$1", [p.id]),
       ).rejects.toThrow();

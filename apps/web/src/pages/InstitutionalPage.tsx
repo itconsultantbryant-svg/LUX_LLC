@@ -90,14 +90,6 @@ export function InstitutionalPage() {
             Verified organization access
           </Link>
         </Feedback>
-        <div className="button-row">
-          <Link className="btn btn--ghost" to="/institutional/provider">
-            Provider portal
-          </Link>
-          <Link className="text-link" to="/institutional/provider-verification">
-            Authorized provider verification
-          </Link>
-        </div>
         {allowed && (
           <>
             <h2>Explore synthetic workspaces</h2>

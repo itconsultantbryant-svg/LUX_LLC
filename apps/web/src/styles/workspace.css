@@ -287,6 +287,100 @@ details summary {
 .secondary-menu nav button:hover {
   background: var(--lux-orange-wash);
 }
+.notify {
+  position: relative;
+  flex-shrink: 0;
+}
+.notify summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--lux-line);
+  border-radius: 0.65rem;
+  padding: 0.6rem 0.75rem;
+  min-height: 48px;
+  min-width: 48px;
+  cursor: pointer;
+  position: relative;
+}
+.notify summary::-webkit-details-marker {
+  display: none;
+}
+.notify__badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--status-error-bg, #c0392b);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.notify__panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(340px, calc(100vw - 2rem));
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid var(--lux-line);
+  border-radius: 0.75rem;
+  box-shadow: var(--hw-shadow);
+  z-index: 40;
+}
+.notify__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.notify__list {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  max-height: 320px;
+  overflow: auto;
+  display: grid;
+  gap: 0.25rem;
+}
+.notify__list button {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 0.4rem;
+  padding: 0.55rem;
+  font: inherit;
+  color: var(--lux-navy);
+  cursor: pointer;
+}
+.notify__list button:hover {
+  background: var(--lux-orange-wash);
+}
+.notify__list span {
+  color: var(--lux-muted);
+  font-size: 0.85rem;
+}
+.notify__list small {
+  color: var(--lux-muted);
+  font-size: 0.7rem;
+}
+.notify__list li.is-unread button {
+  border-left: 3px solid var(--lux-orange-ink);
+}
+.notify__empty {
+  color: var(--lux-muted);
+  font-size: 0.9rem;
+}
 .network-notice {
   padding: 0.5rem 1rem;
   background: var(--status-error-bg);

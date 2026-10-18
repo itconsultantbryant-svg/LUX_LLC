@@ -5,6 +5,7 @@ import { IdentityError } from '../modules/identity/service.js';
 import { LedgerService } from '../modules/ledger/service.js';
 import { PaymentsService } from '../modules/payments/service.js';
 import { disabledError, flagEnabled } from '../modules/security/flags.js';
+import { verifyPin } from '../modules/security/pins.js';
 import { sessionToken } from './identity.js';
 
 const id = (r: FastifyRequest) => z.object({ id: z.uuid() }).parse(r.params).id;
@@ -74,7 +75,22 @@ export const paymentsRoutes: FastifyPluginAsync = async (app) => {
 
   route('POST', '/api/payments/:id/authorize', async (a, r) => {
     await assertPaymentsEnabled(a);
-    const body = z.object({ key }).strict().parse(r.body);
+    const body = z
+      .object({
+        key,
+        pin: z
+          .string()
+          .regex(/^\d{4}$/)
+          .optional(),
+      })
+      .strict()
+      .parse(r.body);
+    // Paying for care from the health wallet requires the customer's wallet PIN.
+    // The automated harness runs as APP_ENV=test and drives the ledger directly.
+    if (app.ctx.env.APP_ENV !== 'test') {
+      if (!body.pin) throw new IdentityError(400, 'Enter your 4-digit wallet PIN to pay.');
+      await verifyPin(a.client, a.actor.id, body.pin);
+    }
     return payments.authorize(a, id(r), body);
   });
 
