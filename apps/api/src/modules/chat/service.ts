@@ -441,17 +441,25 @@ export class ChatService {
     const bytes = this.decode(document.base64);
 
     // Storage keys must match the private-object pattern enforced by the
-    // adapters (`private/<uuid>`), which blocks path traversal.
-    const stored = await this.adapters.storage.putObject({
-      key: `private/${randomUUID()}`,
-      bytes,
-      contentType,
-    });
+    // adapters (`private/<uuid>`), which blocks path traversal. Retention is
+    // best-effort: serverless filesystems can be read-only, and extraction reads
+    // the bytes directly, so a storage failure must not fail the upload.
+    let storageKey = 'inline:unsaved';
+    try {
+      const stored = await this.adapters.storage.putObject({
+        key: `private/${randomUUID()}`,
+        bytes,
+        contentType,
+      });
+      storageKey = stored.key;
+    } catch {
+      storageKey = 'inline:unsaved';
+    }
 
     let extraction: AiExtractionResult;
     try {
       extraction = await this.adapters.ai.extractFromDocument({
-        storageKey: stored.key,
+        storageKey,
         contentType,
         bytes,
       });
