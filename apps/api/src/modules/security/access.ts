@@ -9,6 +9,7 @@ export const institutionRoles = [
   'reviewer',
   'finance_operator',
   'partner_officer',
+  'employer_admin',
 ] as const;
 export type InstitutionRole = (typeof institutionRoles)[number];
 export type Principal = {
@@ -177,7 +178,7 @@ export async function withSession<T>(
   try {
     await client.query('BEGIN');
     const result = await client.query<Omit<Principal, 'roles'>>(
-      `SELECT u.id,u.phone_e164 AS phone,s.token_hash AS "sessionHash",s.auth_method AS "authMethod",s.created_at AS "createdAt",s.mfa_verified_at AS "mfaVerifiedAt" FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.suspended_at IS NULL AND ($2::boolean OR s.auth_method='phone') FOR SHARE OF s,u`,
+      `SELECT u.id,u.phone_e164 AS phone,s.token_hash AS "sessionHash",s.auth_method AS "authMethod",s.created_at AS "createdAt",s.mfa_verified_at AS "mfaVerifiedAt" FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.suspended_at IS NULL AND ($2::boolean OR s.auth_method IN ('phone','password')) FOR SHARE OF s,u`,
       [tokenHash(token), env.APP_ENV !== 'production'],
     );
     const actor = result.rows[0];

@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { Access, withSession } from '../modules/security/access.js';
+import { Access, denied, withSession } from '../modules/security/access.js';
 import { IdentityError } from '../modules/identity/service.js';
 import { LedgerService } from '../modules/ledger/service.js';
 import { PartnersService } from '../modules/partners/service.js';
@@ -46,6 +46,38 @@ export const partnerRoutes: FastifyPluginAsync = async (app) => {
   route('GET', '/api/partners/modules', async (a) =>
     partners.modules(!(await flagEnabled(a.client, 'partner_modules'))),
   );
+
+  /** Read-only institutional settlement view. A partner can only see records
+   * assigned to one of its active organizations; `confirmed` is backed by the
+   * database evidence constraint and is never inferred by this endpoint. */
+  route('GET', '/api/partners/settlements', async (a) => {
+    a.mfa();
+    const membership = await a.client.query(
+      `SELECT 1
+         FROM organization_memberships m
+         JOIN organizations o ON o.id=m.organization_id
+        WHERE m.user_id=$1 AND m.status='active' AND o.kind='partner' AND o.status='approved'
+          AND m.role IN ('partner_officer','finance_operator','organization_admin')
+        LIMIT 1`,
+      [a.actor.id],
+    );
+    if (!membership.rowCount) throw denied();
+    const settlements = await a.client.query(
+      `SELECT s.id,s.direction,s.amount_minor::text AS amount_minor,s.currency,s.status,
+              s.adapter_mode,s.partner_reference,s.confirmed_at,s.created_at,
+              o.name AS organization_name
+         FROM partner_settlements s
+         JOIN organizations o ON o.id=s.partner_organization_id
+        WHERE EXISTS (
+          SELECT 1 FROM organization_memberships m
+           WHERE m.organization_id=s.partner_organization_id AND m.user_id=$1
+             AND m.status='active' AND m.role IN ('partner_officer','finance_operator','organization_admin')
+        )
+        ORDER BY s.created_at DESC LIMIT 200`,
+      [a.actor.id],
+    );
+    return { settlements: settlements.rows };
+  });
 
   /** Partner money-moving routes fail closed when an operator disables the modules. */
   const assertModulesEnabled = async (a: Access) => {

@@ -113,6 +113,27 @@
       "when": 1792300000002,
       "tag": "0015_moaning_stryfe",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793000000000,
+      "tag": "0016_credential_logins",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793100000000,
+      "tag": "0017_employer_directory",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793200000000,
+      "tag": "0018_system_flags_repair",
+      "breakpoints": true
     }
   ]
 }

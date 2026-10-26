@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiGet, apiPost, apiPut } from '../lib/api';
 import { Feedback } from '../components/Feedback';
 import { Icon } from '../components/icons/Icon';
@@ -52,7 +52,12 @@ const SECTIONS = [
 
 export function AdminPage() {
   const { profile } = useAuth();
-  const [section, setSection] = useState<(typeof SECTIONS)[number]['id']>('overview');
+  const [searchParams] = useSearchParams();
+  const requestedSection = searchParams.get('section');
+  const initialSection = SECTIONS.some((item) => item.id === requestedSection)
+    ? (requestedSection as (typeof SECTIONS)[number]['id'])
+    : 'overview';
+  const [section, setSection] = useState<(typeof SECTIONS)[number]['id']>(initialSection);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -66,6 +71,10 @@ export function AdminPage() {
   const [validDays, setValidDays] = useState('30');
 
   const isAdmin = profile?.roles.includes('platform_admin') ?? false;
+
+  useEffect(() => {
+    setSection(initialSection);
+  }, [initialSection]);
 
   const refresh = useCallback(async () => {
     setError('');

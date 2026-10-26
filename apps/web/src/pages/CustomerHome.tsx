@@ -1,189 +1,299 @@
-import { FundingActivity } from '../components/FundingActivity';
-import { NearbyCare } from '../components/NearbyCare';
-import { WalletBalance } from '../components/WalletBalance';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useDemo, money } from '../features/demo';
-import { useAuth } from '../features/auth-context';
-import { Feedback } from '../components/Feedback';
-import { DashboardCard } from '../components/DashboardCard';
 import { Icon } from '../components/icons/Icon';
+import { useAuth } from '../features/auth-context';
+import { apiGet } from '../lib/api';
+import { formatMinor } from '../lib/money';
+import type { WalletData } from '../components/WalletBalance';
+import './ReferencePortal.css';
+
+type Receipt = {
+  id: string;
+  kind: string;
+  amountMinor: string;
+  currency: string;
+  status: string;
+  issuedAt: string;
+  from: { label: string };
+  to: { label: string };
+};
 
 export function CustomerHome() {
-  const { state, dispatch, allowed } = useDemo();
-  const { signedIn, profile } = useAuth();
+  const { profile } = useAuth();
+  const institutionalRole = [
+    'platform_admin',
+    'reviewer',
+    'provider_admin',
+    'provider_manager',
+    'provider_staff',
+    'employer_admin',
+    'sponsor_admin',
+    'partner_officer',
+  ].find((role) => profile?.roles.includes(role as never));
+  const [wallet, setWallet] = useState<WalletData>();
+  const [walletError, setWalletError] = useState(false);
+  const [receipts, setReceipts] = useState<Receipt[]>();
+  const [receiptsError, setReceiptsError] = useState(false);
+  useEffect(() => {
+    let current = true;
+    void apiGet<WalletData>('/api/wallet')
+      .then((data) => {
+        if (current) setWallet(data);
+      })
+      .catch(() => {
+        if (current) setWalletError(true);
+      });
+    return () => {
+      current = false;
+    };
+  }, []);
+  useEffect(() => {
+    let current = true;
+    void apiGet<{ receipts: Receipt[] }>('/api/receipts?limit=4')
+      .then((data) => {
+        if (current) setReceipts(data.receipts);
+      })
+      .catch(() => {
+        if (current) setReceiptsError(true);
+      });
+    return () => {
+      current = false;
+    };
+  }, []);
+  if (institutionalRole) return <InstitutionDashboard role={institutionalRole} />;
+  const name = profile?.phone ? `Account ${profile.phone.slice(-4)}` : 'Customer';
+  const balance = (currency: string) => {
+    const item = wallet?.currencies.find((entry) => entry.currency === currency);
+    return item ? formatMinor(item.balances.available, currency) : '—';
+  };
   return (
-    <section className="workspace">
-      <div className="page-heading">
+    <section className="reference-portal" aria-label="Customer dashboard">
+      <header className="reference-portal__heading">
+        <span className="reference-portal__heading-icon">
+          <Icon name="wallet" size={16} />
+        </span>
         <div>
-          <p className="eyebrow">
-            <Icon name="heart" size={15} /> Your healthcare, planned ahead
-          </p>
-          <h1>{state.active ? 'Welcome to your demo wallet' : 'Your health. Your next step.'}</h1>
-          <p>Prepare for care, pay with confidence, and ask for support.</p>
+          <h1>Welcome, {name}</h1>
+          <p>Your HealthWallet overview</p>
         </div>
-        {!state.active && (
-          <Link className="btn btn--ghost" to="/account">
-            <Icon name="user" size={18} />
-            {signedIn ? `Signed in · ${profile?.phone ?? 'Your account'}` : 'Customer sign in'}
-          </Link>
-        )}
+      </header>
+      <div className="reference-balance-grid">
+        <article className="reference-balance reference-balance--lrd">
+          <small>LRD Balance</small>
+          <strong>{balance('LRD')}</strong>
+          <span>Liberian Dollar</span>
+        </article>
+        <article className="reference-balance reference-balance--usd">
+          <small>USD Balance</small>
+          <strong>{balance('USD')}</strong>
+          <span>US Dollar</span>
+        </article>
       </div>
-      {!state.active && allowed && (
-        <div className="demo-entry">
-          <div>
-            <strong>Explore without an account</strong>
-            <p>Try a fictional wallet. No real money, people, or medical information.</p>
-          </div>
-          <button className="btn btn--ghost" onClick={() => dispatch({ type: 'start' })}>
-            Try Demo
-          </button>
-        </div>
-      )}
-      <div className="dashboard-grid">
-        {!state.active ? (
-          <WalletBalance />
-        ) : (
-          <DashboardCard
-            title="Available healthcare funds"
-            description="Liberian dollars · ready for simulated care payments"
-            icon="wallet"
-            className="balance-panel"
-            action={
-              <Link className="btn btn--primary" to="/pay">
-                Pay for Care <span aria-hidden="true">→</span>
-              </Link>
-            }
-          >
-            <p className="balance">{money(state.available)}</p>
-            <div className="action-pair">
-              <Link className="btn btn--ghost" to="/save">
-                <Icon name="heart" size={18} /> Save Money
-              </Link>
-              <Link className="btn btn--ghost" to="/support">
-                <Icon name="credit-card" size={18} /> Get Support
-              </Link>
-            </div>
-            <div style={{ marginTop: '1rem' }}>
-              <div className="stat-card">
-                <div>
-                  <div className="stat-card__label">Restricted</div>
-                  <div className="stat-card__value">{money(state.restricted)}</div>
-                  <div className="stat-card__meta">For eligible care only. Not included above.</div>
-                </div>
-                <div className="stat-card__icon">
-                  <Icon name="shield" size={18} />
-                </div>
-              </div>
-              <div className="stat-card">
-                <div>
-                  <div className="stat-card__label">Pending</div>
-                  <div className="stat-card__value">{money(state.pending)}</div>
-                  <div className="stat-card__meta">Awaiting review. Not available to spend.</div>
-                </div>
-                <div className="stat-card__icon">
-                  <Icon name="clock" size={18} />
-                </div>
-              </div>
-            </div>
-          </DashboardCard>
-        )}
-        {state.active && (
-          <DashboardCard
-            title="Pending requests"
-            description={`${state.activity.filter((item) => item.status === 'Pending').length} items need attention`}
-            icon="clock"
-            action={
-              <Link className="text-link" to="/support">
-                Explore support options →
-              </Link>
-            }
-          >
-            {state.activity.filter((item) => item.status === 'Pending').length > 0 ? (
-              <ul className="activity-list">
-                {state.activity
-                  .filter((item) => item.status === 'Pending')
-                  .map((item) => (
-                    <li key={item.id}>
-                      <div>
-                        <strong>{item.title}</strong>
-                        <small>{item.detail}</small>
-                      </div>
-                      <div>
-                        <strong>{money(item.amount)}</strong>
-                        <span className="badge badge--pending">Pending review</span>
-                      </div>
-                    </li>
-                  ))}
-              </ul>
-            ) : (
-              <Feedback title="No requests to show">
-                <p>Your requests will appear here when your account is connected.</p>
-              </Feedback>
-            )}
-          </DashboardCard>
-        )}
-      </div>
-      {!state.active && <NearbyCare />}
-      {!state.active && <FundingActivity />}
-      {state.active && (
-        <DashboardCard
-          title="Recent activity"
-          description="Latest payments, savings, and support updates"
-          icon="activity"
-          action={
-            <Link className="text-link" to="/history">
-              View history →
-            </Link>
-          }
-        >
-          {state.activity.length > 0 ? (
-            <ul className="activity-list">
-              {state.activity.slice(0, 3).map((item) => (
-                <li key={item.id}>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <small>{item.detail}</small>
-                  </div>
-                  <div>
-                    <strong>{money(item.amount)}</strong>
-                    <span
-                      className={`badge badge--${item.status === 'Pending' ? 'pending' : 'success'}`}
-                    >
-                      {item.status}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Feedback title="A fresh start">
-              <p>Payments, savings, and support updates will appear here.</p>
-            </Feedback>
-          )}
-        </DashboardCard>
-      )}
-      <details className="panel guidance">
-        <summary>
-          <Icon name="trending-up" size={18} /> Optional savings guidance
-        </summary>
-        <h2>Start with an amount that fits your day</h2>
-        <p>
-          Choose a small regular amount after your essential expenses. You can review your plan
-          before making any contribution.
-        </p>
-        <p className="muted">
-          General guidance only. Personalized AI guidance is not connected yet.
-        </p>
-        <Link className="text-link" to="/save">
-          Explore saving →
-        </Link>
-      </details>
-      <p className="institution-entry">
-        Working with a clinic or organization?{' '}
-        <Link className="text-link" to="/institutional">
-          Institutional access →
-        </Link>
+      <p className="reference-notice">
+        <Icon name="shield" size={13} /> HealthWallet funds are reserved for verified healthcare
+        services.
       </p>
+      {walletError && (
+        <p className="reference-error" role="alert">
+          Wallet data is unavailable. Retry from your dashboard after reconnecting.
+        </p>
+      )}
+      <div className="reference-action-grid">
+        <Link to="/save">
+          <Icon name="heart" size={18} />
+          <span>
+            <strong>Deposit Funds</strong>
+            <small>From bank or Orange Money</small>
+          </span>
+        </Link>
+        <Link to="/pay">
+          <Icon name="credit-card" size={18} />
+          <span>
+            <strong>Pay Provider</strong>
+            <small>Healthcare payment</small>
+          </span>
+        </Link>
+        <Link to="/services/ussd">
+          <Icon name="smartphone" size={18} />
+          <span>
+            <strong>USSD Access</strong>
+            <small>No internet? Dial *155*9#</small>
+          </span>
+        </Link>
+      </div>
+      <div className="reference-two-column">
+        <article className="reference-card">
+          <h2>
+            <Icon name="shield-check" size={15} /> Insurance Status
+          </h2>
+          <dl>
+            <dt>Active Policy</dt>
+            <dd>Coverage is shown only when verified.</dd>
+            <dt>Insurer</dt>
+            <dd>Check your claim workspace.</dd>
+          </dl>
+          <Link to="/services/insurance">View insurance claims</Link>
+        </article>
+        <article className="reference-card">
+          <h2>
+            <Icon name="wallet" size={15} /> Wallet Information
+          </h2>
+          <dl>
+            <dt>Wallet ID</dt>
+            <dd>{profile?.id ?? 'Available after sign in'}</dd>
+            <dt>Status</dt>
+            <dd>
+              <b className="reference-tag reference-tag--success">ACTIVE</b>
+            </dd>
+          </dl>
+          <Link to="/account">Manage profile</Link>
+        </article>
+      </div>
+      <article className="reference-card reference-card--transactions">
+        <div className="reference-card__title">
+          <h2>Recent Transactions</h2>
+          <Link to="/history">View all →</Link>
+        </div>
+        {receiptsError ? (
+          <p className="reference-error" role="alert">
+            Recent activity could not be loaded.
+          </p>
+        ) : !receipts ? (
+          <p className="reference-empty">Loading activity…</p>
+        ) : receipts.length === 0 ? (
+          <p className="reference-empty">No confirmed funding or healthcare payments yet.</p>
+        ) : (
+          <div className="reference-receipts">
+            {receipts.map((receipt) => (
+              <div key={receipt.id}>
+                <span>
+                  <strong>{receipt.kind.replaceAll('_', ' ')}</strong>
+                  <small>
+                    {receipt.from.label} → {receipt.to.label} ·{' '}
+                    {new Date(receipt.issuedAt).toLocaleDateString()}
+                  </small>
+                </span>
+                <span>
+                  <b>{formatMinor(receipt.amountMinor, receipt.currency)}</b>
+                  <em
+                    className={`reference-tag reference-tag--${receipt.status === 'completed' ? 'success' : 'warning'}`}
+                  >
+                    {receipt.status}
+                  </em>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </article>
+    </section>
+  );
+}
+
+const institutionalDashboards: Record<
+  string,
+  { title: string; subtitle: string; stats: string[]; actions: string[] }
+> = {
+  employer_admin: {
+    title: 'Employer Portal',
+    subtitle: 'Your organization HealthWallet workspace',
+    stats: ['Employees', 'Total Contributed (LRD)', 'Total Contributed (USD)'],
+    actions: ['View Employees', 'Send Contribution'],
+  },
+  sponsor_admin: {
+    title: 'Sponsor Portal',
+    subtitle: 'Create and fund voucher programs',
+    stats: ['Active', 'Pending', 'Partially Used', 'Total Programs'],
+    actions: ['Voucher Programs', 'Transactions'],
+  },
+  partner_officer: {
+    title: 'Bank Portal',
+    subtitle: 'Verify funding, credit wallets & reconcile transactions',
+    stats: ['Pending', 'Verified', 'Credited', 'Reconciled'],
+    actions: ['Manage Funding', 'Reconcile Transactions'],
+  },
+  provider_staff: {
+    title: 'Provider Portal',
+    subtitle: 'Authorized healthcare payment workspace',
+    stats: ['Pending Balance', 'Settled Balance', 'Total Payouts'],
+    actions: ['Verify Patient', 'Payment Requests', 'Payouts', 'Claims'],
+  },
+  provider_manager: {
+    title: 'Provider Portal',
+    subtitle: 'Authorized healthcare payment workspace',
+    stats: ['Pending Balance', 'Settled Balance', 'Total Payouts'],
+    actions: ['Verify Patient', 'Payment Requests', 'Payouts', 'Claims'],
+  },
+  provider_admin: {
+    title: 'Provider Portal',
+    subtitle: 'Authorized healthcare payment workspace',
+    stats: ['Pending Balance', 'Settled Balance', 'Total Payouts'],
+    actions: ['Verify Patient', 'Payment Requests', 'Payouts', 'Claims'],
+  },
+  reviewer: {
+    title: 'LUX Operations',
+    subtitle: 'LUX HealthTrust command center',
+    stats: [
+      'Transactions today',
+      'Human Review queue',
+      'High-risk alerts',
+      'Provider verification',
+    ],
+    actions: ['Human Review', 'Insurance Claims'],
+  },
+  platform_admin: {
+    title: 'LUX Operations',
+    subtitle: 'LUX HealthTrust command center',
+    stats: [
+      'Transactions today',
+      'Human Review queue',
+      'High-risk alerts',
+      'Provider verification',
+    ],
+    actions: ['Human Review', 'Provider Verification', 'Fraud & Risk', 'Payment Validation'],
+  },
+};
+
+function InstitutionDashboard({ role }: { role: string }) {
+  const item = institutionalDashboards[role] ?? institutionalDashboards.reviewer;
+  return (
+    <section className="reference-portal" aria-label={item.title}>
+      <header className="reference-portal__heading">
+        <span className="reference-portal__heading-icon">
+          <Icon name="building" size={16} />
+        </span>
+        <div>
+          <h1>{item.title}</h1>
+          <p>{item.subtitle}</p>
+        </div>
+      </header>
+      <div className="reference-stat-grid">
+        {item.stats.map((stat, index) => (
+          <article className={`reference-stat reference-stat--${index}`} key={stat}>
+            <strong>—</strong>
+            <span>{stat}</span>
+          </article>
+        ))}
+      </div>
+      <div className="reference-action-grid reference-action-grid--institution">
+        {item.actions.map((action) => (
+          <article key={action}>
+            <Icon name="activity" size={18} />
+            <span>
+              <strong>{action}</strong>
+              <small>Open your authorized workspace</small>
+            </span>
+          </article>
+        ))}
+      </div>
+      <article className="reference-card reference-card--transactions">
+        <div className="reference-card__title">
+          <h2>Recent Activity</h2>
+        </div>
+        <p className="reference-empty">
+          Only records authorized for your organization are shown here.
+        </p>
+      </article>
     </section>
   );
 }

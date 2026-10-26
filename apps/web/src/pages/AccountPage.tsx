@@ -22,6 +22,8 @@ export function AccountPage() {
   const navigate = useNavigate();
   const { refresh: refreshAuth } = useAuth();
   const requestedReturn: unknown = location.state?.returnTo;
+  const requestedLoginRole: unknown = location.state?.loginRole;
+  const loginRole = typeof requestedLoginRole === 'string' ? requestedLoginRole.slice(0, 40) : null;
   const returnTo =
     typeof requestedReturn === 'string' &&
     /^\/(pay|save|support|history|contribute#[A-Za-z0-9_-]{43})$/.test(requestedReturn)
@@ -136,7 +138,9 @@ export function AccountPage() {
 
   return (
     <section className="account">
-      <h1>{profile ? 'Your account' : 'Sign in to HealthWallet'}</h1>
+      <h1>
+        {profile ? 'Your account' : loginRole ? `${loginRole} sign in` : 'Sign in to HealthWallet'}
+      </h1>
       {authConfig.simulation && (
         <p className="account__simulation">
           SIMULATION — no SMS is sent and phone ownership is not verified. Use a test phone number

@@ -71,8 +71,8 @@ describe('primary screen landmarks and navigation', () => {
   });
 
   it('renders the customer home heading and a path to sign in', () => {
-    expect(html).toContain('Your health. Your next step.');
-    expect(html).toContain('Customer sign in');
+    expect(html).toContain('Welcome, Customer');
+    expect(html).toContain('Profile &amp; sign in');
   });
 });
 

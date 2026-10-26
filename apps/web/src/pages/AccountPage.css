@@ -1,5 +1,5 @@
 .account {
-  max-width: 42rem;
+  max-width: 34rem;
   margin: 0 auto;
 }
 .account form {
@@ -13,13 +13,13 @@
 .account input:not([type='checkbox']) {
   width: 100%;
   padding: 0.85rem;
-  border: 1px solid var(--hw-muted);
-  border-radius: 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.7rem;
   background: white;
 }
 .account fieldset {
-  border: 1px solid var(--hw-line);
-  border-radius: 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.7rem;
   padding: 1rem;
 }
 .account__check {
@@ -35,8 +35,9 @@
 .account__simulation,
 .account__code {
   padding: 1rem;
-  background: var(--lux-orange-wash);
-  border-radius: 0.6rem;
+  border: 1px solid #99f6e4;
+  background: #f0fdfa;
+  border-radius: 0.75rem;
 }
 .account__code strong {
   letter-spacing: 0.15em;
@@ -77,13 +78,25 @@
 .account {
   background: white;
   padding: clamp(1rem, 4vw, 2.5rem);
-  border: 1px solid var(--lux-line);
+  border: 1px solid #e2e8f0;
   border-radius: 1.25rem;
-  box-shadow: var(--hw-shadow);
+  box-shadow: 0 16px 40px rgb(15 23 42 / 9%);
 }
 .account h1 {
   margin-top: 0;
   font-size: clamp(1.6rem, 5vw, 2.3rem);
+}
+.account > h1 + .account__simulation,
+.account > h1 + p:not(.account__simulation) {
+  margin-top: -0.25rem;
+}
+.account .btn {
+  width: 100%;
+}
+.account__admin {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
 }
 .account__check {
   min-height: 44px;

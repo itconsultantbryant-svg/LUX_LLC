@@ -57,7 +57,8 @@ try {
       mobile: width < 700,
     });
     for (const route of [
-      '/',
+      '/login',
+      '/dashboard',
       '/pay',
       '/support',
       '/history',
@@ -73,10 +74,10 @@ try {
         `new Promise(resolve => { const timer = setInterval(() => { if (document.querySelector('main h1') && [...document.images].every(i => i.complete)) { clearInterval(timer); resolve(true); } }, 100); setTimeout(() => {clearInterval(timer);resolve(false)}, 15000) })`,
       );
       const result = await evaluate(
-        `({ width: innerWidth, scroll: document.documentElement.scrollWidth, logo: [...document.images].some(i => i.alt === 'LUX AI' && i.naturalWidth > 0), heading: document.querySelector('main h1')?.textContent, nav: [...document.querySelectorAll('.shell__nav a')].map(a => ({width:a.getBoundingClientRect().width,height:a.getBoundingClientRect().height})) })`,
+        `({ width: innerWidth, scroll: document.documentElement.scrollWidth, brand: Boolean(document.querySelector('.login-page__brand, .shell__product')), heading: document.querySelector('main h1')?.textContent, nav: [...document.querySelectorAll('.shell__nav a, .shell__mobile-nav a')].filter(a => { const r = a.getBoundingClientRect(); return r.width > 0 && r.height > 0 }).map(a => ({width:a.getBoundingClientRect().width,height:a.getBoundingClientRect().height})) })`,
       );
       assert(result.heading, `Missing heading ${route}`);
-      assert(result.logo, `Missing logo ${route}`);
+      assert(result.brand, `Missing brand ${route}`);
       assert(
         result.scroll <= result.width,
         `Horizontal overflow ${width} ${route}: ${JSON.stringify(result)}`,
@@ -86,22 +87,12 @@ try {
         `Small navigation targets ${width}`,
       );
       console.log(`PASS ${width}px ${route}`);
-      if (route === '/') {
+      if (route === '/login') {
         const shot = await send('Page.captureScreenshot', {
           format: 'png',
           captureBeyondViewport: true,
         });
-        await writeFile(`/tmp/lux-screenshots/home-${width}.png`, Buffer.from(shot.data, 'base64'));
-        await evaluate(`document.querySelector('.install__button').click()`);
-        assert(
-          await evaluate(`document.querySelector('dialog').open`),
-          'Install instructions did not open',
-        );
-        await evaluate(`document.querySelector('dialog button').click()`);
-        assert(
-          !(await evaluate(`document.querySelector('dialog').open`)),
-          'Install instructions did not close',
-        );
+        await writeFile(`/tmp/lux-screenshots/login-${width}.png`, Buffer.from(shot.data, 'base64'));
       }
     }
   }

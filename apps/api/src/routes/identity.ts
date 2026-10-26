@@ -16,6 +16,7 @@ import {
 } from '../modules/identity/service.js';
 import { limit } from '../modules/security/limits.js';
 import { PostgresIdentityStore } from '../modules/identity/postgres.js';
+import { passwordMatches } from '../modules/identity/password.js';
 
 const COOKIE = 'hw_session';
 export function sessionToken(request: FastifyRequest): string | undefined {
@@ -113,6 +114,37 @@ export const identityRoutes: FastifyPluginAsync<{ service?: IdentityService }> =
     reply.header('Set-Cookie', cookie(request, token, SESSION_SECONDS));
     return {
       simulation: app.ctx.adapters.messaging.mode === 'sandbox',
+      profile: await service.profile(token),
+    };
+  });
+  app.post('/api/auth/credential-login', async (request, reply) => {
+    const body = z.object({ identifier: z.string().trim().min(3).max(320), password: z.string().min(12).max(200) }).strict().parse(request.body);
+    await limit(app.ctx.pool, 'credential-login-ip', request.ip, 10, 900);
+    const identifier = body.identifier.toLowerCase();
+    const result = await app.ctx.pool.query<{ id: string; password_hash: string; locked_until: Date | null; failed_attempts: number }>(
+      `SELECT u.id,c.password_hash,c.locked_until,c.failed_attempts FROM credential_logins c JOIN users u ON u.id=c.user_id
+       WHERE c.identifier=$1 AND u.suspended_at IS NULL FOR UPDATE OF c,u`, [identifier]);
+    const credential = result.rows[0];
+    // Deliberately use the same response for invalid identifier and password.
+    if (!credential || (credential.locked_until && credential.locked_until > new Date()) || !(await passwordMatches(body.password, credential.password_hash))) {
+      if (credential) await app.ctx.pool.query(`UPDATE credential_logins SET failed_attempts=failed_attempts+1,locked_until=CASE WHEN failed_attempts+1>=5 THEN now()+interval '15 minutes' ELSE locked_until END,updated_at=now() WHERE user_id=$1`, [credential.id]);
+      throw new IdentityError(401, 'Invalid credentials or account temporarily locked.');
+    }
+    await app.ctx.pool.query('UPDATE credential_logins SET failed_attempts=0,locked_until=NULL,updated_at=now() WHERE user_id=$1', [credential.id]);
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + SESSION_SECONDS * 1000);
+    await app.ctx.pool.query(
+      `INSERT INTO auth_sessions(token_hash,user_id,expires_at,auth_method,mfa_verified_at)
+       VALUES($1,$2,$3,'password',CASE WHEN $4 THEN now() ELSE NULL END)`,
+      [tokenHash(token), credential.id, expiresAt, app.ctx.env.APP_ENV !== 'production'],
+    );
+    await app.ctx.pool.query("INSERT INTO audit_events(actor_user_id,event_type,entity_type,entity_id,payload) VALUES($1,'auth.credential_login','user',$1,'{}')", [credential.id]);
+    reply.header('Set-Cookie', cookie(request, token, SESSION_SECONDS));
+    return {
+      // Development/demo credentials are synthetic accounts whose sandbox session is
+      // explicitly marked MFA-verified above. Production credentials still require
+      // an authenticator challenge before institutional access.
+      mfaRequired: app.ctx.env.APP_ENV === 'production',
       profile: await service.profile(token),
     };
   });

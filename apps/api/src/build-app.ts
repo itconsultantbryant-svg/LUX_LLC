@@ -31,12 +31,14 @@ import { healthRoutes } from './routes/health.js';
 import { metaRoutes } from './routes/meta.js';
 import { accountRoutes } from './routes/account.js';
 import { adminRoutes } from './routes/admin.js';
+import { employerRoutes } from './routes/employers.js';
 
 /** Global mutation limiter. Registered as an onRequest hook (runs before handlers). */
 function addMutationLimit(app: FastifyInstance, deps: { env: Env; pool: pg.Pool }) {
   const exempt = new Set([
     '/api/auth/request-code',
     '/api/auth/verify-code',
+    '/api/auth/credential-login',
     // Provider callbacks are signature-verified; throttling them could drop legitimate events.
     '/api/payments/callback',
   ]);
@@ -93,6 +95,7 @@ export async function buildApp(deps: { env: Env; pool: pg.Pool; db: Db; adapters
     '/api/auth/config',
     '/api/auth/request-code',
     '/api/auth/verify-code',
+    '/api/auth/credential-login',
     '/api/auth/admin-login',
     '/api/auth/logout',
     '/api/meta',
@@ -155,6 +158,7 @@ export async function buildApp(deps: { env: Env; pool: pg.Pool; db: Db; adapters
   await app.register(notificationRoutes);
   await app.register(governanceRoutes);
   await app.register(partnerRoutes);
+  await app.register(employerRoutes);
   await app.register(accountRoutes);
   await app.register(adminRoutes);
 

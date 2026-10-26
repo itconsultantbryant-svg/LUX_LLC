@@ -6,12 +6,12 @@
   letter-spacing: 0.01em;
 }
 .env-banner--demo {
-  background: var(--lux-navy);
-  color: #e4ecf8;
-  border-bottom: 2px solid var(--lux-orange);
+  background: #0f172a;
+  color: #cbd5e1;
+  border-bottom: 2px solid #0f766e;
 }
 .env-banner--live {
-  background: var(--lux-orange-wash);
-  color: var(--lux-navy);
-  border-bottom: 2px solid var(--lux-orange);
+  background: #f0fdfa;
+  color: #115e59;
+  border-bottom: 2px solid #0f766e;
 }

@@ -1,0 +1,302 @@
+.login-page {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 1.5rem;
+  background: #f8fafc;
+}
+.login-page__content {
+  width: min(100%, 48rem);
+}
+.login-page__form {
+  max-width: 31rem;
+}
+.login-page__continue,
+.role-login-form button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  border: 0;
+  border-radius: 0.65rem;
+  background: #168d82;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.role-login-form {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #fff;
+}
+.role-login-form label {
+  margin-top: 0.35rem;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.role-login-form input {
+  min-height: 40px;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.45rem;
+}
+.role-login-form button {
+  margin-top: 0.65rem;
+  cursor: pointer;
+}
+.role-login-form__notice {
+  margin: 0 !important;
+  padding: 0.65rem;
+  border: 1px solid #fde68a;
+  border-radius: 0.45rem;
+  background: #fffbeb;
+  color: #854d0e !important;
+  font-size: 0.7rem !important;
+  line-height: 1.4;
+}
+.login-page__back {
+  display: block;
+  margin-top: 1rem;
+  color: #0f766e;
+  font-size: 0.75rem;
+  text-align: center;
+}
+.login-page__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #0f172a;
+  font-size: 1rem;
+}
+.login-page__brand > span {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 0.9rem;
+  color: #fff;
+  background: linear-gradient(145deg, #14b8a6, #0f766e);
+  box-shadow: 0 8px 18px rgb(13 148 136 / 20%);
+}
+.login-page__head {
+  margin: 2.5rem 0 1.25rem;
+}
+.login-page__head h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.65rem, 5vw, 2rem);
+  letter-spacing: -0.04em;
+}
+.login-page__head p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+.login-page__roles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.login-role {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 78px;
+  padding: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  color: #0f172a;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+.login-role:hover {
+  border-color: #5eead4;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 9%);
+  transform: translateY(-1px);
+}
+.login-role__icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 0.75rem;
+}
+.login-role__copy strong,
+.login-role__copy small {
+  display: block;
+}
+.login-role__copy strong {
+  font-size: 0.86rem;
+}
+.login-role__copy small {
+  margin-top: 0.12rem;
+  color: #94a3b8;
+  font-size: 0.67rem;
+}
+.login-role__copy em {
+  display: block;
+  margin-top: 0.22rem;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-style: normal;
+}
+.login-role > svg {
+  color: #94a3b8;
+}
+.login-role--teal .login-role__icon {
+  color: #0f766e;
+  background: #f0fdfa;
+}
+.login-role--sky .login-role__icon {
+  color: #0369a1;
+  background: #f0f9ff;
+}
+.login-role--violet .login-role__icon {
+  color: #6d28d9;
+  background: #f5f3ff;
+}
+.login-role--amber .login-role__icon {
+  color: #a16207;
+  background: #fffbeb;
+}
+.login-role--rose .login-role__icon {
+  color: #be123c;
+  background: #fff1f2;
+}
+.login-page__note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 1.5rem 0 0;
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+.login-page__ussd {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid #99f6e4;
+  border-radius: 1rem;
+  background: #f0fdfa;
+  color: #134e4a;
+}
+.login-page__ussd-icon {
+  display: grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.7rem;
+  color: #0f766e;
+  background: #ccfbf1;
+}
+.login-page__ussd h2 {
+  margin: 0;
+  color: #115e59;
+  font-size: 0.85rem;
+}
+.login-page__ussd p {
+  margin: 0.3rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+.login-page__demo {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #dbe5ef;
+  border-radius: 1rem;
+  background: #fff;
+}
+.login-page__demo h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 0.82rem;
+}
+.login-page__demo > p {
+  margin: 0.3rem 0 0.75rem;
+  color: #64748b;
+  font-size: 0.68rem;
+}
+.login-page__demo > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+.login-page__demo span {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.42rem 0.5rem;
+  border-radius: 0.4rem;
+  background: #f8fafc;
+  font-size: 0.62rem;
+}
+.login-page__demo code {
+  color: #0f766e;
+  font-size: 0.59rem;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+  .login-page__demo > div {
+    grid-template-columns: 1fr;
+  }
+}
+
+.login-page__brand > img {
+  width: 78px;
+  height: 34px;
+  object-fit: contain;
+  object-position: left center;
+}
+.role-login-form__password {
+  position: relative;
+  display: block;
+}
+.role-login-form__password input {
+  width: 100%;
+  padding-right: 2.8rem;
+}
+.role-login-form__password button {
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  display: grid;
+  width: 2rem;
+  min-height: 2rem;
+  margin: 0;
+  padding: 0;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: #64748b;
+}
+.role-login-form__password button:hover {
+  background: #f1f5f9;
+  color: #0f766e;
+}
+@media (max-width: 520px) {
+  .login-page {
+    place-items: start center;
+    padding-top: 2rem;
+  }
+  .login-page__roles {
+    grid-template-columns: 1fr;
+  }
+}

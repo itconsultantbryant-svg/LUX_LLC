@@ -1,13 +1,16 @@
 :root {
   color-scheme: light;
-  --lux-navy: #001539;
-  --lux-navy-soft: #10294e;
-  --lux-orange: #ff7900;
-  --lux-orange-ink: #a84700;
-  --lux-orange-wash: #fff2e5;
-  --lux-canvas: #f6f8fc;
-  --lux-muted: #526079;
-  --lux-line: #dce3ed;
+  --lux-navy: #0f172a;
+  --lux-navy-soft: #1e293b;
+  --lux-orange: #0f766e;
+  --lux-orange-ink: #115e59;
+  --lux-orange-wash: #f0fdfa;
+  --lux-canvas: #f8fafc;
+  --lux-muted: #64748b;
+  --lux-line: #e2e8f0;
+  --lux-line-strong: #cbd5e1;
+  --lux-navy-wash: #f1f5f9;
+  --lux-teal: #087f7f;
   --hw-ink: var(--lux-navy);
   --hw-muted: var(--lux-muted);
   --hw-paper: var(--lux-canvas);
@@ -15,6 +18,7 @@
   --hw-line: var(--lux-line);
   --hw-coral: #b42318;
   --hw-shadow: 0 16px 40px rgb(0 21 57 / 7%);
+  --hw-shadow-raised: 0 18px 45px rgb(0 21 57 / 10%);
   --font-display: 'Avenir Next', 'Segoe UI', sans-serif;
   --font-body: 'Avenir Next', 'Segoe UI', sans-serif;
   color: var(--hw-ink);
@@ -38,6 +42,7 @@ body,
 }
 body {
   min-width: 280px;
+  background: var(--lux-canvas);
 }
 a {
   color: inherit;
@@ -115,22 +120,25 @@ input[type='checkbox'] {
   justify-content: center;
   gap: 1rem;
   padding: 0.85rem 1.25rem;
-  border-radius: 0.7rem;
+  border-radius: 0.75rem;
   font-weight: 700;
   border: 1px solid transparent;
   text-align: center;
   line-height: 1.4;
   transition:
     background 160ms ease,
-    box-shadow 160ms ease;
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
 }
 .btn--primary {
-  background: var(--lux-orange);
-  color: var(--lux-navy);
+  background: #0f766e;
+  color: #fff;
 }
 .btn--primary:hover {
-  background: #ff942e;
-  box-shadow: 0 4px 16px rgb(255 121 0 / 18%);
+  background: #0d9488;
+  box-shadow: 0 4px 16px rgb(13 148 136 / 22%);
+  transform: translateY(-1px);
 }
 .btn--ghost {
   background: white;
@@ -141,8 +149,12 @@ input[type='checkbox'] {
   background: #edf2f9;
   border-color: #b3c0d2;
 }
+.btn--ghost:active,
+.btn--primary:active {
+  transform: translateY(0);
+}
 .eyebrow {
-  color: var(--lux-orange-ink);
+  color: #0f766e;
   font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;

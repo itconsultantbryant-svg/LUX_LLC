@@ -250,7 +250,10 @@ export const organizations = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    check('organization_kind_valid', sql`${table.kind} IN ('provider','sponsor','partner')`),
+    check(
+      'organization_kind_valid',
+      sql`${table.kind} IN ('provider','sponsor','partner','employer')`,
+    ),
     check(
       'organization_status_valid',
       sql`${table.status} IN ('pending','approved','rejected','suspended')`,
@@ -279,9 +282,38 @@ export const memberships = pgTable(
     ),
     check(
       'membership_role_valid',
-      sql`${table.role} IN ('provider_staff','provider_manager','organization_admin','program_manager','reviewer','finance_operator','partner_officer')`,
+      sql`${table.role} IN ('provider_staff','provider_manager','organization_admin','program_manager','reviewer','finance_operator','partner_officer','employer_admin')`,
     ),
     check('membership_status_valid', sql`${table.status} IN ('active','suspended','revoked')`),
+  ],
+);
+export const employerEmployees = pgTable(
+  'employer_employees',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    employeeReference: varchar('employee_reference', { length: 100 }).notNull(),
+    department: varchar('department', { length: 120 }),
+    status: varchar('status', { length: 20 }).notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('employer_employee_org_user_unique').on(table.organizationId, table.userId),
+    uniqueIndex('employer_employee_org_reference_unique').on(
+      table.organizationId,
+      table.employeeReference,
+    ),
+    index('employer_employee_org_status_idx').on(table.organizationId, table.status),
+    check(
+      'employer_employee_status_valid',
+      sql`${table.status} IN ('active','inactive','invited')`,
+    ),
   ],
 );
 export const invitations = pgTable('organization_invitations', {

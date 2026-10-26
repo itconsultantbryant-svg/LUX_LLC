@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { formatMinor } from '../lib/money';
 import type { Provider } from '../lib/provider';
@@ -18,6 +18,7 @@ type Bill = {
   revision: number | null;
 };
 export function ProviderPage() {
+  const [searchParams] = useSearchParams();
   const [portal, setPortal] = useState<{ organizations: Organization[]; providers: Provider[] }>();
   const [organization, setOrganization] = useState('');
   const [selected, setSelected] = useState('');
@@ -39,6 +40,9 @@ export function ProviderPage() {
   const canManage = portal?.organizations.some(
     (o) => o.id === organization && ['organization_admin', 'provider_manager'].includes(o.role),
   );
+  const screen = searchParams.get('screen') ?? 'dashboard';
+  const showProfile = screen === 'dashboard' || screen === 'profile';
+  const showPayments = screen === 'dashboard' || screen === 'payments';
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -105,7 +109,15 @@ export function ProviderPage() {
           <p className="eyebrow">
             <Icon name="hospital" size={15} /> Institutional access
           </p>
-          <h1>Healthcare provider portal</h1>
+          <h1>
+            {screen === 'verify-patient'
+              ? 'Verify patient authorization'
+              : screen === 'payments'
+                ? 'Payment requests'
+                : screen === 'profile'
+                  ? 'Provider profile'
+                  : 'Healthcare provider portal'}
+          </h1>
           <p>
             Organization membership and a recently verified authenticator are required. Every bill
             remains associated with its customer.
@@ -150,84 +162,99 @@ export function ProviderPage() {
               </option>
             ))}
           </select>
-          <article className="panel">
-            <h2>Organizational provider profile</h2>
-            <p>
-              Verification: <strong>{p?.status ?? 'Profile not submitted'}</strong>. Only current
-              evidence-based verification permits live payment.
-            </p>
-            {canManage ? (
-              <form
-                className="app-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void act(async () => {
-                    await apiPost('/api/provider/profiles', {
-                      organizationId: organization,
-                      legalName: name,
-                      licenseNumber: license,
-                      address: { line: address, phone },
-                    });
-                    setNotice(
-                      'Profile saved. Licensed detail changes require a new verification review.',
-                    );
-                  });
-                }}
-              >
-                <label htmlFor="provider-name">Licensed provider name</label>
-                <input
-                  id="provider-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-                <label htmlFor="provider-license">License or registration number</label>
-                <input
-                  id="provider-license"
-                  value={license}
-                  onChange={(e) => setLicense(e.target.value)}
-                  required
-                />
-                <label htmlFor="provider-address">Public practice address</label>
-                <input
-                  id="provider-address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  required
-                />
-                <label htmlFor="provider-phone">Public contact phone (international format)</label>
-                <input
-                  id="provider-phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                />
-                <button className="btn btn--primary" disabled={busy}>
-                  Save profile for verification
-                </button>
-              </form>
-            ) : (
+          {screen === 'verify-patient' && (
+            <Feedback title="Patient authorization is required">
               <p>
-                {p?.legal_name} · {p?.address.line}
+                Ask the customer to select this verified facility in Pay Provider and provide their
+                one-use association code. The portal does not support name-only patient lookup or
+                disclose balances.
               </p>
-            )}
-            {p && <ProviderQr id={p.id} />}
-          </article>
-          {canManage && (
-            <StaffManager
-              key={organization}
-              organization={organization}
-              role={
-                portal.organizations.some(
-                  (o) => o.id === organization && o.role === 'organization_admin',
-                )
-                  ? 'organization_admin'
-                  : 'provider_manager'
-              }
-            />
+            </Feedback>
           )}
-          {p && (
+          {showProfile && (
+            <>
+              <article className="panel">
+                <h2>Organizational provider profile</h2>
+                <p>
+                  Verification: <strong>{p?.status ?? 'Profile not submitted'}</strong>. Only
+                  current evidence-based verification permits live payment.
+                </p>
+                {canManage ? (
+                  <form
+                    className="app-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void act(async () => {
+                        await apiPost('/api/provider/profiles', {
+                          organizationId: organization,
+                          legalName: name,
+                          licenseNumber: license,
+                          address: { line: address, phone },
+                        });
+                        setNotice(
+                          'Profile saved. Licensed detail changes require a new verification review.',
+                        );
+                      });
+                    }}
+                  >
+                    <label htmlFor="provider-name">Licensed provider name</label>
+                    <input
+                      id="provider-name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                    <label htmlFor="provider-license">License or registration number</label>
+                    <input
+                      id="provider-license"
+                      value={license}
+                      onChange={(e) => setLicense(e.target.value)}
+                      required
+                    />
+                    <label htmlFor="provider-address">Public practice address</label>
+                    <input
+                      id="provider-address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      required
+                    />
+                    <label htmlFor="provider-phone">
+                      Public contact phone (international format)
+                    </label>
+                    <input
+                      id="provider-phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required
+                    />
+                    <button className="btn btn--primary" disabled={busy}>
+                      Save profile for verification
+                    </button>
+                  </form>
+                ) : (
+                  <p>
+                    {p?.legal_name} · {p?.address.line}
+                  </p>
+                )}
+                {p && <ProviderQr id={p.id} />}
+              </article>
+              {canManage && (
+                <StaffManager
+                  key={organization}
+                  organization={organization}
+                  role={
+                    portal.organizations.some(
+                      (o) => o.id === organization && o.role === 'organization_admin',
+                    )
+                      ? 'organization_admin'
+                      : 'provider_manager'
+                  }
+                />
+              )}
+            </>
+          )}
+          {p && showPayments && (
             <>
               <article className="panel">
                 <h2>Create an itemized customer bill</h2>

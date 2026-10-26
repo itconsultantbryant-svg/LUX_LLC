@@ -13,10 +13,10 @@ describe('unconnected service boundaries', () => {
         <CustomerHome />
       </MemoryRouter>,
     );
-    expect(html).toContain('LRD —');
+    expect(html).toContain('LRD Balance');
     expect(html).not.toContain('Try Demo');
     expect(html).not.toContain('12,500.00');
-    expect(html).toContain('Institutional access');
+    expect(html).toContain('Insurance Status');
   });
   it('does not render live payment forms without a demo session', () => {
     const html = renderToStaticMarkup(
