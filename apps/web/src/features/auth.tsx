@@ -33,8 +33,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await apiGet<{ profile: IdentityProfile }>('/api/auth/me');
       setProfile(data.profile);
       void ensureLocation();
+      return data.profile;
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) setProfile(null);
+      return null;
     } finally {
       setLoading(false);
     }

@@ -5,7 +5,7 @@ export type AuthState = {
   profile: IdentityProfile | null;
   loading: boolean;
   signedIn: boolean;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<IdentityProfile | null>;
   signOut: () => Promise<void>;
 };
 
@@ -13,7 +13,7 @@ export const AuthContext = createContext<AuthState>({
   profile: null,
   loading: false,
   signedIn: false,
-  refresh: async () => {},
+  refresh: async () => null,
   signOut: async () => {},
 });
 

@@ -54,22 +54,41 @@ export function RoleLoginPage() {
   const { signedIn, refresh } = useAuth();
   const navigate = useNavigate();
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const item = role ? loginTypes[role] : undefined;
   if (!item) return <Navigate to="/login" replace />;
   if (signedIn) return <Navigate to="/dashboard" replace />;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     const form = new FormData(event.currentTarget);
+    setBusy(true);
+    setSubmitted(false);
+    setError('');
     try {
       const result = await apiPost<{ mfaRequired: boolean }>('/api/auth/credential-login', {
-        identifier: form.get('identifier'),
+        identifier: String(form.get('identifier') ?? '')
+          .trim()
+          .toLowerCase(),
         password: form.get('password'),
       });
-      await refresh();
-      navigate(result.mfaRequired ? '/login/mfa?returnTo=/dashboard' : '/dashboard');
-    } catch {
+      if (result.mfaRequired) {
+        navigate('/login/mfa?returnTo=/dashboard');
+        return;
+      }
+      const profile = await refresh();
+      if (!profile)
+        throw new Error('Your session could not be restored. Check your connection and try again.');
+      navigate('/dashboard');
+    } catch (reason) {
       setSubmitted(true);
+      setError(
+        reason instanceof Error ? reason.message : 'We could not complete sign-in. Try again.',
+      );
+    } finally {
+      setBusy(false);
     }
   }
   return (
@@ -88,7 +107,9 @@ export function RoleLoginPage() {
         </header>
         {item.fields === 'credentials' && (
           <form className="role-login-form" onSubmit={submit}>
-            <label htmlFor="identifier">Organization email or ID</label>
+            <label htmlFor="identifier">
+              {role === 'customer' ? 'Email or customer ID' : 'Organization email or ID'}
+            </label>
             <input id="identifier" name="identifier" required autoComplete="username" />
             <label htmlFor="password">Password</label>
             <span className="role-login-form__password">
@@ -107,13 +128,14 @@ export function RoleLoginPage() {
                 <Icon name="eye" size={17} />
               </button>
             </span>
-            <button type="submit">
-              Continue to verification <Icon name="arrow-right" size={16} />
+            <button type="submit" disabled={busy}>
+              {busy ? 'Signing in…' : 'Continue to verification'}{' '}
+              <Icon name="arrow-right" size={16} />
             </button>
             {submitted && (
               <p className="role-login-form__notice">
-                We could not verify those credentials. Confirm your organization access and try
-                again.
+                {error ||
+                  'We could not verify those credentials. Confirm your organization access and try again.'}
               </p>
             )}
           </form>

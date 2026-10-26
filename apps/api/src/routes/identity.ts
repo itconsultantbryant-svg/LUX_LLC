@@ -71,7 +71,12 @@ export const identityRoutes: FastifyPluginAsync<{ service?: IdentityService }> =
       return reply.code(400).send({ message: 'Invalid request.' });
     // Do not log database parameters, phone numbers, codes, or cookies.
     app.log.error(
-      { errorType: error instanceof Error ? error.name : 'UnknownError' },
+      {
+        errorType: error instanceof Error ? error.name : 'UnknownError',
+        errorCode:
+          error && typeof error === 'object' && 'code' in error ? String(error.code) : undefined,
+        errorMessage: error instanceof Error ? error.message : undefined,
+      },
       'Identity operation failed',
     );
     return reply
