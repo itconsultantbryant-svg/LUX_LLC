@@ -174,11 +174,6 @@ export function AccountPage() {
               Continue funding request
             </Link>
           )}
-          <p>
-            <Link className="text-link" to="/save">
-              Manage optional financial guidance consent
-            </Link>
-          </p>
           <h2>Your consent records</h2>
           <p>
             These consent records apply to this account. Changing consent does not grant another

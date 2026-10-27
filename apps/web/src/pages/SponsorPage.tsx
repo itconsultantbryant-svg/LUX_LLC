@@ -19,7 +19,7 @@ type Program = {
 };
 type Organization = { id: string; name: string; kind: string; status: string };
 
-export function SponsorPage() {
+export function SponsorPage({ screen: screenOverride }: { screen?: string } = {}) {
   const [searchParams] = useSearchParams();
   const [programs, setPrograms] = useState<Program[]>();
   const [organizations, setOrganizations] = useState<Organization[]>();
@@ -27,10 +27,10 @@ export function SponsorPage() {
   const [notice, setNotice] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [busy, setBusy] = useState(false);
-  const screen = searchParams.get('screen') ?? 'dashboard';
+  const screen = screenOverride ?? searchParams.get('screen') ?? 'dashboard';
   useEffect(() => {
     let active = true;
-    void apiGet<{ programs: Program[] }>('/api/governance/programs')
+    void apiGet<{ programs: Program[] }>('/api/sponsor/portal')
       .then((data) => active && setPrograms(data.programs))
       .catch((reason: Error) => active && setError(reason.message));
     return () => {
@@ -98,7 +98,7 @@ export function SponsorPage() {
       setNotice(
         'Program submitted for separate approval. It cannot fund or issue vouchers until approved.',
       );
-      setPrograms((await apiGet<{ programs: Program[] }>('/api/governance/programs')).programs);
+      setPrograms((await apiGet<{ programs: Program[] }>('/api/sponsor/portal')).programs);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The program could not be submitted.');
     } finally {

@@ -6,6 +6,7 @@ import { InstallApp } from './InstallApp';
 import { NotificationBell } from './NotificationBell';
 import { useDemo } from '../features/demo';
 import { useAuth } from '../features/auth-context';
+import { hasAnyRole, hasInstitutionalRole, institutionalRoles } from '../features/roles';
 import { NetworkNotice } from './Feedback';
 import { EnvironmentBanner } from './EnvironmentBanner';
 import { Icon, type IconName } from './icons/Icon';
@@ -15,33 +16,33 @@ type NavItem = { to: string; label: string; icon: IconName };
 
 const customerLinks: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: 'home' },
-  { to: '/save', label: 'Save for Health', icon: 'heart' },
-  { to: '/pay', label: 'Pay Provider', icon: 'credit-card' },
-  { to: '/support', label: 'Receive Funds', icon: 'users' },
-  { to: '/pay?directory=1', label: 'Providers', icon: 'hospital' },
-  { to: '/services/insurance', label: 'Insurance Claims', icon: 'shield-check' },
-  { to: '/history', label: 'Transactions', icon: 'activity' },
-  { to: '/services/ussd', label: 'USSD Access', icon: 'smartphone' },
-  { to: '/services/orange-money', label: 'Orange Money', icon: 'smartphone' },
-  { to: '/account', label: 'Profile', icon: 'user' },
+  { to: '/customer/save', label: 'Save for Health', icon: 'heart' },
+  { to: '/customer/pay', label: 'Pay Provider', icon: 'credit-card' },
+  { to: '/customer/receive', label: 'Receive Funds', icon: 'users' },
+  { to: '/customer/insurance', label: 'Insurance Claims', icon: 'shield-check' },
+  { to: '/customer/providers', label: 'Providers', icon: 'hospital' },
+  { to: '/customer/transactions', label: 'Transactions', icon: 'activity' },
+  { to: '/customer/ussd', label: 'USSD Access', icon: 'smartphone' },
+  { to: '/customer/orange-money', label: 'Orange Money', icon: 'smartphone' },
+  { to: '/customer/profile', label: 'Profile', icon: 'user' },
 ];
 
 const roleLinks: Record<string, NavItem[]> = {
   platform_admin: [
-    { to: '/admin', label: 'Overview', icon: 'home' },
+    { to: '/operations/dashboard', label: 'Overview', icon: 'home' },
     {
-      to: '/institutional/reviews?screen=human-review',
+      to: '/operations/reviews',
       label: 'Human Review',
       icon: 'check-circle',
     },
     {
-      to: '/institutional/provider-verification',
+      to: '/operations/providers',
       label: 'Provider Verification',
       icon: 'hospital',
     },
-    { to: '/admin?section=flags', label: 'Operational controls', icon: 'alert-triangle' },
+    { to: '/operations/admin', label: 'Operational controls', icon: 'alert-triangle' },
     {
-      to: '/institutional/reviews?screen=payment-validation',
+      to: '/operations/reviews',
       label: 'Payment Validation',
       icon: 'shield-check',
     },
@@ -50,9 +51,9 @@ const roleLinks: Record<string, NavItem[]> = {
     { to: '/admin?section=receipts', label: 'Issued Receipts', icon: 'file-text' },
   ],
   reviewer: [
-    { to: '/institutional/reviews', label: 'Overview', icon: 'home' },
+    { to: '/operations/dashboard', label: 'Overview', icon: 'home' },
     {
-      to: '/institutional/reviews?screen=human-review',
+      to: '/operations/reviews',
       label: 'Human Review',
       icon: 'check-circle',
     },
@@ -60,58 +61,54 @@ const roleLinks: Record<string, NavItem[]> = {
     { to: '/receipts', label: 'Transactions', icon: 'activity' },
   ],
   provider_staff: [
-    { to: '/institutional/provider', label: 'Dashboard', icon: 'home' },
-    {
-      to: '/institutional/provider?screen=verify-patient',
-      label: 'Verify Patient',
-      icon: 'user-check',
-    },
-    { to: '/institutional/provider?screen=payments', label: 'Payments', icon: 'credit-card' },
+    { to: '/provider/dashboard', label: 'Dashboard', icon: 'home' },
+    { to: '/provider/verify-patient', label: 'Verify Patient', icon: 'user-check' },
+    { to: '/provider/payments', label: 'Payments', icon: 'credit-card' },
     { to: '/services/insurance', label: 'Claims', icon: 'shield-check' },
     { to: '/receipts', label: 'Payouts', icon: 'wallet' },
-    { to: '/institutional/provider?screen=profile', label: 'Profile', icon: 'user' },
+    { to: '/provider/profile', label: 'Profile', icon: 'user' },
   ],
   provider_manager: [
-    { to: '/institutional/provider', label: 'Dashboard', icon: 'home' },
+    { to: '/provider/dashboard', label: 'Dashboard', icon: 'home' },
     {
-      to: '/institutional/provider?screen=verify-patient',
+      to: '/provider/verify-patient',
       label: 'Verify Patient',
       icon: 'user-check',
     },
-    { to: '/institutional/provider?screen=payments', label: 'Payments', icon: 'credit-card' },
+    { to: '/provider/payments', label: 'Payments', icon: 'credit-card' },
     { to: '/services/insurance', label: 'Claims', icon: 'shield-check' },
     { to: '/receipts', label: 'Payouts', icon: 'wallet' },
-    { to: '/institutional/provider?screen=profile', label: 'Profile', icon: 'user' },
+    { to: '/provider/profile', label: 'Profile', icon: 'user' },
   ],
   provider_admin: [
-    { to: '/institutional/provider', label: 'Dashboard', icon: 'home' },
+    { to: '/provider/dashboard', label: 'Dashboard', icon: 'home' },
     {
-      to: '/institutional/provider?screen=verify-patient',
+      to: '/provider/verify-patient',
       label: 'Verify Patient',
       icon: 'user-check',
     },
-    { to: '/institutional/provider?screen=payments', label: 'Payments', icon: 'credit-card' },
+    { to: '/provider/payments', label: 'Payments', icon: 'credit-card' },
     { to: '/services/insurance', label: 'Claims', icon: 'shield-check' },
     { to: '/receipts', label: 'Payouts', icon: 'wallet' },
-    { to: '/institutional/provider?screen=profile', label: 'Profile', icon: 'user' },
+    { to: '/provider/profile', label: 'Profile', icon: 'user' },
   ],
   employer_admin: [
-    { to: '/institutional/employer', label: 'Dashboard', icon: 'home' },
-    { to: '/institutional/employer?screen=employees', label: 'Employees', icon: 'users' },
-    { to: '/institutional/employer?screen=contribute', label: 'Contribute', icon: 'credit-card' },
-    { to: '/institutional/employer?screen=transactions', label: 'Transactions', icon: 'activity' },
+    { to: '/employer/dashboard', label: 'Dashboard', icon: 'home' },
+    { to: '/employer/employees', label: 'Employees', icon: 'users' },
+    { to: '/employer/contribute', label: 'Contribute', icon: 'credit-card' },
+    { to: '/employer/transactions', label: 'Transactions', icon: 'activity' },
   ],
   sponsor_admin: [
-    { to: '/institutional/sponsor', label: 'Dashboard', icon: 'home' },
-    { to: '/institutional/sponsor?screen=programs', label: 'Programs', icon: 'gift' },
-    { to: '/institutional/sponsor?screen=beneficiaries', label: 'Beneficiaries', icon: 'users' },
-    { to: '/institutional/sponsor?screen=transactions', label: 'Transactions', icon: 'activity' },
+    { to: '/sponsor/dashboard', label: 'Dashboard', icon: 'home' },
+    { to: '/sponsor/programs', label: 'Programs', icon: 'gift' },
+    { to: '/sponsor/beneficiaries', label: 'Beneficiaries', icon: 'users' },
+    { to: '/sponsor/transactions', label: 'Transactions', icon: 'activity' },
   ],
   partner_officer: [
-    { to: '/institutional/partner', label: 'Dashboard', icon: 'home' },
-    { to: '/institutional/partner?screen=funding', label: 'Funding', icon: 'wallet' },
-    { to: '/institutional/partner?screen=reconcile', label: 'Reconcile', icon: 'refresh' },
-    { to: '/institutional/partner?screen=transactions', label: 'Transactions', icon: 'activity' },
+    { to: '/bank/dashboard', label: 'Dashboard', icon: 'home' },
+    { to: '/bank/funding', label: 'Funding', icon: 'wallet' },
+    { to: '/bank/reconcile', label: 'Reconcile', icon: 'refresh' },
+    { to: '/bank/transactions', label: 'Transactions', icon: 'activity' },
   ],
 };
 
@@ -120,24 +117,16 @@ const workspaceLinks: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/assistant', label: 'LUX assistant', icon: 'message-circle' },
   { to: '/receipts', label: 'Receipts', icon: 'receipt' },
 ];
-const rolePriority = [
-  'platform_admin',
-  'reviewer',
-  'provider_admin',
-  'provider_manager',
-  'provider_staff',
-  'employer_admin',
-  'sponsor_admin',
-  'partner_officer',
-];
-
 export function AppShell() {
   const location = useLocation();
   const { state, dispatch } = useDemo();
   const { signedIn, profile, signOut } = useAuth();
+  const canAccessAdmin = hasAnyRole(profile?.roles, ['platform_admin']);
+  const canAccessReviews = hasAnyRole(profile?.roles, ['platform_admin', 'reviewer']);
+  const hasInstitutionalAccess = hasInstitutionalRole(profile?.roles);
   const links = useMemo(
     () =>
-      rolePriority
+      institutionalRoles
         .filter((role) => profile?.roles.includes(role as never))
         .map((role) => roleLinks[role])
         .find((items): items is NavItem[] => Boolean(items)) ?? customerLinks,
@@ -198,7 +187,7 @@ export function AppShell() {
                 <Icon name="user" size={17} />
               </summary>
               <nav aria-label="Secondary">
-                <NavLink to={signedIn ? '/account' : '/login'}>
+                <NavLink to={signedIn ? '/customer/profile' : '/login'}>
                   <Icon name="user" size={18} />{' '}
                   {signedIn ? `Signed in · ${profile?.phone ?? 'Account'}` : 'Profile & sign in'}
                 </NavLink>
@@ -219,15 +208,21 @@ export function AppShell() {
                 <NavLink to="/notifications">
                   <Icon name="bell" size={18} /> Notifications
                 </NavLink>
-                <NavLink to="/admin">
-                  <Icon name="shield" size={18} /> Admin console
-                </NavLink>
-                <NavLink to="/institutional/reviews">
-                  <Icon name="check-circle" size={18} /> Review queue
-                </NavLink>
-                <NavLink to="/institutional/metrics">
-                  <Icon name="activity" size={18} /> Journey metrics
-                </NavLink>
+                {canAccessAdmin && (
+                  <NavLink to="/admin">
+                    <Icon name="shield" size={18} /> Admin console
+                  </NavLink>
+                )}
+                {canAccessReviews && (
+                  <NavLink to="/institutional/reviews">
+                    <Icon name="check-circle" size={18} /> Review queue
+                  </NavLink>
+                )}
+                {canAccessAdmin && (
+                  <NavLink to="/institutional/metrics">
+                    <Icon name="activity" size={18} /> Journey metrics
+                  </NavLink>
+                )}
                 <NavLink to="/status">
                   <Icon name="settings" size={18} /> Service status
                 </NavLink>
@@ -259,14 +254,19 @@ export function AppShell() {
           <div className="shell__sidebar-section">
             <span>Tools</span>
             <nav className="shell__workspace-nav" aria-label="Workspace tools">
-              {workspaceLinks.map((link) => (
-                <NavLink key={link.to} to={link.to}>
-                  <Icon name={link.icon} size={17} /> {link.label}
-                </NavLink>
-              ))}
+              {workspaceLinks
+                .filter((link) => link.to !== '/institutional' || hasInstitutionalAccess)
+                .map((link) => (
+                  <NavLink key={link.to} to={link.to}>
+                    <Icon name={link.icon} size={17} /> {link.label}
+                  </NavLink>
+                ))}
             </nav>
           </div>
-          <NavLink className="shell__sidebar-account" to={signedIn ? '/account' : '/login'}>
+          <NavLink
+            className="shell__sidebar-account"
+            to={signedIn ? '/customer/profile' : '/login'}
+          >
             <span className="shell__avatar" aria-hidden="true">
               <Icon name="user" size={18} />
             </span>

@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { Access, withSession } from '../modules/security/access.js';
+import { Access, denied, withSession } from '../modules/security/access.js';
 import { IdentityError } from '../modules/identity/service.js';
 import { GovernanceService } from '../modules/programs/governance.js';
 import { sessionToken } from './identity.js';
@@ -38,6 +38,31 @@ export const governanceRoutes: FastifyPluginAsync = async (app) => {
     });
 
   route('GET', '/api/governance/programs', (a) => governance.listPrograms(a));
+
+  /** Sponsor portal projection. The broader governance API also supports other
+   * program operators; this endpoint is deliberately limited to sponsor workspaces. */
+  route('GET', '/api/sponsor/portal', async (a) => {
+    const organizations = (
+      await a.client.query<{ id: string; name: string; role: string }>(
+        `SELECT o.id,o.name,m.role
+           FROM organization_memberships m JOIN organizations o ON o.id=m.organization_id
+          WHERE m.user_id=$1 AND m.status='active' AND o.kind='sponsor' AND o.status='approved'
+            AND m.role=ANY($2::text[])
+          ORDER BY o.name`,
+        [
+          a.actor.id,
+          ['sponsor_admin', 'organization_admin', 'program_manager', 'finance_operator'],
+        ],
+      )
+    ).rows;
+    if (!organizations.length) throw denied();
+    const allowed = new Set(organizations.map((organization) => organization.id));
+    const { programs } = await governance.listPrograms(a);
+    return {
+      organizations,
+      programs: programs.filter((program) => allowed.has(program.organization_id)),
+    };
+  });
 
   route('POST', '/api/governance/programs', async (a, r) => {
     const body = z

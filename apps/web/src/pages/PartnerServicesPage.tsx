@@ -51,9 +51,13 @@ const services = {
 
 type ServiceKey = keyof typeof services;
 
-export function PartnerServicesPage() {
+export function PartnerServicesPage({ section: sectionOverride }: { section?: ServiceKey }) {
   const { section } = useParams();
-  const key = section && Object.hasOwn(services, section) ? (section as ServiceKey) : null;
+  const requestedSection = sectionOverride ?? section;
+  const key =
+    requestedSection && Object.hasOwn(services, requestedSection)
+      ? (requestedSection as ServiceKey)
+      : null;
   const [modules, setModules] = useState<Module[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [coverage, setCoverage] = useState<Coverage>();

@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { Access, missing, withSession } from '../modules/security/access.js';
+import { Access, denied, missing, withSession } from '../modules/security/access.js';
 import { IdentityError, tokenHash } from '../modules/identity/service.js';
 import { limit } from '../modules/security/limits.js';
 import { sessionToken } from './identity.js';
@@ -76,6 +76,7 @@ export const providerRoutes: FastifyPluginAsync = async (app) => {
         [a.actor.id, staffRoles],
       )
     ).rows;
+    if (!organizations.length) throw denied();
     const profiles = (
       await a.client.query(`SELECT p.* FROM providers p WHERE p.organization_id=ANY($1::uuid[])`, [
         organizations.map((o) => o.id),

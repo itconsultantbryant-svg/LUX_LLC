@@ -18,11 +18,11 @@ type Settlement = {
   organization_name: string;
 };
 
-export function BankPage() {
+export function BankPage({ screen: screenOverride }: { screen?: string } = {}) {
   const [searchParams] = useSearchParams();
   const [settlements, setSettlements] = useState<Settlement[]>();
   const [error, setError] = useState('');
-  const screen = searchParams.get('screen') ?? 'dashboard';
+  const screen = screenOverride ?? searchParams.get('screen') ?? 'dashboard';
   useEffect(() => {
     let active = true;
     void apiGet<{ settlements: Settlement[] }>('/api/partners/settlements')

@@ -17,7 +17,7 @@ type Bill = {
   status: string;
   revision: number | null;
 };
-export function ProviderPage() {
+export function ProviderPage({ screen: screenOverride }: { screen?: string } = {}) {
   const [searchParams] = useSearchParams();
   const [portal, setPortal] = useState<{ organizations: Organization[]; providers: Provider[] }>();
   const [organization, setOrganization] = useState('');
@@ -40,7 +40,7 @@ export function ProviderPage() {
   const canManage = portal?.organizations.some(
     (o) => o.id === organization && ['organization_admin', 'provider_manager'].includes(o.role),
   );
-  const screen = searchParams.get('screen') ?? 'dashboard';
+  const screen = screenOverride ?? searchParams.get('screen') ?? 'dashboard';
   const showProfile = screen === 'dashboard' || screen === 'profile';
   const showPayments = screen === 'dashboard' || screen === 'payments';
   useEffect(() => {

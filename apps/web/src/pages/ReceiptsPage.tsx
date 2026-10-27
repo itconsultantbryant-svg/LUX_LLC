@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { apiGet } from '../lib/api';
 import { Feedback } from '../components/Feedback';
 import { Icon } from '../components/icons/Icon';
@@ -57,17 +56,13 @@ export function ReceiptsPage() {
             <Icon name="receipt" size={15} /> Receipts
           </p>
           <h1>Transaction receipts</h1>
-          <p>Every movement has a unique number, the parties involved and its status.</p>
         </div>
       </div>
       {loading && <Feedback kind="loading" title="Loading your receipts…" />}
       {error && <Feedback kind="error" title={error} />}
       {!loading && !error && receipts.length === 0 && (
         <Feedback kind="unavailable" title="No receipts yet">
-          <p>Receipts appear here after a top-up, contribution or payment.</p>
-          <Link className="btn btn--primary" to="/save">
-            Add money
-          </Link>
+          <p>Your completed transactions will appear here.</p>
         </Feedback>
       )}
       {receipts.length > 0 && (
