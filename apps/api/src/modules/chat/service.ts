@@ -4,11 +4,12 @@ import {
   FEE_SCHEDULE,
   type AiExtractionResult,
   type ChatActionKind,
+  type ChatItem,
+  type ChatMessage,
+  type ChatMessageContent,
   type ChatConfirmation,
   type ChatDocumentReview,
-  type ChatItemIntent,
   type LocationInput,
-  type NearbyProvider,
 } from '@healthwallet/shared';
 import type pg from 'pg';
 import { IdentityError } from '../identity/service.js';
@@ -33,45 +34,6 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
   'image/jpeg',
   'text/plain',
 ]);
-
-export type ChatAction = { label: string; href: string };
-
-export type ChatItem = {
-  kind: 'alert' | 'recommendation' | 'action';
-  title: string;
-  detail: string;
-  action?: ChatAction;
-  confirmation?: ChatConfirmation;
-  intent?: ChatItemIntent;
-};
-
-export type ChatExtractionSummary = {
-  providerName: string | null;
-  totalAmountMinor: number | null;
-  currency: string | null;
-  serviceDate: string | null;
-  confidence: number;
-  unreadable: boolean;
-  ambiguous: string[];
-};
-
-export type ChatMessageContent = {
-  text: string;
-  disclaimer?: string;
-  document?: { contentType: string; byteSize: number };
-  documentReview?: ChatDocumentReview;
-  extraction?: ChatExtractionSummary;
-  items?: ChatItem[];
-  providers?: NearbyProvider[];
-  usedLocation?: boolean;
-};
-
-export type ChatMessage = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: ChatMessageContent;
-  createdAt: string;
-};
 
 export type ChatConfirmResult = {
   id: string;
@@ -411,7 +373,23 @@ export class ChatService {
     content: ChatMessageContent,
   ): Promise<ChatMessage> {
     const stored: ChatMessageContent =
-      role === 'assistant' ? { ...content, disclaimer: ASSISTANT_DISCLAIMER } : content;
+      role === 'assistant'
+        ? {
+            ...content,
+            disclaimer: ASSISTANT_DISCLAIMER,
+            provenance: content.extraction
+              ? {
+                  method: 'sandbox_document_reader',
+                  label: 'LUX sandbox document reader',
+                }
+              : content.providers
+                ? {
+                    method: 'verified_provider_directory',
+                    label: 'Verified provider directory',
+                  }
+                : { method: 'rules_engine', label: 'LUX rules engine' },
+          }
+        : content;
     const row = (
       await a.client.query<{ id: string; created_at: Date }>(
         'INSERT INTO chat_messages(user_id,role,content) VALUES($1,$2,$3) RETURNING id,created_at',
@@ -470,7 +448,7 @@ export class ChatService {
       };
     }
 
-    const summary: ChatExtractionSummary = {
+    const summary: NonNullable<ChatMessageContent['extraction']> = {
       providerName: extraction.fields.providerName,
       totalAmountMinor: extraction.fields.totalAmountMinor,
       currency: extraction.fields.currency,

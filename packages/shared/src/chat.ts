@@ -97,6 +97,17 @@ export type ChatDocumentReview = z.infer<typeof ChatDocumentReviewSchema>;
 export const ChatMessageContentSchema = z.object({
   text: z.string(),
   disclaimer: z.string().max(400).optional(),
+  /**
+   * A human-readable explanation of the system that produced an assistant
+   * reply. This prevents the UI from presenting deterministic guidance as a
+   * live generative-model response.
+   */
+  provenance: z
+    .object({
+      method: z.enum(['rules_engine', 'sandbox_document_reader', 'verified_provider_directory']),
+      label: z.string().min(1).max(120),
+    })
+    .optional(),
   document: z
     .object({ contentType: z.string().max(60), byteSize: z.number().int().nonnegative() })
     .optional(),

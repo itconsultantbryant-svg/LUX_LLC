@@ -157,6 +157,28 @@
   gap: 0.75rem;
 }
 
+.chat__ai-disclosure {
+  display: grid;
+  gap: 0.75rem;
+  border-left: 4px solid var(--lux-orange);
+}
+
+.chat__ai-disclosure h2,
+.chat__ai-disclosure p {
+  margin: 0;
+}
+
+.chat__ai-disclosure ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.chat__ai-disclosure li {
+  line-height: 1.5;
+}
+
 .chat__briefing h2 {
   margin: 0;
 }
@@ -196,6 +218,19 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--hw-muted);
+}
+
+.chat__provenance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: -0.05rem 0 0.5rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: var(--lux-orange-wash);
+  color: var(--lux-navy);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .chat__text {

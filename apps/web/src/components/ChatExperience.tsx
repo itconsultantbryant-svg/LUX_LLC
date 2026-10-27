@@ -407,6 +407,11 @@ export function ChatExperience({
             aria-label={message.role === 'user' ? 'You' : 'Assistant'}
           >
             <p className="chat__who">{message.role === 'user' ? 'You' : 'LUX assistant'}</p>
+            {message.role === 'assistant' && message.content.provenance && (
+              <p className="chat__provenance">
+                <Icon name="sparkles" size={13} /> {message.content.provenance.label}
+              </p>
+            )}
             <p className="chat__text">{message.content.text}</p>
             {message.role === 'assistant' && message.content.disclaimer && (
               <p className="chat__disclaimer">{message.content.disclaimer}</p>
