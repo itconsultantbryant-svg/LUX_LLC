@@ -52,7 +52,7 @@ echo "==> Applying migrations to $DEMO_DB"
 APP_ENV=demo DATABASE_URL="$DEMO_URL" DATABASE_URL_UNPOOLED="$DEMO_URL_UNPOOLED" \
   pnpm --filter @healthwallet/api db:migrate
 
-echo "==> Seeding synthetic demo records"
+echo "==> Seeding synthetic demo records and portal sign-in credentials"
 APP_ENV=demo DATABASE_URL="$DEMO_URL" DATABASE_URL_UNPOOLED="$DEMO_URL_UNPOOLED" \
   pnpm --filter @healthwallet/api db:seed
 

@@ -16,7 +16,7 @@
     "db:up": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "test:db": "IDENTITY_DATABASE_TESTS=1 vitest run src/modules/identity/postgres.integration.test.ts --testTimeout=30000 --hookTimeout=30000",
-    "db:seed": "tsx src/db/seed.ts --synthetic",
+    "db:seed": "tsx src/db/seed.ts --synthetic && node scripts/seed-demo-portals.mjs",
     "seed:demo-portals": "node scripts/seed-demo-portals.mjs",
     "seed:admin": "node scripts/seed-dev-admin.mjs",
     "worker:reconcile": "tsx src/workers/reconcile.ts",

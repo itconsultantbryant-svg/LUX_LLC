@@ -55,6 +55,7 @@ Environment samples: [`config/environments/`](./config/environments/).
 
 ```bash
 pnpm db:migrate
+pnpm db:seed
 pnpm dev
 ```
 
@@ -62,6 +63,9 @@ pnpm dev
 - Sandbox account: http://localhost:5173/account
 - API health: http://localhost:4000/health
 - API ready (DB): http://localhost:4000/ready
+
+`pnpm db:seed` creates synthetic records and the development portal accounts shown
+on the sign-in screen. It is restricted to development, demo, and test databases.
 
 ## Checks
 
