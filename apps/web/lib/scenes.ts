@@ -1,4 +1,5 @@
 const training = {
+  position: "60% 45%",
   alt: "Midwives attending wellbaby training in Harper City, Liberia",
   caption: "Midwife training · Harper City, Liberia · 2017",
   category: "Healthcare in Liberia",
@@ -9,6 +10,7 @@ const training = {
     "https://commons.wikimedia.org/wiki/File:Midwives_at_a_training_conducted_by_Partners_in_Health_01.jpg",
 };
 const community = {
+  position: "65% 50%",
   alt: "Liberian residents walking to a community outreach health fair in 2012",
   caption: "Community health outreach · Liberia · 2012",
   category: "Community health",
@@ -20,6 +22,7 @@ const community = {
     "https://commons.wikimedia.org/wiki/File:HSV_Swift_brings_training,_medical_care_to_Liberia_120807-F-YW322-286.jpg",
 };
 const monrovia = {
+  position: "50% 10%",
   alt: "A jeans vendor with merchandise in Monrovia, Liberia",
   caption: "Everyday enterprise · Monrovia, Liberia",
   category: "Our local context",

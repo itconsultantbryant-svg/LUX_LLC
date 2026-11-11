@@ -2,7 +2,7 @@
 
 ## Current release — 11 November 2026
 
-- `pnpm test`: **39 domain/PostgreSQL tests passed** (60.27 seconds), including new demo confirmation expiry/attempt/idempotency checks and safe team contact links.
+- `pnpm test`: **39 domain/PostgreSQL tests passed**; final pre-push rerun completed in 12.07 seconds, including new demo confirmation expiry/attempt/idempotency checks and safe team contact links.
 - `pnpm typecheck`: **passed** for backend, scripts, tests and Next.js after the current enhancements.
 - `pnpm build`: **passed** with Next.js 16.4.6 optimized compilation and route generation. Vercel's production build/deployment also succeeded.
 - Local browser coverage: **all 9 tests passed across the final public (7) and authenticated (2) runs**. An initial suite run timed out; the next complete run exposed a genuine draft-restoration race. “Start a fresh draft” now waits for draft hydration. Its claim-submission regression and the workspace responsive test passed after the fix; the multi-route workspace test receives a realistic execution budget on this host.
@@ -14,7 +14,7 @@
 - `pnpm audit --prod`: **no known vulnerabilities found**. `git diff --check`: passed before release staging.
 - Private credentials/secrets are excluded by `.gitignore` and `.vercelignore`; eight unique demo account passwords are handed off under ignored `.local/` files, not in source.
 
-Post-push verification is recorded in the release handoff once the pushed deployment has been checked. Historical results below are retained as an execution record, not current release limitations.
+**Post-push verification:** rebuild commit `a89dd2f` was pushed to `origin/main`; its Git-triggered Vercel deployment reached Ready and owns the canonical alias. **All 9 hosted browser tests passed in a single post-push run (5.7 minutes)**, including authenticated facility claim submission and workspace accessibility/responsiveness. The hosted synthetic API/claim/payment/report smoke passed again at **10:15 UTC**, after that deployment. See `docs/release-handoff.md`. Historical results below are retained as an execution record, not current release limitations.
 
 ## Completed initial pass — 10 November 2026
 

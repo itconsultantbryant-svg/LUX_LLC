@@ -4,7 +4,9 @@
 
 LUX supplies software and records. The insurer controls coverage and authorizes payment. Orange Money is the intended channel, not an assumed payout API. No insurer or facility principal is held in a LUX wallet. No Orange Money PIN belongs in LUX.
 
-`demo` is synthetic and cannot run under `NODE_ENV=production`. `sandbox` and `live` currently declare no contracted business-payment capabilities and fail closed. `manual` cannot initiate a business payout through an invented API. An approved manual procedure can use a provider-authorized external process and independent verification; it must be explicitly enabled with `MANUAL_VERIFICATION_ENABLED=true`. This switch is not a substitute for contracts or approval.
+`demo` is synthetic. A production Node runtime rejects it unless `DEPLOYMENT_TIER=demo` is explicitly set, both origins are HTTPS and the database contains only synthetic organizations. This is a hosted-demonstration exception, not approval for live-production use. `sandbox` and `live` currently declare no contracted business-payment capabilities and fail closed. `manual` cannot initiate a business payout through an invented API. An approved manual procedure can use a provider-authorized external process and independent verification; it must be explicitly enabled with `MANUAL_VERIFICATION_ENABLED=true`. This switch is not a substitute for contracts or approval.
+
+Demo dispatch requires a generated four-digit code displayed by LUX, **never a real Orange Money PIN**. It is actor/organization/payment/version-bound, expires after two minutes, HMAC-stored, limited to five attempts and single-use. Successful command replay does not redispatch. This simulated authorization step must not be reused as a real provider PIN collection flow.
 
 ## Normal synthetic journey
 

@@ -32,6 +32,18 @@ test("real-photo carousel has credits, working images and manual controls", asyn
   await expect(carousel.locator(".hero-image-disclosure")).toContainText(
     "Harper City",
   );
+  await carousel
+    .getByRole("button", {
+      name: "Show slide 4: Orange Money · Intended payment channel",
+    })
+    .click();
+  await expect(carousel.locator(".hero-photo-layer.is-active img")).toHaveCSS(
+    "object-position",
+    "50% 10%",
+  );
+  await expect(carousel.locator(".hero-image-disclosure")).toContainText(
+    "Monrovia",
+  );
   await expect(page.locator('img[alt*="AI-generated"]')).toHaveCount(0);
   await expect
     .poll(() =>

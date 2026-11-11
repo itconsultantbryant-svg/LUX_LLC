@@ -28,6 +28,7 @@ export function SceneImage({
             .join(", ")}
           sizes="(max-width: 767px) 100vw, 60vw"
           alt={data.alt}
+          style={{ objectPosition: data.position }}
           width={1536}
           height={1024}
           loading={priority ? "eager" : "lazy"}

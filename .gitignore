@@ -12,5 +12,3 @@ playwright-report/
 coverage/
 *.tsbuildinfo
 .vercel/
-.vercel
-.env*
