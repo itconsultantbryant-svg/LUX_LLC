@@ -1,179 +1,74 @@
-# HealthWallet Liberia
+# LUX HealthPay
 
-Healthcare-financing platform for the Orange Summer Challenge, powered by **LUX HealthTrust**, operated by **LUX AI**. Intended integration partner: **Orange Liberia** (no signed agreement implied).
+Hosted synthetic demo: **https://luxllc.vercel.app**. No real funds move. See the [PRD](docs/PRD.md), [capability boundaries](docs/capabilities.md), [photography credits](docs/photography.md) and [deployment guide](docs/deployment-guide.md). Hosted account passwords are generated uniquely and handed off privately, never committed.
 
-## What this repo contains
+A new TypeScript modular monolith for structured healthcare claims in Liberia: public website, invitation-based organization workspaces, insurer review, exact fee accounting, payment evidence and reconciliation. **This is a runnable synthetic pilot implementation, not an approved live Orange Money integration.** No patient wallets, custodial balances, tokens or subscriptions.
 
-- Product foundation docs in [`docs/`](./docs/)
-- Modular monorepo:
-  - `apps/web` — React + TypeScript (Vite), mobile-first UI
-  - `apps/api` — Node.js + Fastify + PostgreSQL (Drizzle)
-  - `packages/shared` — shared Zod contracts and product constants
-  - `packages/config` — shared tooling baselines
-- Sandbox adapters for AI, payments, messaging, and local document storage
-- CI workflow for format, lint, typecheck, test, migrate, build, and readiness
+## Run locally
 
-## Prerequisites
+Requires Node 24, pnpm 11, PostgreSQL 15+ (Neon supported). S3-compatible private storage and ClamAV are required for usable attachments, not for the synthetic claim journey. Docker Compose supplies PostgreSQL, MinIO and ClamAV. Durable jobs use PostgreSQL `SKIP LOCKED`; Redis is intentionally not required.
 
-- Node.js 24+ (`nvm use` selects the project version)
-- [pnpm](https://pnpm.io/) 11+
-- PostgreSQL 15+ (Docker Compose provided, or local install)
-
-## Quick start
-
-### 1. Install dependencies
-
-```bash
-nvm use
-pnpm install
+```sh
+pnpm install --frozen-lockfile
+docker compose up -d
+cp .env.example .env
 ```
 
-### 2. Start PostgreSQL
+Set these values in the ignored root `.env`:
 
-Option A — Docker:
+| Name               | Local value / requirement                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| DATABASE_URL       | `postgresql://lux:local-development-only@localhost:5432/lux` for Compose; use a NEW database/Neon branch |
+| BETTER_AUTH_SECRET | Your own high-entropy secret, at least 32 characters                                                     |
+| BETTER_AUTH_URL    | `http://localhost:3000`                                                                                  |
+| WEB_ORIGIN         | `http://localhost:3000`                                                                                  |
+| LUX_MODE           | `demo` for local synthetic use                                                                           |
+| ALLOW_DEMO_SEED    | `true` locally only                                                                                      |
+| DEMO_PASSWORD      | Your own local-only password, at least 16 characters; hosted demos use a private DEMO_PASSWORDS_FILE map |
 
-```bash
-docker compose up -d postgres
-```
-
-Option B — local Postgres: create role/database matching the URL below.
-
-### 3. Configure environment
-
-```bash
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
-```
-
-Default database URL:
-
-`postgresql://healthwallet:healthwallet@127.0.0.1:5432/healthwallet_dev`
-
-Environment samples: [`config/environments/`](./config/environments/).
-
-### 4. Migrate and run
-
-```bash
+```sh
 pnpm db:migrate
 pnpm db:seed
 pnpm dev
 ```
 
-- Web: http://localhost:5173
-- Sandbox account: http://localhost:5173/account
-- API health: http://localhost:4000/health
-- API ready (DB): http://localhost:4000/ready
+Open <http://localhost:3000>. API: <http://localhost:4000/api/v1/health>. OpenAPI: <http://localhost:4000/api/v1/openapi.json>. Start commands must inherit the root environment; `pnpm dev` loads it for API/worker through dotenv. Set `API_INTERNAL_URL` in `apps/web/.env.local` or the Vercel environment when the API is not at `http://127.0.0.1:4000`.
 
-`pnpm db:seed` creates synthetic records and the development portal accounts shown
-on the sign-in screen. It is restricted to development, demo, and test databases.
+The seed prints account names, **not passwords**. Use your supplied local `DEMO_PASSWORD`, or set `DEMO_PASSWORDS_FILE` to a private JSON map of account keys to unique passwords for hosted demo use:
 
-## Checks
+- `platform@demo.lux.test`: operations/CMS; no clinical access.
+- `luxfinance@demo.lux.test`: LUX fee revenue.
+- `facility@demo.lux.test`: explicitly combined synthetic facility clinician, claims, administration and finance roles.
+- `facility2@demo.lux.test`: unrelated facility for access-denial tests.
+- `reviewer@demo.lux.test`: insurer human decisions.
+- `finance@demo.lux.test`: insurer payment maker/executor.
+- `checker@demo.lux.test`: independent insurer payment checker.
+- `insurer2@demo.lux.test`: unrelated insurer.
 
-```bash
-pnpm format:check
-pnpm lint
+Each account uses a real Better Auth session cookie. No role selector or public signup grants access. Switching maker/checker requires signing out and using the other account (or separate browser profiles).
+
+## Verify
+
+Create a **separate empty PostgreSQL database**, set `TEST_DATABASE_URL` to it, then:
+
+```sh
 pnpm typecheck
 pnpm test
+pnpm exec playwright install chromium
+pnpm test:browser
 pnpm build
-# or everything:
-pnpm check
 ```
 
-## Demo and deployment
+Integration tests migrate and seed the isolated test database only. They refuse the application database and never truncate data. Repeated test runs add synthetic records. Browser tests need the running API/web and local seed password. `BROWSER_EXECUTABLE` optionally selects an existing compatible Chromium on older development systems.
 
-```bash
-pnpm demo:local          # labelled synthetic demo, set up + verify + tear down
-pnpm demo:local:keep     # leave it running at http://127.0.0.1:5173
-pnpm deploy:check        # offline production configuration preflight
-```
+## Important boundaries
 
-See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) and
-[docs/FIVE_MINUTE_DEMO.md](./docs/FIVE_MINUTE_DEMO.md).
+- Never point these **new foundation migrations** at the old LUX database. Use a new Neon branch/database; historical tables are not migrated or dropped.
+- Production refuses `LUX_MODE=demo`; sandbox/live payment execution remains blocked, not faked.
+- The seed’s insurer-added fee mode is synthetic only. Commercial fee incidence remains unresolved for live use.
+- The supplied `LUX_HealthPay.png` actually contains historical **LUX AI** artwork. It is unchanged and accompanied by accessible **LUX HealthPay** text.
+- Five supplied team portraits are used. No service photographs or authorized Orange marks were supplied. The hero uses a UI workflow diagram; photography integration remains an asset handoff item.
+- Public legal text is explicitly an operator-review draft.
+- No commit, push, deployment, hosted database reset or live transfer has been performed.
 
-## Documentation map
-
-| Document                   | Path                                                                                         |
-| -------------------------- | -------------------------------------------------------------------------------------------- |
-| Product requirements       | [docs/PRODUCT_REQUIREMENTS.md](./docs/PRODUCT_REQUIREMENTS.md)                               |
-| Roles & permissions        | [docs/ROLE_PERMISSION_MATRIX.md](./docs/ROLE_PERMISSION_MATRIX.md)                           |
-| Screen inventory           | [docs/SCREEN_INVENTORY.md](./docs/SCREEN_INVENTORY.md)                                       |
-| Architecture               | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)                                               |
-| How AI is used             | [docs/AI_USAGE.md](./docs/AI_USAGE.md)                                                       |
-| Implementation backlog     | [docs/IMPLEMENTATION_BACKLOG.md](./docs/IMPLEMENTATION_BACKLOG.md)                           |
-| Assumptions & integrations | [docs/ASSUMPTIONS_AND_INTEGRATIONS.md](./docs/ASSUMPTIONS_AND_INTEGRATIONS.md)               |
-| Payment journey acceptance | [docs/ACCEPTANCE_CRITERIA_PAYMENT_JOURNEY.md](./docs/ACCEPTANCE_CRITERIA_PAYMENT_JOURNEY.md) |
-| Reusable components        | [docs/REUSABLE_COMPONENTS.md](./docs/REUSABLE_COMPONENTS.md)                                 |
-| Deployment                 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)                                                   |
-| Environment variables      | [docs/ENVIRONMENT_VARIABLES.md](./docs/ENVIRONMENT_VARIABLES.md)                             |
-| Migrations                 | [docs/MIGRATIONS.md](./docs/MIGRATIONS.md)                                                   |
-| Monitoring                 | [docs/MONITORING.md](./docs/MONITORING.md)                                                   |
-| Backup & rollback          | [docs/BACKUP_AND_ROLLBACK.md](./docs/BACKUP_AND_ROLLBACK.md)                                 |
-| Incident response          | [docs/INCIDENT_RESPONSE.md](./docs/INCIDENT_RESPONSE.md)                                     |
-| Administrator guide        | [docs/ADMIN_GUIDE.md](./docs/ADMIN_GUIDE.md)                                                 |
-| Provider guide             | [docs/PROVIDER_GUIDE.md](./docs/PROVIDER_GUIDE.md)                                           |
-| Customer support guide     | [docs/CUSTOMER_SUPPORT_GUIDE.md](./docs/CUSTOMER_SUPPORT_GUIDE.md)                           |
-| Five-minute demo           | [docs/FIVE_MINUTE_DEMO.md](./docs/FIVE_MINUTE_DEMO.md)                                       |
-| Pilot proposal             | [docs/PILOT_PROPOSAL.md](./docs/PILOT_PROPOSAL.md)                                           |
-| Readiness & approvals      | [docs/READINESS_AND_APPROVALS.md](./docs/READINESS_AND_APPROVALS.md)                         |
-| Operations runbook         | [docs/OPERATIONS_RUNBOOK.md](./docs/OPERATIONS_RUNBOOK.md)                                   |
-
-## Adapter replacement points
-
-| Concern                         | Sandbox default              | Replace when                        |
-| ------------------------------- | ---------------------------- | ----------------------------------- |
-| AI (`AI_ADAPTER`)               | `lux-healthtrust.ai.sandbox` | Live LUX HealthTrust model hosting  |
-| Payments (`PAYMENT_ADAPTER`)    | Simulated Orange Money–style | Confirmed Orange Liberia interfaces |
-| Messaging (`MESSAGING_ADAPTER`) | Log sink                     | Approved SMS/USSD/WhatsApp gateway  |
-| Storage (`STORAGE_ADAPTER`)     | Local disk                   | Private object bucket               |
-
-Demo/development/test must keep simulation labels visible. Do not invent accuracy or automation percentages.
-
-## Unresolved partner questions
-
-Recorded in the assumptions register, including: Orange’s 85–90% AI definition, Orange Money sandbox interfaces, fund custody, participating providers/sponsors, fees/limits, USSD availability, and AI evaluation data policy.
-
-## Sandbox sign-in
-
-The Account and Account Security pages support configurable phone verification, expiring and revocable sessions, authenticator MFA, recovery codes, profiles, consent, dependent access, invitations, and organization onboarding. Every implemented record and document API enforces server-side ownership or organization membership. See [Authorization](docs/AUTHORIZATION.md) for permissions, configuration, and administrator bootstrap. Development uses simulated phone codes; no SMS is sent until a live provider is configured. Use fictional information only. Production rejects simulated sessions.
-
-See [development handoff](docs/DEVELOPMENT_HANDOFF.md) for implementation status, verification limits, and the next development steps.
-
-## Current deployment setup
-
-One Vercel project hosts the `web` frontend (static Vite build) and the `api`
-backend (Fastify), backed by Neon PostgreSQL. See [Deployment](docs/DEPLOYMENT.md).
-For local development, either run both apps with `pnpm dev` (local API), or point
-the Vite dev proxy at a Neon Function using the server-only values in the root
-`.env.local`:
-
-```bash
-pnpm dev:web
-```
-
-Open http://127.0.0.1:5173. See [Neon development](docs/NEON_DEVELOPMENT.md) for
-the optional Neon Function workflow (a legacy alternative to the Vercel service).
-
-### LUX brand and device support
-
-The web app uses the supplied `assets/LUX_AI_logo.png` throughout, with LUX navy
-(`#001539`) and orange (`#ff7900`). Its layouts support phones, tablets, and desktop
-browsers, with bottom navigation on small screens and keyboard focus support.
-
-Production builds include an installable web app manifest and a branded offline
-notice. Installation requires HTTPS (or localhost) and browser support. Account
-and API responses are never cached by the service worker; account actions require
-internet access. This is a responsive web app, not an App Store/Play Store native
-binary. Deploy on HTTPS as a Vercel project with the `web` and `api` services; the
-browser only talks to the same origin, so no secret reaches the client. The local
-development URL is only accessible on this computer by default.
-
-For browser layout checks, start Chrome with `--headless
---remote-debugging-port=9223 --user-data-dir=/tmp/lux-browser-check`, start the web
-server, then run `node apps/web/scripts/check-browser.mjs`. Screenshots are written
-to `/tmp/lux-screenshots`. Set `APP_URL` to check another deployment.
-
-## Core data model and ledger
-
-The core model now includes a database-enforced double-entry ledger, exact money, source-specific allocation rules, idempotent funding/reservation/capture operations, explicit currency conversion records, and separate partner settlement tracking. The customer home reads the authenticated `/api/wallet` projection. See [Core data model](docs/CORE_DATA_MODEL.md) for migrations, synthetic seed data, accounting invariants, and test commands.
-
-Healthcare deposits, support links, contribution receipts, and consented savings planning: [Funding workflows](docs/FUNDING_WORKFLOWS.md).
+See [architecture](docs/system-architecture.md), [decision log](docs/decisions.md), [deployment](docs/deployment-guide.md), [security](docs/security.md), [payment runbook](docs/payments.md), [capability matrix](docs/capabilities.md), and [verification results](docs/test-results.md).

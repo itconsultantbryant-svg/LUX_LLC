@@ -1,118 +1,58 @@
-name: CI
-
-on:
-  push:
-    branches: [main, master]
-  pull_request:
-
+name: Verify rebuilt LUX HealthPay
+on: [push, pull_request]
 jobs:
-  foundational-checks:
+  verify:
     runs-on: ubuntu-latest
-
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:17
         env:
-          POSTGRES_USER: healthwallet
-          POSTGRES_PASSWORD: healthwallet
-          POSTGRES_DB: healthwallet_test
-        ports:
-          - 5432:5432
+          POSTGRES_USER: lux
+          POSTGRES_PASSWORD: ci-ephemeral-only
+          POSTGRES_DB: lux
+        ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U healthwallet -d healthwallet_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
+          --health-cmd "pg_isready -U lux"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      APP_ENV: test
-      DATABASE_URL: postgresql://healthwallet:healthwallet@127.0.0.1:5432/healthwallet_test
-      AI_ADAPTER: sandbox
-      PAYMENT_ADAPTER: sandbox
-      MESSAGING_ADAPTER: sandbox
-      STORAGE_ADAPTER: local
-      STORAGE_LOCAL_ROOT: ./apps/api/storage
-      CORS_ORIGIN: http://localhost:5173
-      DEFAULT_CURRENCY: LRD
-      VITE_APP_ENV: test
-
+      DATABASE_URL: postgresql://lux:ci-ephemeral-only@localhost:5432/lux
+      TEST_DATABASE_URL: postgresql://lux:ci-ephemeral-only@localhost:5432/lux_tests
+      LUX_MODE: demo
+      ALLOW_DEMO_SEED: "true"
+      BETTER_AUTH_URL: http://localhost:3000
+      WEB_ORIGIN: http://localhost:3000
+      API_INTERNAL_URL: http://127.0.0.1:4000
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
           version: 11.3.0
-
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      - name: Format check
-        run: pnpm format:check
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Test
-        run: pnpm test
-
-      - name: Migrate database
-        run: pnpm db:migrate
-
-      - name: Identity database integration tests
-        run: pnpm --filter @healthwallet/api test:db
-
-      - name: Ledger and authorization database integration tests
-        env:
-          LEDGER_DATABASE_TESTS: '1'
-          FUNDING_DATABASE_TESTS: '1'
-          PROVIDER_DATABASE_TESTS: '1'
-          SECURITY_DATABASE_TESTS: '1'
-          OPERATIONS_DATABASE_TESTS: '1'
-        run: pnpm --filter @healthwallet/api exec vitest run src/modules/providers/providers.integration.test.ts src/modules/funding/funding.integration.test.ts src/modules/ledger/ledger.integration.test.ts src/modules/security/security.integration.test.ts src/modules/operations/operations.integration.test.ts --testTimeout=120000 --hookTimeout=120000
-
-      - name: Build
-        run: pnpm build
-
-      - name: Secret scanning
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
-
-      - name: Repo secret hygiene check (block obvious committed secrets)
+      - run: pnpm install --frozen-lockfile
+      - name: Generate local-only secrets and isolated test database
         run: |
-          FAIL=0
-          for TOKEN in NEON_API_SECRET MFA_MASTER_KEY AI_API_KEY PAYMENT_API_KEY TWILIO_AUTH_TOKEN SMS_API_KEY; do
-            if grep -rnE "${TOKEN}\s*=\s*[A-Za-z0-9+/_-]{12,}" \
-                --include='*.ts' --include='*.tsx' --include='*.js' --include='*.mjs' --include='*.json' --include='*.yaml' --include='*.yml' \
-                --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.pnpm-store --exclude-dir=dist \
-                . 2>/dev/null | grep -v '\.test\.' | grep -v pnpm-lock.yaml; then
-              echo "::error::Potential ${TOKEN} value committed in source"
-              FAIL=1
-            fi
-          done
-          exit $FAIL
-
-      - name: API ready probe
+          echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "DEMO_PASSWORD=$(openssl rand -hex 20)" >> "$GITHUB_ENV"
+          PGPASSWORD=ci-ephemeral-only createdb -h localhost -U lux lux_tests
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Build and exercise browser journeys
         run: |
-          pnpm --filter @healthwallet/api start &
-          API_PID=$!
-          for i in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:4000/ready >/dev/null; then
-              curl -sf http://127.0.0.1:4000/health
-              kill $API_PID
-              exit 0
-            fi
-            sleep 1
-          done
-          kill $API_PID || true
-          echo "API failed readiness probe"
-          exit 1
+          node --import tsx apps/api/src/main.ts > api.log 2>&1 &
+          node --import tsx apps/worker/src/main.ts > worker.log 2>&1 &
+          pnpm build
+          pnpm --filter @lux/web start > web.log 2>&1 &
+          for i in $(seq 1 40); do if curl -sf http://localhost:3000/login > /dev/null; then break; fi; sleep 2; done
+          pnpm test:browser
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: synthetic-test-traces
+          path: test-results/
+          retention-days: 7

@@ -1,21 +1,27 @@
 services:
   postgres:
-    image: postgres:16-alpine
-    container_name: healthwallet-postgres
-    restart: unless-stopped
-    ports:
-      - '5432:5432'
+    image: postgres:17-alpine
     environment:
-      POSTGRES_USER: healthwallet
-      POSTGRES_PASSWORD: healthwallet
-      POSTGRES_DB: healthwallet_dev
-    volumes:
-      - healthwallet_pgdata:/var/lib/postgresql/data
+      POSTGRES_USER: lux
+      POSTGRES_PASSWORD: local-development-only
+      POSTGRES_DB: lux
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U healthwallet -d healthwallet_dev']
+      test: ["CMD-SHELL", "pg_isready -U lux"]
       interval: 5s
-      timeout: 5s
       retries: 10
-
+  storage:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: lux-local
+      MINIO_ROOT_PASSWORD: local-storage-only
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["objects:/data"]
+  scanner:
+    image: clamav/clamav:stable
+    ports: ["3310:3310"]
 volumes:
-  healthwallet_pgdata:
+  pgdata:
+  objects:

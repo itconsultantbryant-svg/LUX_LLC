@@ -1,0 +1,19 @@
+# Internal asset manifest
+
+| Key / filename                              | Origin                      | Use / approval boundary                                                                                                                                          |
+| ------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LUX_HealthPay.png`                         | User-supplied `assets/`     | Historical LUX AI artwork, unchanged. Adjacent accessible name: LUX HealthPay. Original 3:1 proportions. Brand zone reserves 1.5× visible height in clear space. |
+| `maryann.jpeg`                              | User-supplied team photo    | Maryann Duncan portrait, no public biography supplied                                                                                                            |
+| `boakai.jpeg`                               | User-supplied team photo    | Boakai K. C Hina portrait                                                                                                                                        |
+| `jededia.jpeg`                              | User-supplied team photo    | Jedidiah Kromah portrait; filename preserved, public name uses authoritative brief spelling                                                                      |
+| `sade.JPG`                                  | User-supplied team photo    | Sade Odiaja portrait; bio names LUX HealthPay                                                                                                                    |
+| `samson.jpeg`                               | User-supplied team photo    | Samson Bryant portrait                                                                                                                                           |
+| `home-healthcare-collaboration.webp`        | **Not supplied**            | Reserve for illustrative healthcare administrator/nurse scene; not partner/team evidence                                                                         |
+| `facility-claims-review.webp`               | **Not supplied**            | Reserve for facility service photography                                                                                                                         |
+| `insurer-claims-review.webp`                | **Not supplied**            | Reserve for insurer review photography                                                                                                                           |
+| `healthcare-payment-coordination.webp`      | **Not supplied**            | Reserve for insurer–facility finance coordination, not patient wallet/payment imagery                                                                            |
+| Orange / Orange Money official vector marks | **Not supplied/authorized** | Do not redraw or download-and-assume permission. No mark is currently displayed.                                                                                 |
+
+Public copies of supplied originals are under `apps/web/public/media/`; sources remain under `assets/`. Images have reserved dimensions and team photos are lazy loaded. No artificial face generation or fake screenshots are used. The product demonstration is real HTML with only synthetic values, not AI-rendered raster text.
+
+When photographic originals arrive, verify provenance and approval, create responsive AVIF/WebP derivatives with a maintained image pipeline, register alt text and focal points in media administration, and integrate semantic placements. Final mobile crop approval and optimized derivatives are not claimed as completed in this build.
