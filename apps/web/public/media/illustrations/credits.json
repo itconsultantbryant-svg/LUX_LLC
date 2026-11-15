@@ -1,0 +1,60 @@
+{
+  "note": "Supplied LUX HealthPay AI concept artwork. These are illustrative, AI-generated images, not documentary photographs, not LUX customers, staff, partners or payment participants. The source files are retained for provenance; only the derivatives listed here are published.",
+  "images": [
+    {
+      "key": "hero-doctor-patient",
+      "suppliedAs": "WhatsApp Image 2026-11-13 at 20.25.03.jpeg",
+      "sha256": "13a2ec53fabb02d63865d85ab5dfc64d49511eae307772797a151aa468b4176f",
+      "crop": {
+        "left": 430,
+        "top": 0,
+        "width": 1170,
+        "height": 900
+      },
+      "widths": [
+        480,
+        960,
+        1170
+      ],
+      "alt": "Illustrative AI-generated image of a clinician and a patient smiling together while reviewing care information on a tablet.",
+      "title": "Clinician and patient · illustrative AI concept art",
+      "usage": "Homepage hero background",
+      "disclosure": "Illustrative AI-generated concept art. Not a photograph of a LUX customer, clinician or transaction."
+    },
+    {
+      "key": "family-phone",
+      "suppliedAs": "WhatsApp Image 2026-11-13 at 20.25.03 (2).jpeg",
+      "sha256": "7785d26bdd0ba6e937d6eb4a982cfdd7b5a641cc2df44a563407719d9da76988",
+      "crop": {
+        "left": 400,
+        "top": 0,
+        "width": 1200,
+        "height": 900
+      },
+      "widths": [
+        480,
+        960,
+        1200
+      ],
+      "alt": "Illustrative AI-generated image of a family looking at a phone together at home.",
+      "title": "Family reviewing cover · illustrative AI concept art",
+      "usage": "Homepage family section",
+      "disclosure": "Illustrative AI-generated concept art. Not a photograph of LUX customers or a real policy."
+    },
+    {
+      "key": "team-at-work",
+      "suppliedAs": "WhatsApp Image 2026-11-13 at 20.25.22.jpeg",
+      "sha256": "17902ed36c25f87315d0c1347fbec9d37f2c8eea158a84a9e2a608ad1e44c063",
+      "crop": null,
+      "widths": [
+        480,
+        960,
+        1600
+      ],
+      "alt": "Illustrative AI-generated image of a diverse team collaborating around a laptop in an office.",
+      "title": "Team collaboration · illustrative AI concept art",
+      "usage": "Partners and about pages",
+      "disclosure": "Illustrative AI-generated concept art. It is not a photograph of the LUX team; real team portraits appear on the team page."
+    }
+  ]
+}

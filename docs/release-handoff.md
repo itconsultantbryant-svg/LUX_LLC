@@ -1,5 +1,9 @@
 # LUX HealthPay demo handoff
 
+## Public-site redesign status
+
+The production-facing redesign was verified locally on 15 November 2026: 39/39 domain/PostgreSQL tests, type checks, the optimized build and 13/13 browser cases against the production build passed. Every public page now has an image-backed hero, login/recovery/invitation use a split image layout, registration and contact share a redesigned form, and public disclaimer footnotes were removed while factual product boundaries remain. Asset provenance is documented in `docs/assets.md`. **No redesign deployment or hosted database action is recorded here.** Until a new frontend release is published, `https://luxllc.vercel.app` continues to serve the previous release described below.
+
 ## Deployed demonstration
 
 - Public site and login: **https://luxllc.vercel.app** and **https://luxllc.vercel.app/login**.
@@ -28,17 +32,17 @@ Use separate browser profiles for maker/checker or sign out before switching. En
 
 ## Verification and deliverables
 
-Local: 39 backend/domain tests, type checks, production build, and all 9 browser cases across final public/authenticated runs passed. Hosted: 7 public browser cases and end-to-end synthetic API/auth/claim/Orange Money simulation/report smoke passed. Scheduled worker execution verified. Detailed records: `docs/test-results.md`.
+The 15 November 2026 local redesign verification passed 39 backend/domain tests, type checks, the production build and 13 browser cases, including every public page hero, production-facing copy checks, the split-image auth screens, patient and facility enquiries, the authenticated claim journey and responsive/axe checks. The earlier 11 November hosted release recorded 7 public browser cases plus the end-to-end synthetic API/auth/claim/Orange Money simulation/report smoke; scheduled worker execution was also verified. Detailed records: `docs/test-results.md`.
 
 - Detailed product requirements: `docs/PRD.md`.
 - Implemented versus remaining scope: `docs/capabilities.md`.
 - Configuration and independently deployed function release process: `docs/deployment-guide.md`.
-- Real Liberian photo sources, rights and limits: `docs/photography.md`; public manifest at `/media/scenes/credits.json`.
+- Supplied illustration provenance, crop metadata and usage boundaries: `docs/assets.md`; public manifest at `/media/illustrations/credits.json`.
 - Synthetic hosted smoke: `scripts/hosted-demo-smoke.ts`; requires explicit demo URL/authorization and private credentials.
 
 ## Live-production gates
 
-This is **not** a completed live Orange Money integration or an approved clinical/financial production service. Remaining requirements include contracted Orange business API/signature/report/currency/fee specifications and credentials; approved fee incidence/collection; verified organizations/destinations/staff MFA; real private storage and scanner; verified mail/SMS capabilities; legal/privacy/retention approval; model-released product photography where endorsement could be implied; expanded operator controls; manual accessibility/security review and operational recovery/monitoring signoff. Unavailable integrations are not represented as successful.
+This is **not** a completed live Orange Money integration or an approved clinical/financial production service. Remaining requirements include contracted Orange business API/signature/report/currency/fee specifications and credentials; approved fee incidence/collection; verified organizations/destinations/staff MFA; real private storage and scanner; verified mail/SMS capabilities; legal/privacy/retention approval; model-released product photography and operator approval of illustrative AI imagery where endorsement could be implied; expanded operator controls; manual accessibility/security review and operational recovery/monitoring signoff. Unavailable integrations are not represented as successful.
 
 The user-authorized legacy source reset is part of this rebuild; old source history remains available in Git. Demo source deployment does not authorize deletion of legacy hosted records. A frontend push does not automatically update separately deployed Neon API/worker bundles—redeploy them from the same release when domain code changes.
 

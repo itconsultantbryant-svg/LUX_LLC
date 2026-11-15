@@ -136,6 +136,19 @@ describe("untrusted inputs", () => {
       consent: true,
     };
     expect(enquirySchema.safeParse(d).success).toBe(true);
+    expect(
+      enquirySchema.safeParse({
+        ...d,
+        kind: "PATIENT",
+        organization: "Individual",
+      }).success,
+    ).toBe(true);
+    expect(
+      enquirySchema.safeParse({
+        ...d,
+        kind: "ORANGE_PARTNER",
+      }).success,
+    ).toBe(false);
     expect(enquirySchema.safeParse({ ...d, consent: false }).success).toBe(
       false,
     );

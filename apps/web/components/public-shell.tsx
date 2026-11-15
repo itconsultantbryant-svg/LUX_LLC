@@ -3,26 +3,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Menu, X, ArrowUpRight } from "lucide-react";
-import { nav } from "../lib/content";
+import { siteNav } from "../lib/site";
 import { authClient } from "../lib/auth-client";
+
 export function Brand() {
   return (
-    <Link href="/" className="brand" aria-label="LUX HealthPay home">
-      <span className="brand-art">
+    <Link href="/" className="lux-logo" aria-label="LUX HealthPay home">
+      <span className="lux-logo-pill">
         <img
           src="/media/LUX_HealthPay.png"
           width="2016"
           height="672"
-          alt="Original LUX AI artwork"
+          alt="LUX AI"
         />
       </span>
-      <span className="brand-name">
-        LUX <b>HealthPay</b>
-        <small>Connected claims. Clear records.</small>
+      <span className="lux-logo-word">
+        HealthPay
+        <small>AI claims platform</small>
       </span>
     </Link>
   );
 }
+
 export function Header() {
   const { data: session } = authClient.useSession();
   const path = usePathname();
@@ -30,10 +32,12 @@ export function Header() {
   const [ready, setReady] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLElement>(null);
+
   useEffect(() => {
     setReady(true);
     setOpen(false);
   }, [path]);
+
   useEffect(() => {
     if (!open) return;
     const first = menu.current?.querySelector<HTMLElement>("a");
@@ -61,35 +65,38 @@ export function Header() {
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [open]);
+
   return (
-    <header className="site-header">
-      <div className="header-inner">
+    <header className="lux-header">
+      <div className="lux-wrap lux-nav">
         <Brand />
-        <nav aria-label="Main navigation" className="desktop-nav">
-          {nav.map(([name, href]) => (
+        <nav aria-label="Main navigation" className="lux-nav-links">
+          {siteNav.map(([name, href]) => (
             <Link
               key={href}
               href={href}
-              aria-current={path === href ? "page" : undefined}
+              aria-current={
+                !href.includes("#") && path === href ? "page" : undefined
+              }
             >
               {name}
             </Link>
           ))}
         </nav>
-        <div className="header-actions">
-          <Link href={session ? "/app" : "/login"} className="login-link">
-            {session ? "Workspace" : "Log In"}
+        <div className="lux-nav-actions">
+          <Link href={session ? "/app" : "/login"} className="lux-login">
+            {session ? "Workspace" : "Log in"}
           </Link>
-          <Link href="/get-started" className="button small">
-            Get Started <ArrowUpRight size={16} />
+          <Link href="/get-started" className="lux-btn small">
+            Register
           </Link>
         </div>
         <button
-          className="menu-toggle"
+          className="lux-menu-toggle"
           disabled={!ready}
           ref={button}
           aria-expanded={open}
-          aria-controls="mobile-menu"
+          aria-controls="lux-mobile-menu"
           aria-label={open ? "Close navigation" : "Open navigation"}
           onClick={() => setOpen(!open)}
         >
@@ -98,15 +105,15 @@ export function Header() {
       </div>
       {open && (
         <nav
-          id="mobile-menu"
+          id="lux-mobile-menu"
           ref={menu}
-          className="mobile-nav"
+          className="lux-mobile-nav"
           aria-label="Mobile navigation"
         >
           {[
-            ...nav,
-            [session ? "Workspace" : "Log In", session ? "/app" : "/login"],
-            ["Get Started", "/get-started"],
+            ...siteNav,
+            [session ? "Workspace" : "Log in", session ? "/app" : "/login"],
+            ["Register", "/get-started"],
           ].map(([name, href]) => (
             <Link
               key={href}
@@ -130,45 +137,52 @@ export function Header() {
     </header>
   );
 }
+
 export function Footer() {
   return (
-    <footer className="footer">
-      <div className="container footer-grid">
-        <div>
+    <footer className="lux-footer">
+      <div className="lux-wrap lux-footer-grid">
+        <div className="lux-footer-brand">
           <Brand />
           <p>
-            A clearer path from care delivered
-            <br />
-            to claims reviewed and payments traced.
+            A Liberia-first platform for verified claims, insurer-controlled
+            decisions and traceable payment records.
           </p>
-          <span className="eyebrow">Built for a Liberian starting point.</span>
+          <p className="lux-small">
+            Team LUX PayHealth · Orange Fab, Orange Digital Center Liberia
+          </p>
+          <p className="lux-small">One Orange. One Customer. One Healthcare.</p>
         </div>
         <div>
           <h2>Explore</h2>
-          {nav.slice(1).map(([n, h]) => (
-            <Link key={h} href={h}>
-              {n}
-            </Link>
-          ))}
+          <Link href="/how-it-works">For patients</Link>
+          <Link href="/services">Platform</Link>
+          <Link href="/about">AI and about</Link>
+          <Link href="/partners">Partners</Link>
+          <Link href="/team">Team</Link>
         </div>
         <div>
-          <h2>Let’s connect</h2>
-          <Link href="/get-started">
-            Discuss the pilot <ArrowUpRight size={15} />
+          <h2>Connect</h2>
+          <Link href="/get-started?type=PATIENT">
+            Register with LUX <ArrowUpRight size={14} />
           </Link>
+          <Link href="/get-started?type=FACILITY">Health facility enquiry</Link>
+          <Link href="/get-started?type=INSURER">Insurer enquiry</Link>
           <Link href="/contact">Contact LUX HealthPay</Link>
           <Link href="/login">Organization login</Link>
-          <p>No patient information on public forms.</p>
         </div>
-      </div>
-      <div className="container footer-bottom">
-        <span>© {new Date().getFullYear()} LUX HealthPay</span>
         <div>
+          <h2>Trust</h2>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/accessibility">Accessibility</Link>
+          <Link href="/contact">Contact</Link>
         </div>
-        <span>Software & records. Not a custodial wallet.</span>
+      </div>
+      <div className="lux-wrap lux-footer-bottom">
+        <span>© {new Date().getFullYear()} LUX HealthPay</span>
+        <span>Built in Liberia for a clearer claims journey.</span>
+        <span>One Orange. One Customer. One Healthcare.</span>
       </div>
     </footer>
   );

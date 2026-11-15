@@ -1,8 +1,8 @@
 # LUX HealthPay
 
-Hosted synthetic demo: **https://luxllc.vercel.app**. No real funds move. See the [PRD](docs/PRD.md), [capability boundaries](docs/capabilities.md), [photography credits](docs/photography.md) and [deployment guide](docs/deployment-guide.md). Hosted account passwords are generated uniquely and handed off privately, never committed.
+Hosted synthetic demo: **https://luxllc.vercel.app**. No real funds move. See the [PRD](docs/PRD.md), [capability boundaries](docs/capabilities.md), [image provenance](docs/assets.md) and [deployment guide](docs/deployment-guide.md). Hosted account passwords are generated uniquely and handed off privately, never committed.
 
-A new TypeScript modular monolith for structured healthcare claims in Liberia: public website, invitation-based organization workspaces, insurer review, exact fee accounting, payment evidence and reconciliation. **This is a runnable synthetic pilot implementation, not an approved live Orange Money integration.** No patient wallets, custodial balances, tokens or subscriptions.
+A new TypeScript modular monolith for structured healthcare claims in Liberia: a patient-first public website, invitation-based organization workspaces, insurer review, exact fee accounting, payment evidence and reconciliation. **This is a runnable synthetic pilot implementation, not an approved live Orange Money integration.** No patient wallets, custodial balances, tokens or subscriptions.
 
 ## Run locally
 
@@ -67,7 +67,7 @@ Integration tests migrate and seed the isolated test database only. They refuse 
 - Production refuses `LUX_MODE=demo`; sandbox/live payment execution remains blocked, not faked.
 - The seed’s insurer-added fee mode is synthetic only. Commercial fee incidence remains unresolved for live use.
 - The supplied `LUX_HealthPay.png` actually contains historical **LUX AI** artwork. It is unchanged and accompanied by accessible **LUX HealthPay** text.
-- Five supplied team portraits are used. No service photographs or authorized Orange marks were supplied. The hero uses a UI workflow diagram; photography integration remains an asset handoff item.
+- Five supplied team portraits are used. Three supplied concept images serve as page heroes and content imagery, with hashes and focal-point metadata in `assets/illustrations/manifest.json` and public provenance at `/media/illustrations/credits.json`. Public pages use production-facing copy without synthetic labels, image captions or footer disclaimers. Authorized Orange marks and model-released product photography are not present; final operator approval remains an asset handoff item.
 - Public legal text is explicitly an operator-review draft.
 - No commit, push, deployment, hosted database reset or live transfer has been performed.
 

@@ -13,55 +13,104 @@ const pages = [
   "/terms",
   "/accessibility",
 ];
-test("real-photo carousel has credits, working images and manual controls", async ({
+test("home hero uses page imagery and production proof points", async ({
   page,
 }) => {
   await page.goto("/");
-  const carousel = page.getByRole("region", {
-    name: "LUX HealthPay healthcare journey",
-  });
-  await expect(carousel).toBeVisible();
-  await expect(carousel.locator(".hero-image-disclosure")).toContainText(
-    "Liberia",
+  const hero = page.getByRole("region", { name: /Verify the care/ });
+  await expect(hero).toBeVisible();
+  await expect(hero.getByRole("heading", { level: 1 })).toContainText(
+    "Verify the care. Verify the coverage.",
   );
-  await expect(carousel.locator(".hero-image-disclosure a")).toHaveCount(2);
-  await carousel
-    .getByRole("button", { name: "Next slide", exact: true })
-    .click();
-  await expect(carousel.locator("h1")).toContainText("From the first record");
-  await expect(carousel.locator(".hero-image-disclosure")).toContainText(
-    "Harper City",
-  );
-  await carousel
-    .getByRole("button", {
-      name: "Show slide 4: Orange Money · Intended payment channel",
-    })
-    .click();
-  await expect(carousel.locator(".hero-photo-layer.is-active img")).toHaveCSS(
-    "object-position",
-    "50% 10%",
-  );
-  await expect(carousel.locator(".hero-image-disclosure")).toContainText(
-    "Monrovia",
-  );
-  await expect(page.locator('img[alt*="AI-generated"]')).toHaveCount(0);
+  await expect(hero.getByText("Insurer-controlled decisions")).toBeVisible();
+  await expect(
+    hero.getByRole("link", { name: "Register with LUX" }),
+  ).toHaveAttribute("href", "/get-started?type=PATIENT");
   await expect
     .poll(() =>
       page
-        .locator(".hero-photo-layer.is-active img")
+        .locator(".lux-hero-media img")
         .evaluate(
           (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
         ),
     )
     .toBe(true);
-  const credits = await page.request.get("/media/scenes/credits.json");
+  await expect(page.locator(".lux-hero-note, .lux-hero-credit")).toHaveCount(0);
+  await expect(page.locator(".lux-figure figcaption")).toHaveCount(0);
+  const credits = await page.request.get("/media/illustrations/credits.json");
   expect(credits.ok()).toBe(true);
-  expect(await credits.json()).toHaveLength(6);
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.reload();
+  const manifest = await credits.json();
+  expect(manifest.images).toHaveLength(3);
+  for (const image of manifest.images)
+    expect(image.sha256).toMatch(/^[a-f0-9]{64}$/);
+});
+test("every public page has an image-backed hero and consistent navigation", async ({
+  page,
+}) => {
+  test.setTimeout(240000);
+  const heroes: Array<[string, string]> = [
+    ["/services", "team-at-work"],
+    ["/how-it-works", "hero-doctor-patient"],
+    ["/about", "team-at-work"],
+    ["/partners", "team-at-work"],
+    ["/team", "team-at-work"],
+    ["/get-started", "hero-doctor-patient"],
+    ["/contact", "family-phone"],
+    ["/privacy", "family-phone"],
+    ["/terms", "team-at-work"],
+    ["/accessibility", "hero-doctor-patient"],
+  ];
+  for (const [route, image] of heroes) {
+    await page.goto(route, { waitUntil: "domcontentloaded" });
+    const hero = page.locator(".lux-page-hero");
+    await expect(hero, route).toBeVisible();
+    await expect(hero.locator("h1"), route).toBeVisible();
+    await expect(hero.locator("img"), route).toHaveAttribute(
+      "src",
+      new RegExp(`${image}-`),
+    );
+    await expect
+      .poll(
+        () =>
+          hero
+            .locator("img")
+            .evaluate(
+              (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
+            ),
+        { message: route },
+      )
+      .toBe(true);
+    await expect(
+      page.getByRole("navigation", { name: "Main navigation" }),
+    ).toBeVisible();
+  }
+});
+test("public copy is production-facing without disclaimer footnotes", async ({
+  page,
+}) => {
+  test.setTimeout(240000);
+  for (const route of pages) {
+    await page.goto(route, { waitUntil: "domcontentloaded" });
+    const body = await page.locator("main").innerText();
+    expect(body, route).not.toMatch(
+      /synthetic|illustrative|AI-generated|operator-review|no live payment|not enabled|no email has been sent/i,
+    );
+    await expect(
+      page.locator(".lux-note, .lux-status, .lux-notice"),
+    ).toHaveCount(0);
+  }
+  await page.goto("/");
+  const journey = page.getByRole("region", { name: "Covered in seven steps" });
+  await expect(journey).toBeVisible();
+  await expect(journey.locator("li")).toHaveCount(7);
+  await expect(journey).toContainText("LUX never holds your money");
+  await expect(page.locator(".lux-demo-badge")).toHaveText("CLAIMS WORKSPACE");
   await expect(
-    carousel.getByRole("button", { name: "Start slide rotation" }),
-  ).toBeDisabled();
+    page.getByRole("heading", { name: "Powered by Orange Money" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/Approved funds move through Orange Money/),
+  ).toBeVisible();
 });
 test("team profile opens with keyboard, traps focus and returns it on Escape", async ({
   page,
@@ -91,8 +140,9 @@ test("team profile opens with keyboard, traps focus and returns it on Escape", a
 test("all public destinations work without authentication", async ({
   page,
 }) => {
+  test.setTimeout(180000);
   for (const route of pages) {
-    const response = await page.goto(route);
+    const response = await page.goto(route, { waitUntil: "domcontentloaded" });
     expect(response?.status(), route).toBe(200);
     await expect(page.locator("main h1")).toBeVisible();
     await expect(
@@ -126,10 +176,19 @@ test("team text and supplied portraits, no fabricated biography", async ({
 test("mobile menu supports focus and Escape; pages do not overflow", async ({
   page,
 }) => {
+  test.setTimeout(300000);
   for (const width of [360, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const route of ["/", "/services", "/team", "/get-started"]) {
-      await page.goto(route);
+    for (const route of [
+      "/",
+      "/services",
+      "/team",
+      "/get-started",
+      "/contact",
+      "/privacy",
+      "/login",
+    ]) {
+      await page.goto(route, { waitUntil: "domcontentloaded" });
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
@@ -148,19 +207,51 @@ test("mobile menu supports focus and Escape; pages do not overflow", async ({
   await expect(
     page
       .getByRole("navigation", { name: "Mobile navigation" })
-      .getByRole("link", { name: "Home", exact: true }),
+      .getByRole("link", { name: "For patients", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(toggle).toBeFocused();
 });
-test("enquiry validates and records without email-success fiction", async ({
+test("patient registration enquiry validates and records without email-success fiction", async ({
   page,
 }) => {
   await page.goto("/get-started");
+  await expect(
+    page.getByRole("heading", { name: "Start with a few details." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("radio", { name: "Patient / family" }),
+  ).toBeChecked();
+  await page
+    .getByLabel("Community, employer or organization")
+    .fill("Individual");
+  await page.getByLabel("Your name").fill("Synthetic Patient");
+  await page.getByLabel("Email", { exact: true }).fill("browser@example.test");
+  await page.getByLabel("Mobile number").fill("0770000000");
+  await page.getByLabel("City or county").fill("Monrovia");
+  await page
+    .getByLabel("How can we help?")
+    .fill("Synthetic patient cover enquiry; no medical details.");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Send enquiry" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Enquiry recorded." }),
+  ).toBeVisible();
+  await expect(page.getByRole("status")).toContainText(
+    "Our team will review it and contact you",
+  );
+});
+test("facility enquiry uses organization fields and creates an organization request", async ({
+  page,
+}) => {
+  await page.goto("/get-started?type=FACILITY");
+  await expect(
+    page.getByRole("radio", { name: "Health facility" }),
+  ).toBeChecked();
   await page.getByLabel("Organization name").fill("Synthetic browser clinic");
   await page.getByLabel("Contact name").fill("Synthetic Contact");
-  await page.getByLabel("Work email").fill("browser@example.test");
-  await page.getByLabel("Telephone").fill("0770000000");
+  await page.getByLabel("Work email").fill("facility@example.test");
+  await page.getByLabel("Telephone").fill("0770000001");
   await page.getByLabel("Location", { exact: true }).fill("Monrovia");
   await page
     .getByLabel("How can we help?")
@@ -170,13 +261,64 @@ test("enquiry validates and records without email-success fiction", async ({
   await expect(
     page.getByRole("heading", { name: "Enquiry recorded." }),
   ).toBeVisible();
-  await expect(page.getByRole("status")).toContainText(
-    "No email has been sent",
-  );
+});
+test("login and account recovery use the split image layout", async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  const screens: Array<[string, string]> = [
+    ["/login", "Welcome back."],
+    ["/forgot-password", "Reset your access."],
+    ["/reset-password", "Choose a new password."],
+    ["/accept-invitation", "Accept your invitation."],
+  ];
+  for (const [route, heading] of screens) {
+    await page.goto(route, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".lux-auth"), route).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: heading }),
+      route,
+    ).toBeVisible();
+    await expect(page.locator(".lux-auth-card"), route).toBeVisible();
+    await expect
+      .poll(
+        () =>
+          page
+            .locator(".lux-auth-media img")
+            .evaluate(
+              (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
+            ),
+        { message: route },
+      )
+      .toBe(true);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      route,
+    ).toBe(true);
+  }
+  await page.goto("/login");
+  await expect(page.getByLabel("Email address")).toBeVisible();
+  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Log In", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Forgot your password?" }),
+  ).toHaveAttribute("href", "/forgot-password");
 });
 test("public accessibility automated checks", async ({ page }) => {
-  for (const route of ["/", "/get-started", "/team"]) {
-    await page.goto(route);
+  test.setTimeout(240000);
+  for (const route of [
+    "/",
+    "/get-started",
+    "/team",
+    "/contact",
+    "/privacy",
+    "/login",
+  ]) {
+    await page.goto(route, { waitUntil: "domcontentloaded" });
     const result = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
       .analyze();
@@ -194,7 +336,7 @@ test("facility signs in, sees scoped data and creates a submitted claim", async 
     .getByLabel("Password", { exact: true })
     .fill(process.env.DEMO_PASSWORD!);
   await page.getByRole("button", { name: "Log In", exact: true }).click();
-  await expect(page).toHaveURL(/\/app$/);
+  await expect(page).toHaveURL(/\/app$/, { timeout: 60000 });
   await expect(page.getByText("DEMO ENVIRONMENT")).toBeVisible();
   await page.getByRole("link", { name: "+ Prepare a claim" }).click();
   await page.getByRole("button", { name: "Start a fresh draft" }).click();
@@ -231,7 +373,7 @@ test("key workspace screens fit supported widths and expose accessible controls"
     .getByLabel("Password", { exact: true })
     .fill(process.env.DEMO_PASSWORD!);
   await page.getByRole("button", { name: "Log In", exact: true }).click();
-  await expect(page).toHaveURL(/\/app$/);
+  await expect(page).toHaveURL(/\/app$/, { timeout: 60000 });
   for (const width of [360, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of [

@@ -1,6 +1,30 @@
 # Verification results
 
-## Current release — 11 November 2026
+## Public-site redesign, image heroes and auth screens — 15 November 2026
+
+- `pnpm typecheck`: **passed** for backend, scripts, tests and Next.js.
+- `pnpm test`: **39/39 domain/PostgreSQL tests passed** against the isolated `lux_healthpay_test` database.
+- `pnpm build`: **passed** with Next.js 16.4.6 optimized compilation, TypeScript and route generation.
+- Browser suite against the production build: **13/13 passed** (6.3 minutes) covering the homepage proof points, image-backed hero on every public page, production-facing copy with no disclaimer footnotes, keyboard team dialog, all public routes, supplied portraits, responsive navigation/overflow at 360/768/1024/1440 px, patient and facility enquiries, the split-image login/recovery/invitation screens, axe checks on six public screens including login, the authenticated facility claim journey, and workspace responsiveness.
+- Every public page now renders a full-bleed `PageHero` image with a navy overlay; patient/registration/accessibility pages use the clinician-and-patient artwork, family/contact/privacy use the family artwork, and platform/about/partners/team/terms/login use the team artwork.
+- Login, forgot-password, reset-password and invitation acceptance use a two-panel image and form layout. Authentication, MFA challenge, invitation and password-reset behaviour is unchanged.
+- Registration and contact use a dark “What happens next” card beside a white form; contact defaults to `GENERAL` and registration routes default to `PATIENT`.
+- Public marketing pages no longer display synthetic/illustrative labels, operator-review drafts, “no email has been sent” notices, image-caption disclosures or footer disclaimers. Factual boundaries remain in the copy: insurers decide coverage, LUX does not hold customer money, and payment authorization is insurer-controlled. The authenticated workspace keeps its demo-environment banner.
+- The public enquiry confirmation now reads “Your enquiry has been recorded. Our team will review it and contact you with the next step.”
+- Automated axe checks report no WCAG 2.0/2.1/2.2 A/AA tagged violations on the six tested public screens and the workspace screens. Manual assistive-technology review remains required.
+- Local verification used a loopback PostgreSQL test database. **No hosted deployment, Neon reset or live payment transfer was performed as part of this review.**
+
+## Public-site illustration pass — 14 November 2026 (superseded by the 15 November record above)
+
+- `pnpm typecheck`: **passed** for backend, scripts, tests and Next.js after the patient-first redesign and illustration pipeline.
+- `pnpm test`: **39/39 domain/PostgreSQL tests passed** (24.9 seconds) against a freshly recreated isolated `lux_healthpay_test` database. Includes the new `PATIENT` enquiry audience and rejection of unknown enquiry kinds.
+- `pnpm build`: **passed** with Next.js 16.4.6 optimized compilation, TypeScript and route generation.
+- Local browser suite: **11/11 passed** against the running API/web with synthetic seed data — 9 public cases (hero imagery/provenance, patient journey and demo boundaries, keyboard team dialog, all public routes, supplied team fidelity, responsive navigation/overflow at 360/768/1024/1440, patient enquiry, facility enquiry and axe accessibility) plus 2 authenticated workspace cases (facility claim submission and responsive/axe workspace screens).
+- Automated axe checks report no WCAG 2.0/2.1/2.2 A/AA tagged violations on Home, Get Started, Team and the tested workspace screens. Manual assistive-technology review remains required.
+- Public hub `/` now uses the supplied illustrative AI concept artwork with visible disclosures, responsive AVIF/WebP/JPEG derivatives, SHA-256 provenance and `/media/illustrations/credits.json`. The obsolete real-photo scenes and carousel were removed.
+- Local verification used a loopback PostgreSQL test database. **No hosted deployment, Neon reset or live payment transfer was performed as part of this redesign review.**
+
+## Previous release — 11 November 2026
 
 - `pnpm test`: **39 domain/PostgreSQL tests passed**; final pre-push rerun completed in 12.07 seconds, including new demo confirmation expiry/attempt/idempotency checks and safe team contact links.
 - `pnpm typecheck`: **passed** for backend, scripts, tests and Next.js after the current enhancements.
@@ -10,7 +34,7 @@
 - **Hosted synthetic API/auth/payment workflow: passed**, 11 November 2026 at 10:02 UTC. Five uniquely credentialed actors signed in through the Vercel same-origin proxy; verified anonymous/signup denials, tenant denial, coverage/encounter creation, immutable claim submission, durable validation, human insurer approval, independent maker/checker, mandatory four-digit demo confirmation, idempotent execution, simulated settlement, scoped reports/reconciliation/PDF and unauthenticated-worker denial. No actual funds or real patient data were used.
 - New isolated Neon project `lux-healthpay-demo` (`blue-morning-83165791`), PostgreSQL 18, migrations **001–005** applied and synthetic seed successful. The legacy database was not migrated or reset.
 - Neon shared `luxapi` and `luxworker` bundles deployed successfully. Every-minute trigger is enabled; provider logs show **`scheduled:true`** durable-job batches. This verifies actual scheduled invocations, not just trigger creation.
-- Real-photography build: six responsive sets replaced, three documented Liberian originals, SHA-256 provenance and public license/source credits. Supplied team portraits/LUX artwork are unchanged. See `docs/photography.md`.
+- Historical real-photography build (superseded by the 14 November 2026 illustration pipeline): six responsive sets, three documented Liberian originals and SHA-256 provenance. The supplied team portraits and LUX artwork were unchanged.
 - `pnpm audit --prod`: **no known vulnerabilities found**. `git diff --check`: passed before release staging.
 - Private credentials/secrets are excluded by `.gitignore` and `.vercelignore`; eight unique demo account passwords are handed off under ignored `.local/` files, not in source.
 

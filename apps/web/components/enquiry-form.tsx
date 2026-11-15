@@ -1,15 +1,22 @@
 "use client";
 import { useState, useEffect, type FormEvent } from "react";
+import { usePathname } from "next/navigation";
 import { ArrowUpRight, CheckCircle2 } from "lucide-react";
+
+const kinds = ["PATIENT", "FACILITY", "INSURER", "GENERAL"];
+
 export function EnquiryForm() {
-  const [kind, setKind] = useState("FACILITY"),
+  const path = usePathname();
+  const [kind, setKind] = useState(path === "/contact" ? "GENERAL" : "PATIENT"),
     [status, setStatus] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   useEffect(() => {
-    const t = new URLSearchParams(location.search).get("type");
-    if (["FACILITY", "INSURER", "GENERAL"].includes(t || "")) setKind(t!);
-  }, []);
+    const type = new URLSearchParams(location.search).get("type");
+    if (kinds.includes(type || "")) setKind(type!);
+    else if (path === "/contact") setKind("GENERAL");
+  }, [path]);
+  const isPatient = kind === "PATIENT";
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -48,13 +55,29 @@ export function EnquiryForm() {
     );
   return (
     <form className="enquiry-form" onSubmit={submit}>
+      <div className="lux-form-head">
+        <span className="lux-eyebrow">
+          {path === "/contact" ? "Contact LUX" : "Registration enquiry"}
+        </span>
+        <h2>
+          {path === "/contact"
+            ? "Tell us how we can help."
+            : "Start with a few details."}
+        </h2>
+        <p>
+          {path === "/contact"
+            ? "Share the workflow you want to improve and the right LUX contact will follow up."
+            : "Choose the option that fits you best. We will route your request to the right team."}
+        </p>
+      </div>
       <fieldset>
         <legend>I’m getting in touch for</legend>
         <div className="type-choices">
           {[
-            ["FACILITY", "Health Facility"],
-            ["INSURER", "Insurance Company"],
-            ["GENERAL", "General Enquiry"],
+            ["PATIENT", "Patient / family"],
+            ["FACILITY", "Health facility"],
+            ["INSURER", "Insurance company"],
+            ["GENERAL", "General enquiry"],
           ].map(([v, l]) => (
             <label key={v} className={kind === v ? "selected" : ""}>
               <input
@@ -71,17 +94,25 @@ export function EnquiryForm() {
       </fieldset>
       <div className="form-grid">
         <label>
-          Organization name
+          {isPatient
+            ? "Community, employer or organization"
+            : "Organization name"}
           <input
             name="organization"
             required
             minLength={2}
             maxLength={160}
-            autoComplete="organization"
+            autoComplete={isPatient ? "off" : "organization"}
           />
+          {isPatient && (
+            <small>
+              Enter your community, employer, or “Individual” if you are
+              registering for yourself.
+            </small>
+          )}
         </label>
         <label>
-          Contact name
+          {isPatient ? "Your name" : "Contact name"}
           <input
             name="name"
             required
@@ -91,7 +122,7 @@ export function EnquiryForm() {
           />
         </label>
         <label>
-          Work email
+          {isPatient ? "Email" : "Work email"}
           <input
             type="email"
             name="email"
@@ -101,7 +132,7 @@ export function EnquiryForm() {
           />
         </label>
         <label>
-          Telephone
+          {isPatient ? "Mobile number" : "Telephone"}
           <input
             type="tel"
             name="phone"
@@ -112,7 +143,7 @@ export function EnquiryForm() {
           />
         </label>
         <label className="full">
-          Location
+          {isPatient ? "City or county" : "Location"}
           <input
             name="location"
             required
@@ -131,7 +162,9 @@ export function EnquiryForm() {
             rows={5}
           />
           <small>
-            Organization needs only. No patient or medical information.
+            {isPatient
+              ? "Tell us what cover you are looking for and who it is for."
+              : "Tell us about your organization, current workflow and what you would like to improve."}
           </small>
         </label>
       </div>
@@ -152,13 +185,10 @@ export function EnquiryForm() {
           {error}
         </p>
       )}
-      <button className="button" disabled={busy}>
-        {busy ? "Recording…" : "Send enquiry"}
+      <button className="lux-btn" disabled={busy}>
+        {busy ? "Sending…" : "Send enquiry"}
         <ArrowUpRight size={18} />
       </button>
-      <p className="subtle">
-        Stored for operator review. Email delivery is not implied.
-      </p>
     </form>
   );
 }

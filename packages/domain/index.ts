@@ -134,7 +134,7 @@ export function billTotal(items: z.infer<typeof billItem>[]) {
   );
 }
 export const enquirySchema = z.object({
-  kind: z.enum(["FACILITY", "INSURER", "GENERAL"]),
+  kind: z.enum(["PATIENT", "FACILITY", "INSURER", "GENERAL"]),
   organization: z.string().trim().min(2).max(160),
   name: z.string().trim().min(2).max(120),
   email: z.email().max(200),

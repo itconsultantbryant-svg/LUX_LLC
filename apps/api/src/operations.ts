@@ -37,7 +37,7 @@ export class OperationsService {
           d.message,
         ],
       );
-      if (d.kind !== "GENERAL")
+      if (d.kind === "FACILITY" || d.kind === "INSURER")
         await db.query(
           "INSERT INTO organization_requests(enquiry_id) VALUES($1)",
           [e.id],
@@ -46,7 +46,7 @@ export class OperationsService {
         id: e.id,
         status: "RECORDED",
         message:
-          "Your enquiry has been recorded for review. Organization access requires approval. No email has been sent.",
+          "Your enquiry has been recorded. Our team will review it and contact you with the next step.",
       };
     });
   }

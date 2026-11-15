@@ -586,6 +586,10 @@ describe("real PostgreSQL tenant authorization", () => {
   });
   it("public enquiry is stored but creates no active tenant", async () => {
     const before = await one(pool, "SELECT count(*) n FROM organizations");
+    const requestsBefore = await one(
+      pool,
+      "SELECT count(*) n FROM organization_requests",
+    );
     const r = await ops.enquire(
       {
         kind: "FACILITY",
@@ -603,6 +607,30 @@ describe("real PostgreSQL tenant authorization", () => {
     expect((await one(pool, "SELECT count(*) n FROM organizations")).n).toBe(
       before.n,
     );
+    expect(
+      Number(
+        (await one(pool, "SELECT count(*) n FROM organization_requests")).n,
+      ),
+    ).toBe(Number(requestsBefore.n) + 1);
+    const patient = await ops.enquire(
+      {
+        kind: "PATIENT",
+        organization: "Individual",
+        name: "Synthetic patient",
+        email: "patient@example.test",
+        phone: "0770000001",
+        location: "Monrovia",
+        message: "Please review a synthetic patient cover enquiry",
+        consent: true,
+      },
+      randomUUID(),
+    );
+    expect(patient.status).toBe("RECORDED");
+    expect(
+      Number(
+        (await one(pool, "SELECT count(*) n FROM organization_requests")).n,
+      ),
+    ).toBe(Number(requestsBefore.n) + 1);
   });
 });
 describe("concurrent reservations and immutable fee snapshots", () => {

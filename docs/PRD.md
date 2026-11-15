@@ -14,31 +14,31 @@ The public website explains the product, the responsibilities of each organizati
 
 ## 2. Outcomes and measurement
 
-| Outcome                       | Measurement                                                   | Release acceptance                                                              |
-| ----------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Clear claim records           | Completeness findings and correction count                    | Submitted snapshot, itemized totals and supporting references are reproducible  |
-| Accountable decisions         | Reviewer, reason, version and audit history                   | No automated insurer approval; every decision has an authorized human actor     |
-| Reliable payment coordination | Time in processing/unknown and reconciliation exception aging | Retry cannot create duplicate financial instructions; ambiguity remains visible |
-| Appropriate access            | Cross-organization and role denial tests                      | Unauthorized users cannot retrieve or mutate another organization's records     |
-| Accessible discovery          | Public navigation, keyboard and responsive tests              | Public routes, carousel controls and team details work without a mouse          |
-| Honest demonstration          | Mode labels, adapter gating and synthetic organizations       | No real funds, real Orange Money PIN collection or fabricated partner claims    |
+| Outcome                       | Measurement                                                   | Release acceptance                                                                   |
+| ----------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Clear claim records           | Completeness findings and correction count                    | Submitted snapshot, itemized totals and supporting references are reproducible       |
+| Accountable decisions         | Reviewer, reason, version and audit history                   | No automated insurer approval; every decision has an authorized human actor          |
+| Reliable payment coordination | Time in processing/unknown and reconciliation exception aging | Retry cannot create duplicate financial instructions; ambiguity remains visible      |
+| Appropriate access            | Cross-organization and role denial tests                      | Unauthorized users cannot retrieve or mutate another organization's records          |
+| Accessible discovery          | Public navigation, keyboard and responsive tests              | Public routes, mobile navigation, image heroes and team details work without a mouse |
+| Honest demonstration          | Mode labels, adapter gating and synthetic organizations       | No real funds, real Orange Money PIN collection or fabricated partner claims         |
 
 Baseline and target turnaround/conversion numbers must be agreed with pilot partners after measurement. No unverified success percentages, customer counts or throughput commitments may be published.
 
 ## 3. Personas and authority
 
-| Persona                 | Tasks                                                            | Restrictions                                                       |
-| ----------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Facility administrator  | Manage facility staff and organization context                   | Cannot administer insurer staff or decisions                       |
-| Facility clinician      | Record encounters and prescriptions                              | Clinical authorship requires clinician permission                  |
-| Facility claims officer | Prepare itemized claims, submit evidence and corrections         | Cannot approve its own claims as an insurer                        |
-| Facility finance        | Track payments and statements                                    | Cannot authorize insurer spending                                  |
-| Insurer reviewer        | Review findings, request information, decide and process appeals | Human decisions; financial maker/checker remains separate          |
-| Insurer finance maker   | Reserve approved amounts and prepare authorization               | Cannot check its own payment                                       |
-| Insurer finance checker | Independently check payment instructions                         | Must be a different actor; fresh authorization required            |
-| LUX platform operator   | Onboarding, CMS, integration/support administration              | Not a substitute for insurer decision/payment authority            |
-| LUX finance             | Review earned/accrued fee records and exceptions                 | Fee accrual is not proof of collected cash                         |
-| Public visitor          | Learn about the platform and submit an organizational enquiry    | No unrestricted account creation or patient-sensitive enquiry data |
+| Persona                 | Tasks                                                                 | Restrictions                                                                      |
+| ----------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Facility administrator  | Manage facility staff and organization context                        | Cannot administer insurer staff or decisions                                      |
+| Facility clinician      | Record encounters and prescriptions                                   | Clinical authorship requires clinician permission                                 |
+| Facility claims officer | Prepare itemized claims, submit evidence and corrections              | Cannot approve its own claims as an insurer                                       |
+| Facility finance        | Track payments and statements                                         | Cannot authorize insurer spending                                                 |
+| Insurer reviewer        | Review findings, request information, decide and process appeals      | Human decisions; financial maker/checker remains separate                         |
+| Insurer finance maker   | Reserve approved amounts and prepare authorization                    | Cannot check its own payment                                                      |
+| Insurer finance checker | Independently check payment instructions                              | Must be a different actor; fresh authorization required                           |
+| LUX platform operator   | Onboarding, CMS, integration/support administration                   | Not a substitute for insurer decision/payment authority                           |
+| LUX finance             | Review earned/accrued fee records and exceptions                      | Fee accrual is not proof of collected cash                                        |
+| Public visitor          | Learn about the platform and submit a patient or organization enquiry | No unrestricted account creation, active policy or patient-sensitive enquiry data |
 
 Patients are beneficiaries of better coordination, not wallet holders. A patient-facing account, balance, token or subscription is outside this release.
 
@@ -60,11 +60,15 @@ Patients are beneficiaries of better coordination, not wallet holders. A patient
 
 Provide Home, Services, How It Works, About, Partners, Team, Get Started, Contact, Privacy, Terms and Accessibility. Preserve the supplied historical LUX artwork without alteration, using adjacent product text where appropriate. Use orange, black and white with restrained navy. Navigation must identify destinations consistently and support mobile menus, keyboard use and visible focus. Historical typo redirects must lead to the intended route.
 
-### WEB-02 — Hero and photographic storytelling
+### WEB-02 — Page heroes and imagery
 
-The homepage offers four contextual slides: people/community, facilities, insurer review and Orange Money coordination. Each slide has descriptive copy and a relevant CTA. Provide previous/next, direct slide selection and pause/play. Rotation stops during interaction and respects reduced motion and hidden tabs. Do not change focus on rotation. Announce manual changes without continuous screen-reader interruption.
+The homepage presents a patient-first journey: registration, Orange Money account linkage, plan choice, premium payment direct to the insurer, care at a partner facility, claim validation and insurer payment. The hero states the product promise, primary registration CTA and three proof points: insurer-controlled decisions, provider payment tracking and one auditable claim record. Related sections cover family cover, claim validation, the platform journey, role-based portals, insurer-controlled AI assistance, Orange Money responsibilities, trust boundaries, a bounded pilot and the team.
 
-Use real Liberian photography, prioritizing Monrovia where verified. Identify Harper and other locations honestly. Show author, source, reuse license and resizing/cropping disclosure. Keep a public provenance manifest and original hashes. No generated scenes may remain in served scene assets. Repeated contextual photographs are preferable to falsely labeling a vendor as an insurer or a documentary image as a LUX transaction. Copyright permission does not prove model-release or endorsement permission; consented commissioned photography is required for testimonials or product-specific promotional portraits.
+Every public page opens with a full-bleed image hero under a navy overlay: the clinician-and-patient artwork on patient, how-it-works, registration and accessibility pages; the family artwork on family, contact and privacy pages; the team artwork on platform, about, partners, team, terms and login pages. Login, invitation, forgot-password and reset-password screens use a two-panel image-and-form layout. Heroes carry a single `h1` and a short description; page-specific calls to action may follow.
+
+Supplied AI-generated concept artwork may be used as public imagery. Publish generated derivatives, not unneeded source files; keep SHA-256 provenance, crop metadata, focal points and a public credits manifest at `/media/illustrations/credits.json`. Keep descriptive alt text on content images and empty alt text on decorative hero backgrounds. Do not reuse supplied posters whose baked-in text or statistics imply unverified claims. Real team portraits remain actual supplied photographs. Copyright or possession of an image does not prove endorsement permission; commissioned, model-released photography is required before any testimonial or endorsement implication.
+
+Public marketing copy is production-facing: it must not display synthetic-demonstration labels, illustrative-AI disclosures, operator-review drafts, reference footnotes or fabricated delivery claims. Factual product boundaries remain in the copy — insurers control coverage decisions and payment authorization, LUX does not hold customer money, and no live provider transfer is implied.
 
 ### WEB-03 — Team profiles
 
@@ -164,7 +168,7 @@ Use private signed quarantine uploads, short-lived access, content/size verifica
 
 ### CMS-01
 
-Provide permission-controlled draft, preview and publication for structured page content; approved team/contact editing; partner publication flags; media source/license metadata. Version public changes and audit operators. Full rich multi-section editing and automated media management remain extensions; the checked-in photography build is reproducible now.
+Provide permission-controlled draft, preview and publication for structured page content; approved team/contact editing; partner publication flags; media source/license metadata. Version public changes and audit operators. Full rich multi-section editing and automated media management remain extensions; the checked-in illustration build is reproducible now.
 
 ### NOTIFY-01
 
@@ -176,7 +180,7 @@ Record immutable audit events, support requests, durable job attempts/dead state
 
 ## 13. Architecture and data contracts
 
-- **Frontend:** TypeScript Next.js App Router, server-rendered public content, client components for carousel, dialogs and authenticated interactions.
+- **Frontend:** TypeScript Next.js App Router, server-rendered public content, client components for navigation, disclosures, dialogs and authenticated interactions.
 - **Domain/API:** modular Nest/TypeScript services with runtime validation, explicit permissions and state machines. A Fetch adapter reuses the same controller/domain implementation for Neon Functions.
 - **Persistence:** PostgreSQL/Neon, checksummed ordered migrations, transactions, locks, optimistic versions, audit history and durable outbox/jobs. No Redis dependency is required for the pilot.
 - **Authentication:** Better Auth sessions and TOTP. Neon PostgreSQL hosts persistence; this is not a second parallel auth system.
@@ -191,16 +195,16 @@ API is versioned under `/api/v1`; authentication under `/api/auth`. Commands val
 
 ## 14. Non-functional requirements
 
-| Area            | Requirement / validation                                                                                                                                                                                   |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Security        | TLS, exact origin validation, safe session cookies, server tenant checks, least privilege, no client secrets, rate limits and dependency review                                                            |
-| Integrity       | Exact arithmetic, transactional reservations, immutable submissions/audit, idempotent commands, persistent dispatch and non-regressing results                                                             |
-| Accessibility   | WCAG 2.2 AA target; keyboard navigation, focus visibility, labeled inputs/status, reduced motion, native modal semantics and meaningful photo alt text; manual assistive-technology signoff still required |
-| Responsive UX   | No horizontal overflow at tested 360/768/1024/1440 widths; usable public routes and critical task screens                                                                                                  |
-| Performance     | Responsive AVIF/WebP photographs, lazy non-critical media and eager first hero image; establish latency/Core Web Vitals budgets from deployed measurements rather than invented results                    |
-| Availability    | Durable job recovery and explicit degradation; backups and restore exercises; paid infrastructure/SLA and recovery targets require operator agreement                                                      |
-| Privacy         | Synthetic-only demo, minimum necessary data, private evidence, approved retention/processing basis and region review before real data                                                                      |
-| Maintainability | Shared typed domain rules, checksummed migrations, automated unit/PostgreSQL/browser tests, reproducible bundles and source provenance                                                                     |
+| Area            | Requirement / validation                                                                                                                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Security        | TLS, exact origin validation, safe session cookies, server tenant checks, least privilege, no client secrets, rate limits and dependency review                                                                          |
+| Integrity       | Exact arithmetic, transactional reservations, immutable submissions/audit, idempotent commands, persistent dispatch and non-regressing results                                                                           |
+| Accessibility   | WCAG 2.2 AA target; keyboard navigation, focus visibility, labeled inputs/status, reduced motion, native modal semantics and meaningful alt text for content imagery; manual assistive-technology signoff still required |
+| Responsive UX   | No horizontal overflow at tested 360/768/1024/1440 widths; usable public routes and critical task screens                                                                                                                |
+| Performance     | Responsive AVIF/WebP/JPEG illustration sets, lazy non-critical media and an eager first hero image; establish latency/Core Web Vitals budgets from deployed measurements rather than invented results                    |
+| Availability    | Durable job recovery and explicit degradation; backups and restore exercises; paid infrastructure/SLA and recovery targets require operator agreement                                                                    |
+| Privacy         | Synthetic-only demo, minimum necessary data, private evidence, approved retention/processing basis and region review before real data                                                                                    |
+| Maintainability | Shared typed domain rules, checksummed migrations, automated unit/PostgreSQL/browser tests, reproducible bundles and source provenance                                                                                   |
 
 ## 15. Environments and rollout
 
@@ -214,7 +218,7 @@ Deployments must confirm health, same-origin authentication/cookies, permission 
 ## 16. Acceptance test scenarios
 
 - Anonymous visitors reach every public route; no fabricated biography, partner or live transaction is displayed.
-- Active carousel photos load, match licensed originals/manifest and retain public credits; reduced motion disables rotation.
+- Hero and supporting images load on every public page and match the illustration manifest; page heroes use decorative alt text, content illustrations keep descriptive alt text, and reduced motion remains respected.
 - A keyboard user opens/closes a team profile and returns to the originating card; absent contact data creates no invented links.
 - An enquiry is validated/stored; unconfigured mail produces no “sent” success claim.
 - An invited user signs in and sees only active memberships; revoked/unrelated actors are denied.
@@ -231,18 +235,18 @@ Deployments must confirm health, same-origin authentication/cookies, permission 
 
 ## 17. Dependencies, risks and open decisions
 
-| Dependency / risk                     | Required resolution                                                                                            |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Orange business API and authorization | Signed specifications, credentials, certification and approved PIN-free LUX boundary                           |
-| Fee incidence and collection          | Commercial approval, currencies/exponents, collection mechanics and reconciled allocation                      |
-| Real organization onboarding          | Identity, contract, coverage/tariff authority, destinations and staff MFA                                      |
-| Healthcare data governance            | Legal review, processing basis, hosting region, retention/deletion and incident obligations                    |
-| Photography rights                    | Maintain copyright attribution; commission model-released photos for endorsements/specific workflow depiction  |
-| Storage and mail                      | Private bucket/scanner, sender verification and realistic failure/recovery tests                               |
-| Operations                            | Named owners, monitoring, budget, capacity, recovery objectives and incident exercises                         |
-| Product completeness                  | Expand patient/import, clinical field UX, rich CMS, remaining reconciliation/operator controls and API schemas |
-| Accessibility                         | Manual screen-reader/keyboard signoff beyond automated tests                                                   |
+| Dependency / risk                     | Required resolution                                                                                                                        |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Orange business API and authorization | Signed specifications, credentials, certification and approved PIN-free LUX boundary                                                       |
+| Fee incidence and collection          | Commercial approval, currencies/exponents, collection mechanics and reconciled allocation                                                  |
+| Real organization onboarding          | Identity, contract, coverage/tariff authority, destinations and staff MFA                                                                  |
+| Healthcare data governance            | Legal review, processing basis, hosting region, retention/deletion and incident obligations                                                |
+| Imagery rights and disclosure         | Retain supplied-image provenance and the public credits manifest; commission model-released photography before any endorsement implication |
+| Storage and mail                      | Private bucket/scanner, sender verification and realistic failure/recovery tests                                                           |
+| Operations                            | Named owners, monitoring, budget, capacity, recovery objectives and incident exercises                                                     |
+| Product completeness                  | Expand patient/import, clinical field UX, rich CMS, remaining reconciliation/operator controls and API schemas                             |
+| Accessibility                         | Manual screen-reader/keyboard signoff beyond automated tests                                                                               |
 
 ## 18. Delivery artifacts and definition of done
 
-Deliver source, migrations, reproducible synthetic seed, environment-name template, deployment/runbooks, API documentation, photo provenance, automated tests, factual test/release report, this PRD and a private credential handoff. A demonstration is done only when locally verified and, if deployed, smoke-tested at the real URL. **Live-production readiness is a separate milestone and remains blocked by the dependencies above.** The detailed capability matrix is `docs/capabilities.md`; it takes precedence over any shorthand marketing description of availability.
+Deliver source, migrations, reproducible synthetic seed, environment-name template, deployment/runbooks, API documentation, illustration provenance, automated tests, factual test/release report, this PRD and a private credential handoff. A demonstration is done only when locally verified and, if deployed, smoke-tested at the real URL. **Live-production readiness is a separate milestone and remains blocked by the dependencies above.** The detailed capability matrix is `docs/capabilities.md`; it takes precedence over any shorthand marketing description of availability.

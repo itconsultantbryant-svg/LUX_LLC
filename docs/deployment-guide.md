@@ -58,7 +58,7 @@ Organizations enter through stored public requests and explicit administrative a
 
 - Run types, PostgreSQL tests, browser journeys, dependency/security checks and a production build.
 - Approve privacy/terms, processing basis, retention, final bios/portraits and public contact details.
-- Obtain original authorized Orange marks; retain real-photo source/license credits and obtain model-released commissioned images for testimonials or product-specific promotional portraits. See `docs/photography.md`.
+- Obtain original authorized Orange marks; retain supplied illustration provenance and visible AI-image disclosures, and obtain model-released commissioned photography before testimonials or product-specific promotional portraits. See `docs/assets.md`.
 - Complete manual keyboard/screen-reader checks and responsive checks for all critical task screens.
 - Exercise password reset, MFA recovery, invitation expiry and membership suspension behind production ingress.
 - Exercise private storage, MIME/size/malware failures and backup restoration.
