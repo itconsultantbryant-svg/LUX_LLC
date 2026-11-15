@@ -12,7 +12,8 @@
 - Public marketing pages no longer display synthetic/illustrative labels, operator-review drafts, “no email has been sent” notices, image-caption disclosures or footer disclaimers. Factual boundaries remain in the copy: insurers decide coverage, LUX does not hold customer money, and payment authorization is insurer-controlled. The authenticated workspace keeps its demo-environment banner.
 - The public enquiry confirmation now reads “Your enquiry has been recorded. Our team will review it and contact you with the next step.”
 - Automated axe checks report no WCAG 2.0/2.1/2.2 A/AA tagged violations on the six tested public screens and the workspace screens. Manual assistive-technology review remains required.
-- Local verification used a loopback PostgreSQL test database. **No hosted deployment, Neon reset or live payment transfer was performed as part of this review.**
+- Local verification used a loopback PostgreSQL test database. **No hosted database migration, Neon reset or live payment transfer was performed.**
+- Commit `0ab5df0` was pushed to `origin/main` and its Git-triggered Vercel deployment is live at `https://luxllc.vercel.app`. Post-push hosted checks passed **3/3**: image-backed hero on every public page, production-facing copy with no disclaimer footnotes, and the split-image auth layout. Hosted `/`, `/services`, `/get-started`, `/contact`, `/privacy`, `/login` and `/media/illustrations/credits.json` returned 200.
 
 ## Public-site illustration pass — 14 November 2026 (superseded by the 15 November record above)
 

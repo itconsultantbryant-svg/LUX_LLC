@@ -2,7 +2,7 @@
 
 ## Public-site redesign status
 
-The production-facing redesign was verified locally on 15 November 2026: 39/39 domain/PostgreSQL tests, type checks, the optimized build and 13/13 browser cases against the production build passed. Every public page now has an image-backed hero, login/recovery/invitation use a split image layout, registration and contact share a redesigned form, and public disclaimer footnotes were removed while factual product boundaries remain. Asset provenance is documented in `docs/assets.md`. **No redesign deployment or hosted database action is recorded here.** Until a new frontend release is published, `https://luxllc.vercel.app` continues to serve the previous release described below.
+The production-facing redesign was verified locally on 15 November 2026: 39/39 domain/PostgreSQL tests, type checks, the optimized build and 13/13 browser cases against the production build passed. Every public page now has an image-backed hero, login/recovery/invitation use a split image layout, registration and contact share a redesigned form, and public disclaimer footnotes were removed while factual product boundaries remain. Asset provenance is documented in `docs/assets.md`. Commit `0ab5df0` was pushed to `origin/main` and its Git-triggered Vercel deployment is live at `https://luxllc.vercel.app`; the hosted hero, production-copy and auth-layout browser checks passed after deployment. No hosted database action was performed.
 
 ## Deployed demonstration
 
@@ -47,6 +47,16 @@ This is **not** a completed live Orange Money integration or an approved clinica
 The user-authorized legacy source reset is part of this rebuild; old source history remains available in Git. Demo source deployment does not authorize deletion of legacy hosted records. A frontend push does not automatically update separately deployed Neon API/worker bundles—redeploy them from the same release when domain code changes.
 
 ## Repository release verification
+
+### 15 November 2026 public redesign
+
+- Redesign committed and pushed to `origin/main`: **`0ab5df0`** (`0ab5df05bdb54e0e92cfea0c75b0676dda250431`).
+- Git-triggered Vercel deployment became ready within about a minute and serves the canonical `https://luxllc.vercel.app` alias with the new public metadata and image heroes.
+- **Post-push hosted browser checks passed 3/3**: image-backed hero on every public page, production-facing copy with no disclaimer footnotes, and the split-image login/recovery/invitation layout.
+- Hosted public routes `/`, `/services`, `/get-started`, `/contact`, `/privacy` and `/login` returned 200; `/media/illustrations/credits.json` returned 200.
+- Final pre-push local rerun: **39/39 tests**, type checks, optimized build and **13/13 browser cases**. No hosted database migration or mutation was performed; the separately deployed Neon API/worker bundles were not changed by this frontend release.
+
+### 11 November 2026 release
 
 - Rebuild committed and pushed to `origin/main`: **`a89dd2f`** (`a89dd2f9e5f60a567f0f5e79e05144e881fc4b56`).
 - Git-triggered Vercel deployment **`dpl_CcZDRwyqV6BZKig6FkWME5j63Ubr`** reached **Ready**, identifies that exact Git SHA and serves the canonical `https://luxllc.vercel.app` alias.
