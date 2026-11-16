@@ -12,6 +12,7 @@ import {
   SupportModule,
   GenericModule,
   EncountersModule,
+  DestinationModule,
 } from "../../../components/modules";
 export default function ModulePage({
   params,
@@ -28,6 +29,8 @@ export default function ModulePage({
       return <EligibilityModule />;
     case "reconciliation":
       return <ReconciliationModule />;
+    case "destination":
+      return <DestinationModule />;
     case "team":
       return <TeamModule />;
     case "content":

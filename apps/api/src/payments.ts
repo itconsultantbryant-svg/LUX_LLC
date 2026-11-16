@@ -29,8 +29,8 @@ export class PaymentsService {
     requirePermission(ctx, "payments.read");
     return (
       await pool.query(
-        "SELECT p.*,c.reference claim_reference FROM payments p JOIN claims c ON c.id=p.claim_id WHERE p.facility_id=$1 OR p.insurer_id=$1 ORDER BY p.created_at DESC LIMIT 100",
-        [ctx.orgId],
+        `SELECT p.*,c.reference claim_reference,pa.maker_id,pa.checker_id,pa.authorized_at,(pa.maker_id=$2) is_maker,mu.name maker_name,cu.name checker_name FROM payments p JOIN claims c ON c.id=p.claim_id LEFT JOIN payment_authorizations pa ON pa.payment_id=p.id LEFT JOIN "user" mu ON mu.id=pa.maker_id LEFT JOIN "user" cu ON cu.id=pa.checker_id WHERE p.facility_id=$1 OR p.insurer_id=$1 ORDER BY p.created_at DESC LIMIT 100`,
+        [ctx.orgId, ctx.userId],
       )
     ).rows;
   }
@@ -128,15 +128,24 @@ export class PaymentsService {
     id: string,
     key: string | undefined,
     version: string | undefined,
+    input?: unknown,
   ) {
     requirePermission(ctx, "payments.authorize");
     if (!ctx.fresh) throw new DomainError("REAUTHENTICATION_REQUIRED", 403);
+    const options = z
+      .object({ demoSelfCheck: z.boolean().optional() })
+      .parse(input || {});
     return transaction((db) =>
       command(
         db,
         ctx,
         key,
-        { action: "check-payment", id, version },
+        {
+          action: "check-payment",
+          id,
+          version,
+          demoSelfCheck: !!options.demoSelfCheck,
+        },
         async () => {
           const p = await paymentAccess(db, ctx, id, true);
           if (p.insurer_id !== ctx.orgId)
@@ -148,11 +157,24 @@ export class PaymentsService {
             "SELECT * FROM payment_authorizations WHERE payment_id=$1 FOR UPDATE",
             [id],
           );
-          if (a.maker_id === ctx.userId)
-            throw new DomainError("SEPARATE_CHECKER_REQUIRED", 403);
+          let checkerId = ctx.userId,
+            demoSubstitution = false;
+          if (a.maker_id === ctx.userId) {
+            if (mode !== "demo" || !options.demoSelfCheck)
+              throw new DomainError("SEPARATE_CHECKER_REQUIRED", 403);
+            const systemChecker = await one(
+              db,
+              `SELECT u.id FROM "user" u JOIN memberships m ON m.user_id=u.id WHERE u.email='internal.checker@demo.lux.test' AND m.organization_id=$1 AND m.status='ACTIVE' LIMIT 1`,
+              [ctx.orgId],
+            );
+            if (!systemChecker)
+              throw new DomainError("DEMO_CHECKER_UNAVAILABLE", 503);
+            checkerId = systemChecker.id;
+            demoSubstitution = true;
+          }
           await db.query(
             "UPDATE payment_authorizations SET checker_id=$2,authorized_at=now() WHERE payment_id=$1",
-            [id, ctx.userId],
+            [id, checkerId],
           );
           const r = await one(
             db,
@@ -160,7 +182,20 @@ export class PaymentsService {
             [id],
           );
           await event(db, ctx, "PaymentAuthorized", id);
-          return r;
+          if (demoSubstitution)
+            await audit(db, ctx, "DemoCheckerSubstitution", id, {
+              note: "Demo-only: checker step attributed to the seeded system identity. Production requires a separate human checker.",
+            });
+          return {
+            ...r,
+            demo_self_check: demoSubstitution,
+            ...(demoSubstitution
+              ? {
+                  message:
+                    "Demo authorization recorded against the internal checker identity. Production requires a separate human checker.",
+                }
+              : {}),
+          };
         },
       ),
     );

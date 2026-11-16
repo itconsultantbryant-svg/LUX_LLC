@@ -1,5 +1,19 @@
 # Verification results
 
+## Authenticated workspace redesign and three-login demo — 15 November 2026
+
+- Demo access is consolidated to **three tested logins**: `facility@demo.lux.test` (facility claims, administration, finance, clinician), `insurer@demo.lux.test` (insurer administration, review, finance, audit) and `admin@demo.lux.test` (platform administration, LUX finance, support, Orange observer). The local demo password is `LuxTest231@`.
+- Each dashboard and grouped sidebar exposes the full role set in real time, with permission-aware navigation, live queue badges, a notification centre and role chips. A hidden `internal.checker@demo.lux.test` identity has no auth account and exists only to attribute historical and explicit demo checker steps.
+- The LUX admin command centre adds network totals, 14-day claim volume, claim and payment state donuts, fee-allocation evidence, operational health, partner rankings, onboarding requests, recent organizations, an audit feed and active role coverage.
+- Facility and insurer dashboards add image-backed heroes, metric cards, 14-day volume bars, payment-lifecycle donuts, work queues, recent claims, money-in-motion panels and an activity trail.
+- Explicit demo-only self-check paths exist for payment authorization and destination approval. They require `demoSelfCheck`, only run with `LUX_MODE=demo`, attribute the checker step to the seeded internal identity and write a `DemoCheckerSubstitution` audit event. Without the flag the API still returns `SEPARATE_CHECKER_REQUIRED`.
+- `pnpm typecheck`: **passed** for backend, scripts, tests and Next.js.
+- `pnpm test`: **42/42 domain/PostgreSQL tests passed** against a freshly recreated isolated `lux_healthpay_test` database. New coverage verifies the demo checker substitution and audit event, scoped dashboard/nav metrics, whole-network platform metrics without clinical claims access, and finance-only redaction.
+- `pnpm build`: **passed** with Next.js 16.4.6 optimized compilation, TypeScript and route generation.
+- Browser suite against the production build: **16/16 passed**, including all public journeys plus insurer, admin and facility role-navigation checks, the facility claim submission journey, responsive overflow at 360/768/1024/1440 px and automated axe checks on the workspace.
+- Accessibility contrast was tightened for the authenticated shell (active navigation, muted text, primary hero action) before the final browser run.
+- No hosted database migration, Neon reset or live payment transfer was performed in this local redesign pass. The separate hosted API/worker bundles require redeployment from the same revision.
+
 ## Public-site redesign, image heroes and auth screens — 15 November 2026
 
 - `pnpm typecheck`: **passed** for backend, scripts, tests and Next.js.

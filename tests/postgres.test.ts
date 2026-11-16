@@ -22,8 +22,12 @@ let facility: any,
   other: any,
   reviewer: any,
   finance: any,
+  financeOnly: any,
   checker: any,
-  platform: any;
+  platform: any,
+  otherEmail: string;
+const testPassword = process.env.DEMO_PASSWORD || "LuxTest231@";
+
 const ctx = (m: any) => ({
   userId: m.user_id,
   orgId: m.organization_id,
@@ -57,11 +61,40 @@ beforeAll(async () => {
     return ctx(m);
   };
   facility = await membership("facility");
-  other = await membership("facility2");
-  reviewer = await membership("reviewer");
-  finance = await membership("finance");
-  checker = await membership("checker");
-  platform = await membership("platform");
+  reviewer = await membership("insurer");
+  finance = await membership("insurer");
+  checker = await membership("internal.checker");
+  platform = await membership("admin");
+  financeOnly = {
+    ...finance,
+    roles: ["INSURER_FINANCE"],
+    permissions: permissions(["INSURER_FINANCE"]),
+  };
+  // A test-only second tenant. No additional demo login is seeded.
+  const otherOrg = await one(
+    pool,
+    "SELECT id FROM organizations WHERE name='Demo River Care Centre'",
+  );
+  const { auth } = await import("../apps/api/src/auth.ts");
+  otherEmail = `cross-tenant-${randomUUID()}@demo.lux.test`;
+  const created = await auth.api.signUpEmail({
+    body: {
+      email: otherEmail,
+      name: "Cross-tenant test",
+      password: testPassword,
+    },
+  });
+  await pool.query('UPDATE "user" SET "emailVerified"=true WHERE id=$1', [
+    created.user.id,
+  ]);
+  const om = await one(
+    pool,
+    "INSERT INTO memberships(user_id,organization_id,roles) VALUES($1,$2,'{FACILITY_CLAIMS}') RETURNING *",
+    [created.user.id, otherOrg.id],
+  );
+  om.type = "FACILITY";
+  om.permissions = permissions(om.roles);
+  other = ctx(om);
   const C = await import("../apps/api/src/claims.ts"),
     P = await import("../apps/api/src/payments.ts"),
     O = await import("../apps/api/src/operations.ts");
@@ -194,7 +227,7 @@ describe("durable validation and scoped evidence", () => {
     );
     const { download } = await import("../apps/api/src/storage.ts");
     await expect(download(other, a.id)).rejects.toMatchObject({ status: 404 });
-    await expect(download(finance, a.id)).rejects.toMatchObject({
+    await expect(download(financeOnly, a.id)).rejects.toMatchObject({
       status: 403,
     });
     await expect(download(facility, a.id)).rejects.toMatchObject({
@@ -282,8 +315,8 @@ describe("maintained authentication against PostgreSQL", () => {
     const { context } = await import("../apps/api/src/access.ts");
     const signed = await auth.api.signInEmail({
       body: {
-        email: "facility2@demo.lux.test",
-        password: process.env.DEMO_PASSWORD!,
+        email: otherEmail,
+        password: testPassword,
       },
       returnHeaders: true,
     });
@@ -306,6 +339,30 @@ describe("maintained authentication against PostgreSQL", () => {
         [other.orgId, other.userId],
       );
     }
+  });
+});
+describe("dashboard, navigation and platform metrics", () => {
+  it("returns scoped 14-day trends, queues and live navigation badges", async () => {
+    const overview = await ops.overview(reviewer);
+    expect(overview.trend).toHaveLength(14);
+    expect(overview.recentClaims.length).toBeGreaterThan(0);
+    expect(overview.queues).toHaveProperty("flagged");
+    expect(overview.admin).toBeNull();
+    const nav = await ops.nav(facility);
+    expect(nav.badges).toHaveProperty("claims");
+    expect(nav.items.length).toBeGreaterThan(0);
+  });
+  it("gives the platform administrator whole-network metrics without clinical claims access", async () => {
+    const overview = await ops.overview(platform);
+    expect(overview.admin).toBeTruthy();
+    expect(overview.admin.totals.claims).toBeGreaterThan(0);
+    expect(overview.admin.trend).toHaveLength(14);
+    expect(overview.admin.roleSummary.length).toBeGreaterThan(0);
+    expect(overview.admin.paymentStates.length).toBeGreaterThan(0);
+    const c = await freshClaim();
+    await expect(claims.detail(platform, c.id)).rejects.toMatchObject({
+      status: 403,
+    });
   });
 });
 describe("scoped reports and statements", () => {
@@ -554,7 +611,7 @@ describe("real PostgreSQL tenant authorization", () => {
   });
   it("finance sees no patient, encounter, bill items or findings", async () => {
     const c = await freshClaim();
-    const detail = await claims.detail(finance, c.id);
+    const detail = await claims.detail(financeOnly, c.id);
     expect(detail.patient).toBeUndefined();
     expect(detail.encounter).toBeUndefined();
     expect(detail.items).toEqual([]);
@@ -695,6 +752,37 @@ describe("concurrent reservations and immutable fee snapshots", () => {
     ).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
     const authorized = await payments.check(checker, p.id, randomUUID(), "1");
     expect(authorized.state).toBe("AUTHORIZED");
+  });
+  it("demo self-check is explicit and attributed to the seeded internal identity", async () => {
+    const c = await freshClaim();
+    const p = await payments.authorize(
+      finance,
+      c.id,
+      { amountMinor: "100000", reason: "Synthetic demo self-check" },
+      randomUUID(),
+      "1",
+    );
+    const authorized = await payments.check(finance, p.id, randomUUID(), "1", {
+      demoSelfCheck: true,
+    });
+    expect(authorized.demo_self_check).toBe(true);
+    expect(authorized.state).toBe("AUTHORIZED");
+    const row = await one(
+      pool,
+      `SELECT pa.checker_id,u.email FROM payment_authorizations pa JOIN "user" u ON u.id=pa.checker_id WHERE pa.payment_id=$1`,
+      [p.id],
+    );
+    expect(row.checker_id).not.toBe(finance.userId);
+    expect(row.email).toBe("internal.checker@demo.lux.test");
+    expect(
+      (
+        await one(
+          pool,
+          "SELECT count(*)::int n FROM audit_events WHERE action='DemoCheckerSubstitution' AND resource_id=$1",
+          [p.id],
+        )
+      ).n,
+    ).toBe(1);
   });
   it("settles once; allocation cash is not invented; old event cannot regress state", async () => {
     const c = await freshClaim();

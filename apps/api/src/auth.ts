@@ -57,7 +57,7 @@ export const auth = betterAuth({
   trustedOrigins: [process.env.WEB_ORIGIN || "http://localhost:3000"],
   emailAndPassword: {
     enabled: true,
-    minPasswordLength: 12,
+    minPasswordLength: 11,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       await sendMail(

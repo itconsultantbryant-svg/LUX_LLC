@@ -75,12 +75,10 @@ try {
   ).toBe(403);
   results.push("Health and unauthenticated/signup denials");
   const facility = await login("facility"),
-    reviewer = await login("reviewer"),
-    finance = await login("finance"),
-    checker = await login("checker"),
-    other = await login("facility2");
+    insurer = await login("insurer"),
+    admin = await login("admin");
   results.push(
-    "Five unique accounts authenticate through the live same-origin proxy",
+    "Three demo accounts authenticate through the live same-origin proxy; tenant isolation is covered by the PostgreSQL suite",
   );
   const patients = await facility.api("/patients"),
     contracts = await facility.api("/contracts");
@@ -113,14 +111,6 @@ try {
     ],
   });
   const claimId = claim.id;
-  await other.api(
-    "/claims/" + claimId,
-    "GET",
-    undefined,
-    undefined,
-    undefined,
-    404,
-  );
   claim = await facility.api(
     `/claims/${claimId}/submit`,
     "POST",
@@ -128,9 +118,9 @@ try {
     claim.version,
   );
   await drain();
-  claim = await reviewer.api("/claims/" + claimId);
+  claim = await insurer.api("/claims/" + claimId);
   expect(claim.state).toBe("AWAITING_REVIEW");
-  claim = await reviewer.api(
+  claim = await insurer.api(
     `/claims/${claimId}/decisions`,
     "POST",
     {
@@ -142,9 +132,9 @@ try {
     claim.version,
   );
   results.push(
-    "Scoped encounter, coverage, claim submission, durable validation, human insurer decision and cross-tenant denial",
+    "Scoped encounter, coverage, claim submission, durable validation and human insurer decision",
   );
-  let payment = await finance.api(
+  let payment = await insurer.api(
     `/claims/${claimId}/payment-authorizations`,
     "POST",
     {
@@ -154,7 +144,7 @@ try {
     claim.version,
   );
   const paymentId = payment.id;
-  await finance.api(
+  await insurer.api(
     `/payments/${paymentId}/approve`,
     "POST",
     {},
@@ -162,13 +152,14 @@ try {
     undefined,
     403,
   );
-  payment = await checker.api(
+  payment = await insurer.api(
     `/payments/${paymentId}/approve`,
     "POST",
-    {},
+    { demoSelfCheck: true },
     payment.version,
   );
-  await finance.api(
+  expect(payment.demo_self_check).toBe(true);
+  await insurer.api(
     `/payments/${paymentId}/execute`,
     "POST",
     {},
@@ -176,7 +167,7 @@ try {
     undefined,
     400,
   );
-  const challenge = await finance.api(
+  const challenge = await insurer.api(
     `/payments/${paymentId}/demo-confirmation`,
     "POST",
     {},
@@ -187,7 +178,7 @@ try {
       demoCode: challenge.demoCode,
     },
     command = randomUUID();
-  payment = await finance.api(
+  payment = await insurer.api(
     `/payments/${paymentId}/execute`,
     "POST",
     body,
@@ -195,7 +186,7 @@ try {
     command,
   );
   expect(payment.state).toBe("PROCESSING");
-  const replay = await finance.api(
+  const replay = await insurer.api(
     `/payments/${paymentId}/execute`,
     "POST",
     body,
@@ -204,24 +195,28 @@ try {
   );
   expect(replay.id).toBe(paymentId);
   await drain();
-  await finance.api(`/payments/${paymentId}/status-check`, "POST", {});
-  const settled = (await finance.api("/payments")).find(
+  await insurer.api(`/payments/${paymentId}/status-check`, "POST", {});
+  const settled = (await insurer.api("/payments")).find(
     (p: any) => p.id === paymentId,
   );
   expect(settled.state).toBe("SETTLED");
   expect(settled.mode).toBe("demo");
   results.push(
-    "Maker/checker separation, mandatory demo-only confirmation, idempotent execution and simulated settlement",
+    "Explicit demo checker substitution, mandatory demo-only confirmation, idempotent execution and simulated settlement",
   );
-  const pdf = await finance.client.get("/api/v1/statements/pdf", {
-    headers: { "X-Organization-ID": finance.org },
+  const pdf = await insurer.client.get("/api/v1/statements/pdf", {
+    headers: { "X-Organization-ID": insurer.org },
   });
   expect(pdf.status()).toBe(200);
   expect((await pdf.body()).subarray(0, 4).toString()).toBe("%PDF");
-  await finance.api("/reports/statement");
-  await finance.api("/reconciliation/exceptions");
+  await insurer.api("/reports/statement");
+  await insurer.api("/reconciliation/exceptions");
+  const metrics = await admin.api("/admin/metrics");
+  expect(metrics.totals.claims).toBeGreaterThan(0);
+  const nav = await admin.api("/nav");
+  expect(nav.badges).toHaveProperty("organization-requests");
   results.push(
-    "Live scoped reports, reconciliation and portable PDF rendering",
+    "Live scoped reports, reconciliation, portable PDF rendering and the platform command-centre metrics",
   );
   const worker = await fetch(process.env.WORKER_URL!, { method: "POST" });
   expect(worker.status).toBe(401);

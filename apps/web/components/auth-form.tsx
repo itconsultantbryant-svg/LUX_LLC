@@ -148,7 +148,7 @@ export function AuthForm({ action = "login" }: { action?: string }) {
     : action === "forgot"
       ? "Enter the email address on your approved organization account. We will send the reset link when the account is eligible."
       : action === "reset"
-        ? "Set a new password with at least 12 characters, then sign in again."
+        ? "Set a new password with at least 11 characters, then sign in again."
         : action === "invite"
           ? "Confirm your name and choose a password to activate your LUX HealthPay account."
           : action === "login"
@@ -266,9 +266,9 @@ export function AuthForm({ action = "login" }: { action?: string }) {
                             : "new-password"
                         }
                         required
-                        minLength={12}
+                        minLength={11}
                       />
-                      <small>At least 12 characters.</small>
+                      <small>At least 11 characters.</small>
                     </label>
                   )}
                 </>

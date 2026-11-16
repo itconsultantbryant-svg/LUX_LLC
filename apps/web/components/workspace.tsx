@@ -26,6 +26,18 @@ import {
   Bell,
   Building2,
   SearchCheck,
+  ClipboardCheck,
+  ShieldAlert,
+  Gavel,
+  BadgeDollarSign,
+  Activity,
+  Send,
+  MapPin,
+  Inbox,
+  UserRoundCog,
+  Newspaper,
+  ChevronRight,
+  CheckCheck,
 } from "lucide-react";
 import { Brand } from "./public-shell";
 import { authClient } from "../lib/auth-client";
@@ -36,12 +48,22 @@ type Membership = {
   roles: string[];
   permissions: string[];
 };
+type NavItem = {
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  permission?: string | string[];
+  orgTypes?: string[];
+  badge?: string;
+};
+type NavGroup = { title: string; items: NavItem[] };
 type State = {
   me: any;
   org: Membership;
   api: (path: string, init?: RequestInit) => Promise<any>;
   refresh: () => void;
   revision: number;
+  demo: boolean;
 };
 const WorkspaceContext = createContext<State | null>(null);
 export const useWorkspace = () => {
@@ -50,7 +72,7 @@ export const useWorkspace = () => {
   return ctx;
 };
 export function money(
-  value: string | number | null | undefined,
+  value: string | number | bigint | null | undefined,
   currency = "USD",
 ) {
   const amount = BigInt(value || 0),
@@ -64,45 +86,249 @@ export function date(value: string) {
     timeZone: "Africa/Monrovia",
   }).format(new Date(value));
 }
-const links = [
-  ["Overview", "/app", LayoutDashboard, "all"],
-  ["Patients & Eligibility", "/app/eligibility", Users, "eligibility"],
-  ["Encounters", "/app/encounters", FileText, "clinical"],
-  ["Claims", "/app/claims", FileText, "claims"],
-  ["Claims Queue", "/app/claims", FileText, "review"],
-  ["Flagged Claims", "/app/flagged", SearchCheck, "review"],
-  ["Returned Claims", "/app/returned", FileText, "facility"],
-  ["Decisions & Appeals", "/app/decisions", ShieldCheck, "review"],
-  ["Coverage & Tariffs", "/app/coverage", ShieldCheck, "coverage"],
-  ["Contracted Organizations", "/app/contracts", Building2, "contracts"],
-  ["Payment Authorizations", "/app/payments", Wallet, "payments.authorize"],
-  ["Payments", "/app/payments", Wallet, "payments.read"],
-  ["Reconciliation", "/app/reconciliation", GitCompareArrows, "reconciliation"],
-  ["Reports", "/app/reports", ChartNoAxesCombined, "reports"],
-  [
-    "Organization Requests",
-    "/app/organization-requests",
-    Building2,
-    "organizations",
-  ],
-  ["Organizations", "/app/organizations", Building2, "organizations"],
-  ["Integration Health", "/app/integrations", Globe, "operations"],
-  ["Validation Operations", "/app/jobs", SearchCheck, "operations"],
-  ["Fee Revenue", "/app/fees", ChartNoAxesCombined, "fees"],
-  ["Public Content", "/app/content", Globe, "cms"],
-  ["Team", "/app/team", Users, "cms"],
-  ["Enquiries", "/app/enquiries", LifeBuoy, "organizations"],
-  ["Users", "/app/users", Users, "users"],
-  ["Audit", "/app/audit", ShieldCheck, "audit"],
-  ["Support", "/app/support", LifeBuoy, "all"],
-  ["Settings", "/app/settings", Settings, "all"],
-] as const;
+const NAV_GROUPS: NavGroup[] = [
+  {
+    title: "Workspace",
+    items: [
+      {
+        label: "Overview",
+        href: "/app",
+        icon: LayoutDashboard,
+        permission: "all",
+      },
+    ],
+  },
+  {
+    title: "Care delivery",
+    items: [
+      {
+        label: "Patients & eligibility",
+        href: "/app/eligibility",
+        icon: Users,
+        permission: "eligibility",
+      },
+      {
+        label: "Encounters",
+        href: "/app/encounters",
+        icon: ClipboardCheck,
+        permission: "clinical",
+      },
+      {
+        label: "Claims",
+        href: "/app/claims",
+        icon: FileText,
+        permission: "claims",
+        orgTypes: ["FACILITY"],
+        badge: "claims",
+      },
+      {
+        label: "Returned claims",
+        href: "/app/returned",
+        icon: Inbox,
+        permission: "claims",
+        orgTypes: ["FACILITY"],
+        badge: "returned",
+      },
+    ],
+  },
+  {
+    title: "Claims operations",
+    items: [
+      {
+        label: "Claims queue",
+        href: "/app/claims",
+        icon: FileText,
+        permission: "review",
+        orgTypes: ["INSURER"],
+        badge: "review",
+      },
+      {
+        label: "Flagged claims",
+        href: "/app/flagged",
+        icon: ShieldAlert,
+        permission: "review",
+        badge: "flagged",
+      },
+      {
+        label: "Decisions & appeals",
+        href: "/app/decisions",
+        icon: Gavel,
+        permission: "review",
+        badge: "decisions",
+      },
+    ],
+  },
+  {
+    title: "Coverage & contracts",
+    items: [
+      {
+        label: "Coverage & tariffs",
+        href: "/app/coverage",
+        icon: ShieldCheck,
+        permission: "coverage",
+      },
+      {
+        label: "Contracted organizations",
+        href: "/app/contracts",
+        icon: Building2,
+        permission: "contracts",
+      },
+      {
+        label: "Wallet destination",
+        href: "/app/destination",
+        icon: MapPin,
+        permission: "destination",
+      },
+    ],
+  },
+  {
+    title: "Finance & settlement",
+    items: [
+      {
+        label: "Payments & authorizations",
+        href: "/app/payments",
+        icon: Wallet,
+        permission: "payments.read",
+        badge: "payments",
+      },
+      {
+        label: "Reconciliation",
+        href: "/app/reconciliation",
+        icon: GitCompareArrows,
+        permission: "reconciliation",
+        badge: "exceptions",
+      },
+      {
+        label: "Reports & statements",
+        href: "/app/reports",
+        icon: ChartNoAxesCombined,
+        permission: "reports",
+      },
+      {
+        label: "Fee revenue",
+        href: "/app/fees",
+        icon: BadgeDollarSign,
+        permission: "fees",
+      },
+    ],
+  },
+  {
+    title: "Network",
+    items: [
+      {
+        label: "Organizations",
+        href: "/app/organizations",
+        icon: Building2,
+        permission: "organizations",
+      },
+      {
+        label: "Organization requests",
+        href: "/app/organization-requests",
+        icon: Send,
+        permission: "organizations",
+        badge: "organization-requests",
+      },
+      {
+        label: "Public enquiries",
+        href: "/app/enquiries",
+        icon: LifeBuoy,
+        permission: "organizations",
+        badge: "enquiries",
+      },
+    ],
+  },
+  {
+    title: "Platform operations",
+    items: [
+      {
+        label: "Integration health",
+        href: "/app/integrations",
+        icon: Activity,
+        permission: "operations",
+      },
+      {
+        label: "Validation operations",
+        href: "/app/jobs",
+        icon: SearchCheck,
+        permission: "operations",
+        badge: "jobs",
+      },
+    ],
+  },
+  {
+    title: "Content & team",
+    items: [
+      {
+        label: "Public content",
+        href: "/app/content",
+        icon: Newspaper,
+        permission: "cms",
+      },
+      {
+        label: "Team profiles",
+        href: "/app/team",
+        icon: Users,
+        permission: "cms",
+      },
+    ],
+  },
+  {
+    title: "Governance",
+    items: [
+      {
+        label: "Organization users",
+        href: "/app/users",
+        icon: UserRoundCog,
+        permission: "users",
+      },
+      {
+        label: "Audit history",
+        href: "/app/audit",
+        icon: ShieldCheck,
+        permission: "audit",
+      },
+      {
+        label: "Support",
+        href: "/app/support",
+        icon: LifeBuoy,
+        permission: "all",
+        badge: "support",
+      },
+    ],
+  },
+  {
+    title: "Account",
+    items: [
+      {
+        label: "Settings",
+        href: "/app/settings",
+        icon: Settings,
+        permission: "all",
+      },
+    ],
+  },
+];
+function itemVisible(item: NavItem, org: Membership) {
+  if (item.orgTypes && !item.orgTypes.includes(org.type)) return false;
+  if (!item.permission) return true;
+  const required = Array.isArray(item.permission)
+    ? item.permission
+    : [item.permission];
+  return required.some((p) => p === "all" || org.permissions.includes(p));
+}
+function isActive(path: string, href: string) {
+  return href === "/app"
+    ? path === "/app"
+    : path === href || path.startsWith(href + "/");
+}
 export function Workspace({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<any>(null),
     [orgId, setOrgId] = useState(""),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0),
-    [open, setOpen] = useState(false);
+    [open, setOpen] = useState(false),
+    [notificationsOpen, setNotificationsOpen] = useState(false),
+    [nav, setNav] = useState<any>({ unread: 0, items: [], badges: {} });
   const path = usePathname();
   const load = useCallback(async () => {
     try {
@@ -128,8 +354,10 @@ export function Workspace({ children }: { children: ReactNode }) {
   }, [load]);
   useEffect(() => {
     setOpen(false);
+    setNotificationsOpen(false);
   }, [path]);
-  const org = me?.memberships.find((m: Membership) => m.id === orgId);
+  const org = me?.memberships.find((m: Membership) => m.id === orgId) as
+    Membership | undefined;
   const api = useCallback(
     async (p: string, init: RequestInit = {}) => {
       const r = await fetch("/api/v1" + p, {
@@ -149,6 +377,40 @@ export function Workspace({ children }: { children: ReactNode }) {
     },
     [orgId],
   );
+  const loadNav = useCallback(async () => {
+    if (!orgId) return;
+    try {
+      const r = await fetch("/api/v1/nav", {
+        cache: "no-store",
+        headers: { "X-Organization-ID": orgId },
+      });
+      if (r.ok) setNav(await r.json());
+    } catch {
+      // A transient badge failure must not interrupt the workspace.
+    }
+  }, [orgId]);
+  useEffect(() => {
+    loadNav();
+    const onFocus = () => loadNav();
+    window.addEventListener("focus", onFocus);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") loadNav();
+    }, 20000);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      clearInterval(timer);
+    };
+  }, [loadNav, revision]);
+  async function markAllRead() {
+    try {
+      await api("/notifications/read", { method: "POST" });
+      setNotificationsOpen(false);
+      await loadNav();
+      setRevision((n) => n + 1);
+    } catch {
+      // Leave the badge visible when the read receipt cannot be recorded.
+    }
+  }
   if (error)
     return (
       <main className="auth-page" id="main">
@@ -191,25 +453,16 @@ export function Workspace({ children }: { children: ReactNode }) {
         </button>
       </main>
     );
-  const visible = links.filter((l, i, arr) => {
-    const p = l[3];
-    return (
-      (p === "all" ||
-        (p === "facility" &&
-          org.type === "FACILITY" &&
-          org.permissions.includes("claims")) ||
-        (p === "claims" &&
-          !org.permissions.includes("review") &&
-          org.permissions.includes(p)) ||
-        (!["facility", "claims"].includes(p) && org.permissions.includes(p))) &&
-      !arr
-        .slice(0, i)
-        .some(
-          (x) =>
-            x[1] === l[1] && (org.permissions.includes(x[3]) || x[3] === "all"),
-        )
-    );
-  });
+  const groups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => itemVisible(item, org)),
+  })).filter((group) => group.items.length);
+  const initials = String(me.user.name || "LUX")
+    .split(" ")
+    .map((part: string) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   return (
     <WorkspaceContext.Provider
       value={{
@@ -218,6 +471,7 @@ export function Workspace({ children }: { children: ReactNode }) {
         api,
         refresh: () => setRevision((n) => n + 1),
         revision,
+        demo: me.mode === "demo",
       }}
     >
       <div className="app-shell">
@@ -228,12 +482,21 @@ export function Workspace({ children }: { children: ReactNode }) {
         </div>
         <aside
           className={"app-sidebar" + (open ? " open" : "")}
-          aria-label="Workspace navigation"
+          aria-label="Workspace sidebar"
         >
-          <Brand />
+          <div className="sidebar-head">
+            <Brand />
+            <button
+              className="sidebar-close"
+              aria-label="Close workspace navigation"
+              onClick={() => setOpen(false)}
+            >
+              <X size={18} />
+            </button>
+          </div>
           <div className="org-control">
             <label>
-              Organization context
+              {org.type.replaceAll("_", " ")} context
               <select
                 aria-label="Organization context"
                 value={orgId}
@@ -249,32 +512,69 @@ export function Workspace({ children }: { children: ReactNode }) {
                 ))}
               </select>
             </label>
+            <div
+              className="org-roles"
+              aria-label="Your roles in this organization"
+            >
+              {org.roles.map((role) => (
+                <span key={role}>
+                  {role.replaceAll("_", " ").toLowerCase()}
+                </span>
+              ))}
+            </div>
           </div>
-          <nav>
-            {visible.map(([label, href, Icon]) => (
-              <Link
-                className={path === href ? "active" : ""}
-                href={href}
-                key={href}
-                aria-current={path === href ? "page" : undefined}
-              >
-                <Icon size={16} />
-                {label}
-              </Link>
+          <nav aria-label="Workspace navigation">
+            {groups.map((group) => (
+              <div className="nav-group" key={group.title}>
+                <p className="nav-group-title">{group.title}</p>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(path, item.href);
+                  const count = item.badge
+                    ? Number(nav.badges?.[item.badge] || 0)
+                    : 0;
+                  return (
+                    <Link
+                      className={active ? "active" : ""}
+                      href={item.href}
+                      key={item.href + item.label}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      <Icon size={16} />
+                      <span>{item.label}</span>
+                      {count > 0 && (
+                        <span
+                          className="nav-badge"
+                          aria-label={`${count} open`}
+                        >
+                          {count > 99 ? "99+" : count}
+                        </span>
+                      )}
+                      {active && (
+                        <ChevronRight
+                          className="nav-active-arrow"
+                          size={13}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
             ))}
           </nav>
           <div className="sidebar-bottom">
             <Link href="/">← Public website</Link>
-            {open && (
-              <button
-                aria-label="Close workspace navigation"
-                onClick={() => setOpen(false)}
-              >
-                <X size={18} />
-              </button>
-            )}
+            <span>Teams in Africa/Monrovia</span>
           </div>
         </aside>
+        {open && (
+          <button
+            className="sidebar-scrim"
+            aria-label="Close workspace navigation"
+            onClick={() => setOpen(false)}
+          />
+        )}
         <div className="app-main">
           <header className="app-topbar">
             <button
@@ -285,19 +585,84 @@ export function Workspace({ children }: { children: ReactNode }) {
             >
               <Menu size={21} />
             </button>
-            <div>
+            <div className="topbar-context">
               <small>{org.type.replaceAll("_", " ")} WORKSPACE</small>
               <strong>{org.name}</strong>
             </div>
-            <div>
-              <small>{me.user.name}</small>
+            <div className="topbar-actions">
+              <div className="notif-wrap">
+                <button
+                  className="notif-button"
+                  aria-label={
+                    nav.unread
+                      ? `Notifications, ${nav.unread} unread`
+                      : "Notifications"
+                  }
+                  aria-expanded={notificationsOpen}
+                  onClick={() => setNotificationsOpen(!notificationsOpen)}
+                >
+                  <Bell size={18} />
+                  {nav.unread > 0 && (
+                    <span className="notif-dot" aria-hidden="true">
+                      {nav.unread > 9 ? "9+" : nav.unread}
+                    </span>
+                  )}
+                </button>
+                {notificationsOpen && (
+                  <div
+                    className="notif-panel"
+                    role="dialog"
+                    aria-label="Notifications"
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setNotificationsOpen(false);
+                    }}
+                  >
+                    <div className="notif-head">
+                      <strong>Notifications</strong>
+                      <button className="inline-button" onClick={markAllRead}>
+                        <CheckCheck size={13} /> Mark all read
+                      </button>
+                    </div>
+                    {nav.items?.length ? (
+                      nav.items.map((n: any) => (
+                        <Link
+                          className={
+                            "notif-item" + (n.read_at ? "" : " unread")
+                          }
+                          href={n.link}
+                          key={n.id}
+                          onClick={() => setNotificationsOpen(false)}
+                        >
+                          <span>{n.title}</span>
+                          <small>{date(n.created_at)}</small>
+                        </Link>
+                      ))
+                    ) : (
+                      <p className="notif-empty">No notifications yet.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="topbar-user">
+                <span className="avatar" aria-hidden="true">
+                  {initials}
+                </span>
+                <div>
+                  <strong>{me.user.name}</strong>
+                  <small>
+                    {org.roles.length} active role
+                    {org.roles.length === 1 ? "" : "s"}
+                  </small>
+                </div>
+              </div>
               <button
+                className="signout-button"
                 onClick={async () => {
                   await authClient.signOut();
                   location.assign("/login");
                 }}
               >
-                <LogOut size={14} /> Sign out
+                <LogOut size={15} /> <span>Sign out</span>
               </button>
             </div>
           </header>

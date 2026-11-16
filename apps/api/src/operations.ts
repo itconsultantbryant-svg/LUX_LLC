@@ -51,31 +51,273 @@ export class OperationsService {
     });
   }
   async overview(ctx: Context) {
-    const counts = (
-      await pool.query(
+    const [
+      counts,
+      money,
+      settlements,
+      notifications,
+      recentClaims,
+      trend,
+      paymentStates,
+      queues,
+      auditFeed,
+    ] = await Promise.all([
+      pool.query(
         "SELECT state,count(*)::int count FROM claims WHERE facility_id=$1 OR insurer_id=$1 GROUP BY state",
         [ctx.orgId],
-      )
-    ).rows;
-    const money = (
-      await pool.query(
+      ),
+      pool.query(
         "SELECT currency,sum(submitted_minor)::text submitted,sum(approved_minor)::text approved FROM claims WHERE facility_id=$1 OR insurer_id=$1 GROUP BY currency",
         [ctx.orgId],
-      )
-    ).rows;
-    const settlements = (
-      await pool.query(
-        `SELECT currency,sum(base_minor) FILTER(WHERE state='SETTLED')::text settled,sum(base_minor) FILTER(WHERE state='UNKNOWN_PENDING_INVESTIGATION')::text unknown FROM payments WHERE facility_id=$1 OR insurer_id=$1 GROUP BY currency`,
+      ),
+      pool.query(
+        `SELECT currency,COALESCE(sum(base_minor) FILTER(WHERE state='SETTLED'),0)::text settled,COALESCE(sum(base_minor) FILTER(WHERE state='UNKNOWN_PENDING_INVESTIGATION'),0)::text unknown FROM payments WHERE facility_id=$1 OR insurer_id=$1 GROUP BY currency`,
         [ctx.orgId],
-      )
-    ).rows;
-    const notifications = (
-      await pool.query(
+      ),
+      pool.query(
         "SELECT id,title,link,created_at,read_at FROM notifications WHERE organization_id=$1 AND (user_id IS NULL OR user_id=$2) ORDER BY created_at DESC LIMIT 20",
         [ctx.orgId, ctx.userId],
-      )
-    ).rows;
-    return { counts, money, settlements, notifications, mode };
+      ),
+      pool.query(
+        `SELECT c.id,c.reference,c.state,c.currency,c.submitted_minor,c.approved_minor,c.updated_at,
+             CASE WHEN c.facility_id=$1 THEN i.name ELSE f.name END counterparty,
+             CASE WHEN c.facility_id=$1 THEN 'INSURER' ELSE 'FACILITY' END counterparty_type
+           FROM claims c
+           JOIN organizations f ON f.id=c.facility_id
+           JOIN organizations i ON i.id=c.insurer_id
+           WHERE c.facility_id=$1 OR c.insurer_id=$1
+           ORDER BY c.updated_at DESC LIMIT 8`,
+        [ctx.orgId],
+      ),
+      pool.query(
+        `SELECT to_char(d::date,'YYYY-MM-DD') AS "day",
+             count(c.id)::int submitted,
+             count(c.id) FILTER (WHERE c.state IN ('APPROVED','PARTIALLY_APPROVED'))::int approved,
+             COALESCE(sum(c.submitted_minor) FILTER (WHERE c.id IS NOT NULL),0)::text volume
+           FROM generate_series(current_date-13,current_date,'1 day') d
+           LEFT JOIN claims c ON c.created_at::date=d::date AND (c.facility_id=$1 OR c.insurer_id=$1)
+           GROUP BY d ORDER BY d`,
+        [ctx.orgId],
+      ),
+      pool.query(
+        `SELECT state,count(*)::int count,COALESCE(sum(base_minor),0)::text amount
+           FROM payments WHERE facility_id=$1 OR insurer_id=$1 GROUP BY state`,
+        [ctx.orgId],
+      ),
+      one(
+        pool,
+        `SELECT
+             (SELECT count(*)::int FROM claims WHERE insurer_id=$1 AND state='AWAITING_REVIEW') awaiting_review,
+             (SELECT count(*)::int FROM claims WHERE facility_id=$1 AND state='NEEDS_INFORMATION') returned,
+             (SELECT count(*)::int FROM claims WHERE facility_id=$1 AND state='DRAFT') drafts,
+             (SELECT count(*)::int FROM claims c JOIN validation_runs v ON v.claim_id=c.id JOIN findings f ON f.validation_run_id=v.id WHERE c.insurer_id=$1 AND f.resolution IS NULL) flagged,
+             (SELECT count(*)::int FROM payments WHERE insurer_id=$1 AND state='AWAITING_AUTHORIZATION') awaiting_authorization,
+             (SELECT count(*)::int FROM payments WHERE (facility_id=$1 OR insurer_id=$1) AND state='UNKNOWN_PENDING_INVESTIGATION') unknown_payments,
+             (SELECT count(*)::int FROM reconciliation_items WHERE organization_id=$1 AND status<>'RESOLVED') open_exceptions,
+             (SELECT count(*)::int FROM decisions d JOIN claims c ON c.id=d.claim_id WHERE c.insurer_id=$1) decisions,
+             (SELECT count(*)::int FROM appeals a JOIN claims c ON c.id=a.claim_id WHERE c.insurer_id=$1 AND a.status='OPEN') open_appeals`,
+        [ctx.orgId],
+      ),
+      pool.query(
+        `SELECT a.action,a.resource_id,a.created_at,u.name actor
+           FROM audit_events a LEFT JOIN "user" u ON u.id=a.actor_id
+           WHERE a.organization_id=$1 ORDER BY a.created_at DESC LIMIT 6`,
+        [ctx.orgId],
+      ),
+    ]);
+    return {
+      counts: counts.rows,
+      money: money.rows,
+      settlements: settlements.rows,
+      notifications: notifications.rows,
+      recentClaims: recentClaims.rows,
+      trend: trend.rows,
+      paymentStates: paymentStates.rows,
+      queues: queues || {},
+      auditFeed: auditFeed.rows,
+      admin: ctx.permissions.includes("organizations")
+        ? await this.adminMetrics()
+        : null,
+      mode,
+    };
+  }
+  async adminMetrics() {
+    const [
+      totals,
+      claimStates,
+      paymentStates,
+      currencies,
+      fees,
+      trend,
+      topInsurers,
+      topFacilities,
+      recentOrganizations,
+      pendingRequests,
+      jobs,
+      integrations,
+      auditFeed,
+      roleSummary,
+    ] = await Promise.all([
+      one(
+        pool,
+        `SELECT
+           (SELECT count(*)::int FROM organizations WHERE status='ACTIVE') organizations,
+           (SELECT count(*)::int FROM organizations WHERE type='FACILITY') facilities,
+           (SELECT count(*)::int FROM organizations WHERE type='INSURER') insurers,
+           (SELECT count(*)::int FROM claims) claims,
+           (SELECT count(*)::int FROM claims WHERE state='AWAITING_REVIEW') awaiting_review,
+           (SELECT count(*)::int FROM claims WHERE state='NEEDS_INFORMATION') returned,
+           (SELECT count(*)::int FROM payments) payments,
+           (SELECT count(*)::int FROM payments WHERE state='SETTLED') settled,
+           (SELECT count(*)::int FROM payments WHERE state='UNKNOWN_PENDING_INVESTIGATION') unknown,
+           (SELECT count(*)::int FROM reconciliation_items WHERE status<>'RESOLVED') exceptions,
+           (SELECT count(*)::int FROM enquiries) enquiries,
+           (SELECT count(*)::int FROM organization_requests WHERE status='PENDING') pending_requests,
+           (SELECT count(*)::int FROM outbox_events WHERE status IN ('PENDING','PROCESSING')) pending_jobs,
+           (SELECT count(*)::int FROM outbox_events WHERE status='DEAD') dead_jobs,
+           (SELECT count(*)::int FROM support_tickets WHERE status='OPEN') open_support,
+           (SELECT count(*)::int FROM team_members WHERE published=true) published_team`,
+      ),
+      pool.query(
+        "SELECT state,count(*)::int count FROM claims GROUP BY state ORDER BY count DESC,state",
+      ),
+      pool.query(
+        "SELECT state,count(*)::int count,COALESCE(sum(base_minor),0)::text amount FROM payments GROUP BY state ORDER BY count DESC,state",
+      ),
+      pool.query(
+        "SELECT currency,COALESCE(sum(submitted_minor),0)::text submitted,COALESCE(sum(approved_minor),0)::text approved FROM claims GROUP BY currency ORDER BY currency",
+      ),
+      one(
+        pool,
+        "SELECT COALESCE(sum(total_minor),0)::text total,COALESCE(sum(lux_minor),0)::text lux,COALESCE(sum(orange_minor),0)::text orange,count(*)::int assessments FROM fee_assessments",
+      ),
+      pool.query(
+        `SELECT to_char(d::date,'YYYY-MM-DD') AS "day",count(c.id)::int claims,COALESCE(sum(c.submitted_minor),0)::text volume
+         FROM generate_series(current_date-13,current_date,'1 day') d
+         LEFT JOIN claims c ON c.created_at::date=d::date
+         GROUP BY d ORDER BY d`,
+      ),
+      pool.query(
+        `SELECT o.name,count(c.id)::int claims,COALESCE(sum(c.submitted_minor),0)::text submitted
+         FROM organizations o LEFT JOIN claims c ON c.insurer_id=o.id
+         WHERE o.type='INSURER' GROUP BY o.id,o.name ORDER BY claims DESC,o.name LIMIT 6`,
+      ),
+      pool.query(
+        `SELECT o.name,count(c.id)::int claims,COALESCE(sum(c.submitted_minor),0)::text submitted
+         FROM organizations o LEFT JOIN claims c ON c.facility_id=o.id
+         WHERE o.type='FACILITY' GROUP BY o.id,o.name ORDER BY claims DESC,o.name LIMIT 6`,
+      ),
+      pool.query(
+        "SELECT id,name,type,status,created_at FROM organizations ORDER BY created_at DESC LIMIT 6",
+      ),
+      pool.query(
+        `SELECT r.id,e.organization,e.kind,e.name,e.email,r.created_at
+         FROM organization_requests r JOIN enquiries e ON e.id=r.enquiry_id
+         WHERE r.status='PENDING' ORDER BY r.created_at DESC LIMIT 5`,
+      ),
+      pool.query(
+        "SELECT status,count(*)::int count FROM outbox_events GROUP BY status ORDER BY status",
+      ),
+      pool.query(
+        "SELECT provider,mode,enabled,capabilities FROM integration_configurations ORDER BY provider",
+      ),
+      pool.query(
+        `SELECT a.action,a.resource_id,a.created_at,u.name actor,o.name organization
+         FROM audit_events a LEFT JOIN "user" u ON u.id=a.actor_id LEFT JOIN organizations o ON o.id=a.organization_id
+         ORDER BY a.created_at DESC LIMIT 8`,
+      ),
+      pool.query(
+        "SELECT unnest(roles) role,count(*)::int count FROM memberships WHERE status='ACTIVE' GROUP BY 1 ORDER BY count DESC,role",
+      ),
+    ]);
+    return {
+      totals,
+      claimStates: claimStates.rows,
+      paymentStates: paymentStates.rows,
+      currencies: currencies.rows,
+      fees,
+      trend: trend.rows,
+      topInsurers: topInsurers.rows,
+      topFacilities: topFacilities.rows,
+      recentOrganizations: recentOrganizations.rows,
+      pendingRequests: pendingRequests.rows,
+      jobs: jobs.rows,
+      integrations: integrations.rows,
+      auditFeed: auditFeed.rows,
+      roleSummary: roleSummary.rows,
+    };
+  }
+  async nav(ctx: Context) {
+    const [unread, items, queues] = await Promise.all([
+      one(
+        pool,
+        "SELECT count(*)::int n FROM notifications WHERE organization_id=$1 AND (user_id IS NULL OR user_id=$2) AND read_at IS NULL",
+        [ctx.orgId, ctx.userId],
+      ),
+      pool.query(
+        "SELECT id,title,link,created_at,read_at FROM notifications WHERE organization_id=$1 AND (user_id IS NULL OR user_id=$2) ORDER BY created_at DESC LIMIT 6",
+        [ctx.orgId, ctx.userId],
+      ),
+      one(
+        pool,
+        `SELECT
+           (SELECT count(*)::int FROM claims WHERE insurer_id=$1 AND state='AWAITING_REVIEW') awaiting_review,
+           (SELECT count(*)::int FROM claims WHERE facility_id=$1 AND state='NEEDS_INFORMATION') returned,
+           (SELECT count(*)::int FROM claims c JOIN validation_runs v ON v.claim_id=c.id JOIN findings f ON f.validation_run_id=v.id WHERE c.insurer_id=$1 AND f.resolution IS NULL) flagged,
+           (SELECT count(*)::int FROM payments WHERE insurer_id=$1 AND state='AWAITING_AUTHORIZATION') awaiting_authorization,
+           (SELECT count(*)::int FROM reconciliation_items WHERE organization_id=$1 AND status<>'RESOLVED') open_exceptions,
+           (SELECT count(*)::int FROM appeals a JOIN claims c ON c.id=a.claim_id WHERE c.insurer_id=$1 AND a.status='OPEN') open_appeals,
+           (SELECT count(*)::int FROM decisions d JOIN claims c ON c.id=d.claim_id WHERE c.insurer_id=$1) decisions,
+           (SELECT count(*)::int FROM support_tickets WHERE organization_id=$1 AND status='OPEN') open_support`,
+        [ctx.orgId],
+      ),
+    ]);
+    const admin = ctx.permissions.includes("organizations");
+    const operations = ctx.permissions.includes("operations");
+    const extra = admin
+      ? await one(
+          pool,
+          `SELECT
+             (SELECT count(*)::int FROM organization_requests WHERE status='PENDING') pending_requests,
+             (SELECT count(*)::int FROM enquiries WHERE status='NEW') new_enquiries,
+             (SELECT count(*)::int FROM outbox_events WHERE status IN ('PENDING','PROCESSING')) pending_jobs,
+             (SELECT count(*)::int FROM support_tickets WHERE status='OPEN') open_support`,
+        )
+      : operations
+        ? await one(
+            pool,
+            "SELECT 0::int pending_requests,0::int new_enquiries,(SELECT count(*)::int FROM outbox_events WHERE status IN ('PENDING','PROCESSING')) pending_jobs,(SELECT count(*)::int FROM support_tickets WHERE status='OPEN') open_support",
+          )
+        : {
+            pending_requests: 0,
+            new_enquiries: 0,
+            pending_jobs: 0,
+            open_support: 0,
+          };
+    return {
+      unread: unread?.n || 0,
+      items: items.rows,
+      badges: {
+        claims: (queues.awaiting_review || 0) + (queues.returned || 0),
+        review: queues.awaiting_review || 0,
+        returned: queues.returned || 0,
+        flagged: queues.flagged || 0,
+        payments: queues.awaiting_authorization || 0,
+        exceptions: queues.open_exceptions || 0,
+        decisions: queues.open_appeals || 0,
+        support: extra.open_support || 0,
+        "organization-requests": extra.pending_requests || 0,
+        enquiries: extra.new_enquiries || 0,
+        jobs: extra.pending_jobs || 0,
+      },
+    };
+  }
+  async markNotificationsRead(ctx: Context) {
+    const r = await pool.query(
+      "UPDATE notifications SET read_at=now() WHERE organization_id=$1 AND (user_id IS NULL OR user_id=$2) AND read_at IS NULL",
+      [ctx.orgId, ctx.userId],
+    );
+    return { status: "READ", count: r.rowCount };
   }
   async directory(ctx: Context) {
     return (
@@ -277,7 +519,7 @@ export class OperationsService {
       .object({
         token: z.string().length(64),
         name: z.string().min(2).max(120),
-        password: z.string().min(12).max(128),
+        password: z.string().min(11).max(128),
       })
       .parse(input);
     const hash = createHash("sha256").update(d.token).digest("hex");
@@ -468,7 +710,10 @@ export class OperationsService {
     requirePermission(ctx, "destination");
     if (!ctx.fresh) throw new DomainError("REAUTHENTICATION_REQUIRED", 403);
     const d = z
-      .object({ verificationEvidence: z.string().min(20).max(1000) })
+      .object({
+        verificationEvidence: z.string().min(20).max(1000),
+        demoSelfCheck: z.boolean().optional(),
+      })
       .parse(input);
     return transaction(async (db) => {
       const c = await one(
@@ -477,8 +722,21 @@ export class OperationsService {
         [id, ctx.orgId],
       );
       if (!c) throw new DomainError("RECORD_NOT_FOUND", 404);
-      if (c.maker_id === ctx.userId)
-        throw new DomainError("SEPARATE_CHECKER_REQUIRED", 403);
+      let checkerId = ctx.userId,
+        demoSubstitution = false;
+      if (c.maker_id === ctx.userId) {
+        if (mode !== "demo" || !d.demoSelfCheck)
+          throw new DomainError("SEPARATE_CHECKER_REQUIRED", 403);
+        const systemChecker = await one(
+          db,
+          `SELECT u.id FROM "user" u JOIN memberships m ON m.user_id=u.id WHERE u.email='internal.checker@demo.lux.test' AND m.organization_id=$1 AND m.status='ACTIVE' LIMIT 1`,
+          [ctx.orgId],
+        );
+        if (!systemChecker)
+          throw new DomainError("DEMO_CHECKER_UNAVAILABLE", 503);
+        checkerId = systemChecker.id;
+        demoSubstitution = true;
+      }
       if (mode !== "demo")
         throw new DomainError(
           "DESTINATION_VERIFICATION_PROVIDER_REQUIRED",
@@ -498,12 +756,26 @@ export class OperationsService {
       );
       await db.query(
         `UPDATE destination_changes SET checker_id=$2,status='APPROVED' WHERE id=$1`,
-        [id, ctx.userId],
+        [id, checkerId],
       );
       await audit(db, ctx, "DestinationChangeApproved", id, {
         evidence: d.verificationEvidence,
       });
-      return { status: "APPROVED", demo: true };
+      if (demoSubstitution)
+        await audit(db, ctx, "DemoCheckerSubstitution", id, {
+          note: "Demo-only: destination approval attributed to the seeded system identity. Production requires a separate human approver.",
+        });
+      return {
+        status: "APPROVED",
+        demo: true,
+        demo_self_check: demoSubstitution,
+        ...(demoSubstitution
+          ? {
+              message:
+                "Demo destination approval recorded against the internal checker identity. Production requires a separate human approver.",
+            }
+          : {}),
+      };
     });
   }
 }

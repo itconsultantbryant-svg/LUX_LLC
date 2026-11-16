@@ -39,14 +39,14 @@ No production secrets, domains or existing project IDs are hardcoded. Promotion 
 ## Neon Functions deployment used for the demo
 
 1. Preserve the legacy Neon project. Create a new isolated project and obtain its connection string privately.
-2. Run migrations and seed only the empty demo database, with `ALLOW_DEMO_SEED=true`, nonproduction seed runtime, `LUX_MODE=demo` and `DEMO_PASSWORDS_FILE` pointing to a private JSON map of eight unique account passwords. Never run the seed against a populated database.
+2. Run migrations and seed only the empty demo database, with `ALLOW_DEMO_SEED=true`, nonproduction seed runtime, `LUX_MODE=demo` and `DEMO_PASSWORDS_FILE` pointing to a private JSON map of the three demo account passwords (`facility`, `insurer`, `admin`), or omit it to use the documented local demo default. Never run the seed against a populated database.
 3. Build `pnpm exec tsx scripts/build-neon.ts`. Deploy `dist/neon/luxapi/index.mjs` and `dist/neon/luxworker/index.mjs` using `neon functions deploy <slug> --src <file> --no-bundle --project-id <new-project> --branch main`. Inject secrets through a private deployment process, not shell history or committed config. The branch injects `DATABASE_URL` automatically.
 4. Set backend/worker `BETTER_AUTH_SECRET`, exact `BETTER_AUTH_URL`/`WEB_ORIGIN`, `NODE_ENV=production`, `DEPLOYMENT_TIER=demo`, `LUX_MODE=demo`, `LUX_NEON_RUNTIME=true` and a high-entropy `WORKER_TRIGGER_SECRET`. Never deploy seed-password files/variables into functions.
 5. Create the worker schedule with `neon triggers create --name lux-durable-jobs --function-slug luxworker --cron '* * * * *' --project-id <new-project> --branch main`. Confirm **actual** `scheduled:true` durable-job batch logs, not just existence of a trigger. Manual worker requests require the secret bearer token; the ordinary public API cannot invoke jobs.
 6. Set Vercel `API_INTERNAL_URL` to the deployed `luxapi` origin and use `apps/web`, Next.js, Node 24. `.vercelignore` excludes local database sockets, secrets and build/test artifacts. Deploy and exercise same-origin sign-in/cookies and workflows at the canonical HTTPS alias.
 7. Rebuild/redeploy function bundles after API/domain changes. A frontend Git push alone does not redeploy these independently hosted functions. Match API/worker and frontend source revisions in release records.
 
-To run the synthetic hosted smoke script, supply `SMOKE_BASE_URL`, `ALLOW_SYNTHETIC_SMOKE=true`, private `DEMO_PASSWORDS_FILE`, `WORKER_URL` and `WORKER_TRIGGER_SECRET`, then `pnpm exec tsx scripts/hosted-demo-smoke.ts`. It deliberately creates synthetic encounters, claims and simulated payments; never run it in a real-data environment.
+To run the synthetic hosted smoke script, supply `SMOKE_BASE_URL`, `ALLOW_SYNTHETIC_SMOKE=true`, private `DEMO_PASSWORDS_FILE` with the three demo accounts, `WORKER_URL` and `WORKER_TRIGGER_SECRET`, then `pnpm exec tsx scripts/hosted-demo-smoke.ts`. It deliberately creates synthetic encounters, claims and simulated payments; never run it in a real-data environment.
 
 ## First production operator
 

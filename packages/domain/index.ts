@@ -100,7 +100,7 @@ export function transitionPayment(from: PaymentState, to: PaymentState) {
 export const roles = {
   PLATFORM_ADMIN: ["organizations", "cms", "operations", "audit", "support"],
   SUPPORT: ["support", "operations"],
-  LUX_FINANCE: ["fees", "reconciliation"],
+  LUX_FINANCE: ["fees", "reconciliation", "reports"],
   FACILITY_ADMIN: ["users", "settings", "contracts", "destination"],
   FACILITY_CLINICIAN: ["clinical", "encounters.write"],
   FACILITY_CLAIMS: ["claims", "eligibility", "clinical"],

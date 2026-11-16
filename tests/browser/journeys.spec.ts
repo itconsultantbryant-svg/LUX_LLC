@@ -13,6 +13,16 @@ const pages = [
   "/terms",
   "/accessibility",
 ];
+async function signIn(page: any, email: string) {
+  await page.goto("/login");
+  await page.getByLabel("Email address").fill(email);
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill(process.env.DEMO_PASSWORD!);
+  await page.getByRole("button", { name: "Log In", exact: true }).click();
+  await expect(page).toHaveURL(/\/app$/, { timeout: 60000 });
+  await expect(page.getByText("DEMO ENVIRONMENT")).toBeVisible();
+}
 test("home hero uses page imagery and production proof points", async ({
   page,
 }) => {
@@ -338,7 +348,10 @@ test("facility signs in, sees scoped data and creates a submitted claim", async 
   await page.getByRole("button", { name: "Log In", exact: true }).click();
   await expect(page).toHaveURL(/\/app$/, { timeout: 60000 });
   await expect(page.getByText("DEMO ENVIRONMENT")).toBeVisible();
-  await page.getByRole("link", { name: "+ Prepare a claim" }).click();
+  await page
+    .getByRole("link", { name: /Prepare a claim/ })
+    .first()
+    .click();
   await page.getByRole("button", { name: "Start a fresh draft" }).click();
   await page.getByLabel("Authorized patient").selectOption({ index: 1 });
   await page.getByLabel("Contracted insurer").selectOption({ index: 1 });
@@ -362,18 +375,130 @@ test("facility signs in, sees scoped data and creates a submitted claim", async 
     /submitted|awaiting review|validating/,
   );
 });
+test("insurer signs in with every insurer role and sees the review and payment workspace", async ({
+  page,
+}) => {
+  test.setTimeout(180000);
+  test.skip(!process.env.DEMO_PASSWORD, "Local seed password is required");
+  await signIn(page, "insurer@demo.lux.test");
+  await expect(
+    page.getByRole("heading", { name: "Insurance desk overview." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Platform overview, Insurance." }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Awaiting review", { exact: false }).first(),
+  ).toBeVisible();
+  await expect(page.getByText("Where payments stand")).toBeVisible();
+  const nav = page.getByRole("navigation", { name: "Workspace navigation" });
+  for (const item of [
+    "Claims queue",
+    "Flagged claims",
+    "Decisions & appeals",
+    "Coverage & tariffs",
+    "Payments & authorizations",
+    "Reconciliation",
+    "Reports & statements",
+    "Organization users",
+    "Audit history",
+  ])
+    await expect(
+      nav.getByRole("link", { name: new RegExp(item) }),
+    ).toBeVisible();
+  await expect(
+    page.locator(".org-roles").getByText("insurer admin"),
+  ).toBeVisible();
+  await expect(
+    page.locator(".org-roles").getByText("insurer finance"),
+  ).toBeVisible();
+  await page.getByRole("link", { name: /Payments & authorizations/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Payments & authorizations" }),
+  ).toBeVisible();
+});
+test("LUX admin sees a comprehensive platform command centre and network tools", async ({
+  page,
+}) => {
+  test.setTimeout(180000);
+  test.skip(!process.env.DEMO_PASSWORD, "Local seed password is required");
+  await signIn(page, "admin@demo.lux.test");
+  await expect(
+    page.getByRole("heading", { name: "Platform overview, LUX." }),
+  ).toBeVisible();
+  await expect(page.getByText("LUX command centre")).toBeVisible();
+  await expect(page.getByText("Claims across the platform")).toBeVisible();
+  await expect(page.getByText("Fee assessment")).toBeVisible();
+  await expect(page.getByText("Operational health")).toBeVisible();
+  await expect(page.getByText("Active memberships by role")).toBeVisible();
+  const nav = page.getByRole("navigation", { name: "Workspace navigation" });
+  for (const item of [
+    "Organizations",
+    "Organization requests",
+    "Public enquiries",
+    "Fee revenue",
+    "Reports & statements",
+    "Integration health",
+    "Validation operations",
+    "Public content",
+    "Team profiles",
+    "Audit history",
+  ])
+    await expect(
+      nav.getByRole("link", { name: new RegExp(item) }),
+    ).toBeVisible();
+  await expect(
+    page.locator(".org-roles").getByText("platform admin"),
+  ).toBeVisible();
+  await expect(
+    page.locator(".org-roles").getByText("lux finance"),
+  ).toBeVisible();
+  await nav.getByRole("link", { name: "Organizations", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Organizations", exact: true }),
+  ).toBeVisible();
+});
+test("facility navigation groups all four facility roles and their destinations", async ({
+  page,
+}) => {
+  test.setTimeout(180000);
+  test.skip(!process.env.DEMO_PASSWORD, "Local seed password is required");
+  await signIn(page, "facility@demo.lux.test");
+  await expect(
+    page.getByRole("heading", { name: "Facility overview." }),
+  ).toBeVisible();
+  const nav = page.getByRole("navigation", { name: "Workspace navigation" });
+  for (const item of [
+    "Patients & eligibility",
+    "Encounters",
+    "Claims",
+    "Returned claims",
+    "Wallet destination",
+    "Payments & authorizations",
+    "Reconciliation",
+    "Reports & statements",
+    "Contracted organizations",
+    "Organization users",
+  ])
+    await expect(
+      nav.getByRole("link", { name: new RegExp(item) }),
+    ).toBeVisible();
+  for (const role of [
+    "facility claims",
+    "facility admin",
+    "facility finance",
+    "facility clinician",
+  ])
+    await expect(page.locator(".org-roles").getByText(role)).toBeVisible();
+  await expect(page.getByText("Claim volume")).toBeVisible();
+  await expect(page.getByText("Your work queue")).toBeVisible();
+});
 test("key workspace screens fit supported widths and expose accessible controls", async ({
   page,
 }) => {
   test.setTimeout(300000);
   test.skip(!process.env.DEMO_PASSWORD, "Local seed password is required");
-  await page.goto("/login");
-  await page.getByLabel("Email address").fill("facility@demo.lux.test");
-  await page
-    .getByLabel("Password", { exact: true })
-    .fill(process.env.DEMO_PASSWORD!);
-  await page.getByRole("button", { name: "Log In", exact: true }).click();
-  await expect(page).toHaveURL(/\/app$/, { timeout: 60000 });
+  await signIn(page, "facility@demo.lux.test");
   for (const width of [360, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of [

@@ -11,24 +11,25 @@ if (
   throw Error(
     "Demo seed requires nonproduction LUX_MODE=demo and ALLOW_DEMO_SEED=true",
   );
-const password = process.env.DEMO_PASSWORD;
+// Demo-only default. The seed refuses to run in production and accepts a
+// private per-account map for hosted demos.
+const DEFAULT_DEMO_PASSWORD = "LuxTest231@";
+const password = process.env.DEMO_PASSWORD || DEFAULT_DEMO_PASSWORD;
 const passwords: Record<string, string> = process.env.DEMO_PASSWORDS_FILE
   ? JSON.parse(await readFile(process.env.DEMO_PASSWORDS_FILE, "utf8"))
   : {};
-if (!Object.keys(passwords).length && (!password || password.length < 16))
+if (!Object.keys(passwords).length && (!password || password.length < 11))
   throw Error(
-    "Supply DEMO_PASSWORD (16+ characters) or a private DEMO_PASSWORDS_FILE. No default password exists.",
+    "Supply DEMO_PASSWORD (11+ characters) or a private DEMO_PASSWORDS_FILE.",
   );
 if ((await pool.query("SELECT id FROM organizations LIMIT 1")).rowCount)
   throw Error(
     "Seed requires an empty NEW database; existing records are never reset.",
   );
 const accounts = [
-  ["platform", "Platform operator", ["PLATFORM_ADMIN"]],
-  ["luxfinance", "LUX finance", ["LUX_FINANCE"]],
   [
     "facility",
-    "Facility claims officer",
+    "Facility workspace",
     [
       "FACILITY_CLAIMS",
       "FACILITY_ADMIN",
@@ -36,17 +37,22 @@ const accounts = [
       "FACILITY_CLINICIAN",
     ],
   ],
-  ["facility2", "Unrelated facility officer", ["FACILITY_CLAIMS"]],
-  ["reviewer", "Insurer reviewer", ["INSURER_REVIEWER"]],
-  ["finance", "Insurer finance maker", ["INSURER_FINANCE"]],
-  ["checker", "Insurer finance checker", ["INSURER_FINANCE"]],
-  ["insurer2", "Other insurer reviewer", ["INSURER_REVIEWER"]],
+  [
+    "insurer",
+    "Insurance workspace",
+    ["INSURER_ADMIN", "INSURER_REVIEWER", "INSURER_FINANCE", "INSURER_AUDITOR"],
+  ],
+  [
+    "admin",
+    "LUX administrator",
+    ["PLATFORM_ADMIN", "LUX_FINANCE", "SUPPORT", "ORANGE_OBSERVER"],
+  ],
 ] as const;
 const users: Record<string, string> = {};
 for (const [key, name] of accounts) {
   const accountPassword = passwords[key] || password;
-  if (!accountPassword || accountPassword.length < 16)
-    throw Error(`Supply a unique 16+ character demo password for ${key}`);
+  if (!accountPassword || accountPassword.length < 11)
+    throw Error(`Supply a unique 11+ character demo password for ${key}`);
   const existing = await one(pool, 'SELECT id FROM "user" WHERE email=$1', [
     `${key}@demo.lux.test`,
   ]);
@@ -64,6 +70,24 @@ for (const [key, name] of accounts) {
     r.user.id,
   ]);
 }
+// A seeded system identity used only to attribute the historical synthetic
+// checker step on demo records. It has no auth account and cannot be signed
+// into. Production maker/checker independence is unchanged.
+const existingChecker = await one(
+  pool,
+  'SELECT id FROM "user" WHERE email=$1',
+  ["internal.checker@demo.lux.test"],
+);
+const internalCheckerId = existingChecker?.id || randomUUID();
+if (!existingChecker)
+  await pool.query(
+    `INSERT INTO "user"(id,name,email,"emailVerified") VALUES($1,$2,$3,true)`,
+    [
+      internalCheckerId,
+      "Internal demo checker",
+      "internal.checker@demo.lux.test",
+    ],
+  );
 await transaction(async (db) => {
   const organizations: Record<string, string> = {};
   for (const [key, name, type] of [
@@ -82,20 +106,20 @@ await transaction(async (db) => {
     organizations[key] = o.id;
   }
   for (const [key, , roles] of accounts) {
-    const org = ["platform", "luxfinance"].includes(key)
-      ? "lux"
-      : ["reviewer", "finance", "checker"].includes(key)
-        ? "insurer"
-        : key === "insurer2"
-          ? "insurer2"
-          : key === "facility2"
-            ? "facility2"
-            : "facility";
+    const org = key === "admin" ? "lux" : key;
     await db.query(
       "INSERT INTO memberships(user_id,organization_id,roles) VALUES($1,$2,$3)",
       [users[key], organizations[org], [...roles]],
     );
   }
+  await db.query(
+    "INSERT INTO memberships(user_id,organization_id,roles) VALUES($1,$2,$3)",
+    [internalCheckerId, organizations.insurer, ["INSURER_FINANCE"]],
+  );
+  await db.query(
+    "INSERT INTO memberships(user_id,organization_id,roles) VALUES($1,$2,$3)",
+    [internalCheckerId, organizations.facility, ["FACILITY_ADMIN"]],
+  );
   for (const [facility, insurer] of [
     ["facility", "insurer"],
     ["facility3", "insurer"],
@@ -117,7 +141,7 @@ await transaction(async (db) => {
     ] as const)
       await db.query(
         `INSERT INTO fee_policies(insurer_id,version,mode,collection_supported,approved_by,effective_at) VALUES($1,$2::int,$3,true,$4,now()-interval '1 day'*$2::int)`,
-        [organizations[key], version, feeMode, users.finance],
+        [organizations[key], version, feeMode, users.insurer],
       );
     for (const version of [1, 2]) {
       const tariff = await one(
@@ -159,7 +183,8 @@ await transaction(async (db) => {
       ik = n < 12 ? "insurer" : "insurer2";
     const facility = organizations[fk],
       insurer = organizations[ik],
-      actor = users[fk];
+      actor = users.facility,
+      ageDays = (n * 3) % 14;
     const patient = await one(
       db,
       `INSERT INTO patients(facility_id,display_name,birth_year,processing_basis,created_by) VALUES($1,$2,$3,'SYNTHETIC_DEMO_ONLY',$4) RETURNING id`,
@@ -220,7 +245,7 @@ await transaction(async (db) => {
             : "0";
     const c = await one(
       db,
-      `INSERT INTO claims(reference,facility_id,insurer_id,contract_id,patient_id,encounter_id,eligibility_id,currency,state,submitted_minor,approved_minor,submission_version,created_by,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,'USD',$8,$9,$10,$11,$12,now()-interval '1 minute'*$13) RETURNING *`,
+      `INSERT INTO claims(reference,facility_id,insurer_id,contract_id,patient_id,encounter_id,eligibility_id,currency,state,submitted_minor,approved_minor,submission_version,created_by,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,'USD',$8,$9,$10,$11,$12,now()-interval '1 day'*$13,now()-interval '1 minute'*$14) RETURNING *`,
       [
         `DEMO-LHP-${String(n + 1).padStart(4, "0")}`,
         facility,
@@ -234,6 +259,7 @@ await transaction(async (db) => {
         approved,
         state === "DRAFT" ? 0 : 1,
         actor,
+        ageDays,
         n,
       ],
     );
@@ -273,7 +299,7 @@ await transaction(async (db) => {
             ? "Please provide complete item evidence."
             : "Synthetic insurer human review decision.",
           approved,
-          users.reviewer,
+          users.insurer,
         ],
       );
     if (n === 2 || n === 11) {
@@ -330,7 +356,7 @@ await transaction(async (db) => {
           },
           policy.id,
           `DEMO-PROVIDER-${n}`,
-          users.finance,
+          users.insurer,
         ],
       );
       await db.query(
@@ -339,7 +365,7 @@ await transaction(async (db) => {
       );
       await db.query(
         `INSERT INTO payment_authorizations(payment_id,maker_id,checker_id,reason,authorized_at) VALUES($1,$2,$3,'Synthetic dual approval',now())`,
-        [p.id, users.finance, users.checker],
+        [p.id, users.insurer, internalCheckerId],
       );
       if (n === 7) {
         const ev = await one(
@@ -368,6 +394,159 @@ await transaction(async (db) => {
         );
     }
   }
+  // A payable claim left at the maker stage so the insurer login can complete
+  // the full authorization chain in the demo.
+  const awaiting = await one(
+    db,
+    "SELECT * FROM claims WHERE reference='DEMO-LHP-0006'",
+  );
+  if (awaiting) {
+    const policy = await one(
+      db,
+      "SELECT id FROM fee_policies WHERE insurer_id=$1 AND version=2",
+      [organizations.insurer],
+    );
+    const p = await one(
+      db,
+      `INSERT INTO payments(claim_id,facility_id,insurer_id,currency,base_minor,state,mode,destination_snapshot,fee_snapshot,policy_id,created_by) VALUES($1,$2,$3,'USD',70000,'AWAITING_AUTHORIZATION','demo',$4,$5,$6,$7) RETURNING *`,
+      [
+        awaiting.id,
+        organizations.facility,
+        organizations.insurer,
+        {
+          reference: "DEMO-DEST-facility",
+          version: 1,
+          scenario: "authorization",
+        },
+        {
+          base: "70000",
+          total: "1400",
+          lux: "700",
+          orange: "700",
+          insurerDebit: "71400",
+          facilityNet: "70000",
+          mode: "INSURER_ADDED",
+        },
+        policy.id,
+        users.insurer,
+      ],
+    );
+    await db.query(
+      "INSERT INTO claim_payment_allocations(claim_id,payment_id,amount_minor,status) VALUES($1,$2,70000,'RESERVED')",
+      [awaiting.id, p.id],
+    );
+    await db.query(
+      "INSERT INTO payment_authorizations(payment_id,maker_id,reason) VALUES($1,$2,$3)",
+      [p.id, users.insurer, "Synthetic maker request awaiting demo checker"],
+    );
+    await db.query(
+      `INSERT INTO audit_events(organization_id,actor_id,action,resource_id) VALUES($1,$2,'PaymentAuthorizationRequested',$3)`,
+      [organizations.insurer, users.insurer, p.id],
+    );
+  }
+  const notifications = [
+    [
+      "facility",
+      "demo-facility-claim",
+      "Claim DEMO-LHP-0005 was approved by the insurer",
+      "/app/claims",
+    ],
+    [
+      "facility",
+      "demo-facility-return",
+      "Claim DEMO-LHP-0004 needs more information",
+      "/app/returned",
+    ],
+    [
+      "facility",
+      "demo-facility-payment",
+      "A simulated payment settled to your verified destination",
+      "/app/payments",
+    ],
+    [
+      "insurer",
+      "demo-insurer-review",
+      "A new claim is waiting in your review queue",
+      "/app/claims",
+    ],
+    [
+      "insurer",
+      "demo-insurer-auth",
+      "A payment request is awaiting a checker",
+      "/app/payments",
+    ],
+    [
+      "insurer",
+      "demo-insurer-exception",
+      "A reconciliation timeout needs a status inquiry",
+      "/app/reconciliation",
+    ],
+    [
+      "admin",
+      "demo-admin-request",
+      "A new facility has requested onboarding",
+      "/app/organization-requests",
+    ],
+    [
+      "admin",
+      "demo-admin-jobs",
+      "Durable validation work is queued",
+      "/app/jobs",
+    ],
+    [
+      "admin",
+      "demo-admin-integration",
+      "Orange Money remains in demo mode; no live payout is configured",
+      "/app/integrations",
+    ],
+  ] as const;
+  for (const [org, eventKey, title, link] of notifications)
+    await db.query(
+      `INSERT INTO notifications(organization_id,event_key,title,link,created_at) VALUES($1,$2,$3,$4,now()-interval '1 hour'*(random()*48)) ON CONFLICT DO NOTHING`,
+      [organizations[org === "admin" ? "lux" : org], eventKey, title, link],
+    );
+  for (const [org, creator, subject] of [
+    [
+      "facility",
+      users.facility,
+      "Confirm the documented statement export scope",
+    ],
+    [
+      "insurer",
+      users.insurer,
+      "Review the simulated timeout reconciliation guidance",
+    ],
+    ["admin", users.admin, "Confirm hosted demo integration mode"],
+  ] as const)
+    await db.query(
+      `INSERT INTO support_tickets(organization_id,subject,message,created_by) VALUES($1,$2,$3,$4)`,
+      [
+        organizations[org === "admin" ? "lux" : org],
+        subject,
+        "Synthetic demo support request; no patient data included.",
+        creator,
+      ],
+    );
+  const facilityEnquiry = await one(
+    db,
+    `INSERT INTO enquiries(kind,organization,name,email,phone,location,message,consent) VALUES('FACILITY',$1,'Synthetic onboarding lead','lead@example.test','0770000100','Monrovia','Synthetic pilot onboarding request for demonstration data.',true) RETURNING id`,
+    ["Demo Harbel Health Post"],
+  );
+  await db.query("INSERT INTO organization_requests(enquiry_id) VALUES($1)", [
+    facilityEnquiry.id,
+  ]);
+  await db.query(
+    `INSERT INTO enquiries(kind,organization,name,email,phone,location,message,consent) VALUES('GENERAL','Individual','Synthetic general enquiry','public@example.test','0770000101','Monrovia','Synthetic general question about covered services.',true)`,
+  );
+  for (const [org, actor, action] of [
+    ["insurer", users.insurer, "DemoInsurerQueueReviewed"],
+    ["lux", users.admin, "DemoPlatformOverviewOpened"],
+    ["lux", users.admin, "DemoIntegrationModeChecked"],
+  ] as const)
+    await db.query(
+      `INSERT INTO audit_events(organization_id,actor_id,action,created_at) VALUES($1,$2,$3,now()-interval '1 hour'*random()*72)`,
+      [organizations[org], actor, action],
+    );
   for (const [i, t] of team.entries())
     await db.query(
       "INSERT INTO team_members(slug,name,role,bio,photo,alt,sort_order,published,admin_note) VALUES($1,$2,$3,$4,$5,$6,$7,true,$8)",

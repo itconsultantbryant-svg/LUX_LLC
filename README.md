@@ -16,15 +16,15 @@ cp .env.example .env
 
 Set these values in the ignored root `.env`:
 
-| Name               | Local value / requirement                                                                                |
-| ------------------ | -------------------------------------------------------------------------------------------------------- |
-| DATABASE_URL       | `postgresql://lux:local-development-only@localhost:5432/lux` for Compose; use a NEW database/Neon branch |
-| BETTER_AUTH_SECRET | Your own high-entropy secret, at least 32 characters                                                     |
-| BETTER_AUTH_URL    | `http://localhost:3000`                                                                                  |
-| WEB_ORIGIN         | `http://localhost:3000`                                                                                  |
-| LUX_MODE           | `demo` for local synthetic use                                                                           |
-| ALLOW_DEMO_SEED    | `true` locally only                                                                                      |
-| DEMO_PASSWORD      | Your own local-only password, at least 16 characters; hosted demos use a private DEMO_PASSWORDS_FILE map |
+| Name               | Local value / requirement                                                                                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DATABASE_URL       | `postgresql://lux:local-development-only@localhost:5432/lux` for Compose; use a NEW database/Neon branch                                                               |
+| BETTER_AUTH_SECRET | Your own high-entropy secret, at least 32 characters                                                                                                                   |
+| BETTER_AUTH_URL    | `http://localhost:3000`                                                                                                                                                |
+| WEB_ORIGIN         | `http://localhost:3000`                                                                                                                                                |
+| LUX_MODE           | `demo` for local synthetic use                                                                                                                                         |
+| ALLOW_DEMO_SEED    | `true` locally only                                                                                                                                                    |
+| DEMO_PASSWORD      | Local demo password, at least 11 characters. The seed defaults to `LuxTest231@` for the synthetic demo; hosted demos may use a private DEMO_PASSWORDS_FILE map instead |
 
 ```sh
 pnpm db:migrate
@@ -34,18 +34,15 @@ pnpm dev
 
 Open <http://localhost:3000>. API: <http://localhost:4000/api/v1/health>. OpenAPI: <http://localhost:4000/api/v1/openapi.json>. Start commands must inherit the root environment; `pnpm dev` loads it for API/worker through dotenv. Set `API_INTERNAL_URL` in `apps/web/.env.local` or the Vercel environment when the API is not at `http://127.0.0.1:4000`.
 
-The seed prints account names, **not passwords**. Use your supplied local `DEMO_PASSWORD`, or set `DEMO_PASSWORDS_FILE` to a private JSON map of account keys to unique passwords for hosted demo use:
+The synthetic seed creates exactly three demonstration logins. Each combines every role for its organization so the dashboard and sidebar expose the full workflow without switching accounts:
 
-- `platform@demo.lux.test`: operations/CMS; no clinical access.
-- `luxfinance@demo.lux.test`: LUX fee revenue.
-- `facility@demo.lux.test`: explicitly combined synthetic facility clinician, claims, administration and finance roles.
-- `facility2@demo.lux.test`: unrelated facility for access-denial tests.
-- `reviewer@demo.lux.test`: insurer human decisions.
-- `finance@demo.lux.test`: insurer payment maker/executor.
-- `checker@demo.lux.test`: independent insurer payment checker.
-- `insurer2@demo.lux.test`: unrelated insurer.
+- `facility@demo.lux.test`: facility claims, administration, finance and clinician roles.
+- `insurer@demo.lux.test`: insurer administration, review, finance and audit roles.
+- `admin@demo.lux.test`: LUX platform administration, LUX finance, support and Orange observer roles.
 
-Each account uses a real Better Auth session cookie. No role selector or public signup grants access. Switching maker/checker requires signing out and using the other account (or separate browser profiles).
+The local demo seed defaults to `LuxTest231@` when `DEMO_PASSWORD` is unset; set a different 11+ character value for any non-public demo. Hosted demos may instead supply `DEMO_PASSWORDS_FILE`, a private JSON map of account keys to unique passwords. The seed also creates an internal checker identity with no auth account, used only to attribute historical and demo checker steps; it is not a fourth login.
+
+Each account uses a real Better Auth session cookie. No role selector or public signup grants access. Production still requires separate human maker and checker accounts: the demo-only self-check path is gated by `demoSelfCheck` and records a `DemoCheckerSubstitution` audit event. Without that explicit flag, the API returns `SEPARATE_CHECKER_REQUIRED`.
 
 ## Verify
 

@@ -87,6 +87,112 @@ function ModuleTitle({ title, text }: { title: string; text?: string }) {
     </div>
   );
 }
+export function DestinationModule() {
+  const { demo, me } = useWorkspace();
+  const q = useData("/destination-changes");
+  const action = useAction();
+  return (
+    <>
+      <ModuleTitle
+        title="Wallet destination"
+        text="Verified destinations receive facility payments. Changes require a separate approver and a fresh session; LUX never holds funds."
+      />
+      <Feedback action={action} />
+      <section className="panel">
+        <h2>Propose a new verified destination</h2>
+        <p>
+          The proposal is recorded first. Approval creates a new immutable
+          destination version only after verification evidence is supplied.
+        </p>
+        <form
+          className="stack-form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await action.run(
+              "/destination-changes",
+              Object.fromEntries(new FormData(e.currentTarget)),
+            );
+          }}
+        >
+          <label>
+            Proposed destination reference
+            <input name="reference" minLength={6} maxLength={100} required />
+          </label>
+          <label>
+            Reason for the change
+            <textarea name="reason" minLength={10} maxLength={1000} required />
+          </label>
+          <button className="button" disabled={action.busy}>
+            Record destination proposal
+          </button>
+        </form>
+      </section>
+      <DataBoundary {...q} retry={q.reload}>
+        {q.data?.length
+          ? q.data.map((c: any) => (
+              <section className="panel" key={c.id}>
+                <div className="panel-heading-row">
+                  <div>
+                    <span className="eyebrow">Destination change</span>
+                    <h2>{c.proposed_reference}</h2>
+                  </div>
+                  <Status value={c.status} />
+                </div>
+                <p>{c.reason}</p>
+                <small className="subtle">
+                  Proposed {date(c.created_at)}
+                  {c.checker_id ? " · checker recorded" : " · awaiting checker"}
+                </small>
+                {c.status === "PENDING" && (
+                  <form
+                    className="stack-form"
+                    style={{ marginTop: 18 }}
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const d = Object.fromEntries(
+                        new FormData(e.currentTarget),
+                      );
+                      await action.run(`/destination-changes/${c.id}/approve`, {
+                        verificationEvidence: d.verificationEvidence,
+                        demoSelfCheck:
+                          demo && c.maker_id === me.user.id ? true : undefined,
+                      });
+                    }}
+                  >
+                    {c.maker_id === me.user.id && (
+                      <div className="notice">
+                        You proposed this change. Production requires a separate
+                        facility administrator. In this demo the checker step is
+                        attributed to the seeded internal checker identity.
+                      </div>
+                    )}
+                    <label>
+                      Verification evidence
+                      <textarea
+                        name="verificationEvidence"
+                        minLength={20}
+                        maxLength={1000}
+                        required
+                      />
+                      <small>
+                        Record what was independently verified. Never paste a
+                        PIN or secret.
+                      </small>
+                    </label>
+                    <button className="button secondary" disabled={action.busy}>
+                      {c.maker_id === me.user.id
+                        ? "Demo approve destination"
+                        : "Approve destination change"}
+                    </button>
+                  </form>
+                )}
+              </section>
+            ))
+          : !q.loading && <Empty title="No destination changes recorded." />}
+      </DataBoundary>
+    </>
+  );
+}
 export function PaymentsModule() {
   const { org } = useWorkspace();
   const q = useData("/payments");
@@ -182,6 +288,14 @@ export function PaymentsModule() {
                   earned revenue excludes Orange’s share and facility principal.
                   No Orange Money PIN is requested.
                 </div>
+                {p.is_maker && p.state === "AWAITING_AUTHORIZATION" && (
+                  <div className="notice">
+                    You recorded this maker request. Production requires a
+                    separate human checker. In this demo environment the checker
+                    step is attributed to the seeded internal checker identity,
+                    and the audit trail records the substitution.
+                  </div>
+                )}
                 <div className="button-row">
                   {org.permissions.includes("payments.authorize") &&
                     p.state === "AWAITING_AUTHORIZATION" && (
@@ -189,10 +303,19 @@ export function PaymentsModule() {
                         className="button"
                         disabled={action.busy}
                         onClick={() =>
-                          action.run(`/payments/${p.id}/approve`, {}, p.version)
+                          action.run(
+                            `/payments/${p.id}/approve`,
+                            {
+                              demoSelfCheck:
+                                p.mode === "demo" && Boolean(p.is_maker),
+                            },
+                            p.version,
+                          )
                         }
                       >
-                        Check & authorize
+                        {p.is_maker
+                          ? "Demo check & authorize"
+                          : "Check & authorize"}
                       </button>
                     )}
                   {org.permissions.includes("payments.execute") &&

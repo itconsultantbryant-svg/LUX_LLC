@@ -1,5 +1,9 @@
 # LUX HealthPay demo handoff
 
+## Authenticated workspace redesign status
+
+The authenticated demo was rebuilt around **three tested logins** with the shared local demo password `LuxTest231@`: `facility@demo.lux.test`, `insurer@demo.lux.test` and `admin@demo.lux.test`. Each login carries every role for its organization, and each dashboard/sidebar exposes the full workflow. Local verification on 15 November 2026 passed **42/42 domain/PostgreSQL tests**, type checks, the optimized build and the **full 16-case browser suite**. Production-facing public pages and public copy were preserved. The hidden `internal.checker@demo.lux.test` identity has no auth account and records only historical or explicit demo self-check steps; normal API calls still return `SEPARATE_CHECKER_REQUIRED`. No hosted database or Neon function was changed in this pass; redeploy the API/worker bundles from the same revision before hosted dashboard verification.
+
 ## Public-site redesign status
 
 The production-facing redesign was verified locally on 15 November 2026: 39/39 domain/PostgreSQL tests, type checks, the optimized build and 13/13 browser cases against the production build passed. Every public page now has an image-backed hero, login/recovery/invitation use a split image layout, registration and contact share a redesigned form, and public disclaimer footnotes were removed while factual product boundaries remain. Asset provenance is documented in `docs/assets.md`. Commit `0ab5df0` was pushed to `origin/main` and its Git-triggered Vercel deployment is live at `https://luxllc.vercel.app`; the hosted hero, production-copy and auth-layout browser checks passed after deployment. No hosted database action was performed.
@@ -15,20 +19,15 @@ The production-facing redesign was verified locally on 15 November 2026: 39/39 d
 
 ## Private credentials
 
-Eight distinct generated passwords are in `.local/hosted-demo-passwords.json`; a readable operator handoff is `.local/hosted-demo-credentials.md`. Both are ignored and permission-restricted on the development machine. They are **not** deployed frontend assets or committed documentation. Do not send them through public issues, shared screenshots or source control. Password reset mail is unavailable until a sender is configured.
+The three demonstration accounts share the local demo password `LuxTest231@`. A readable operator handoff is `.local/hosted-demo-credentials.md`; the optional private map is `.local/hosted-demo-passwords.json`. Local files are ignored and permission-restricted on the development machine. Do not send passwords through public issues, shared screenshots or source control. Password reset mail is unavailable until a sender is configured.
 
-| Login                      | Demonstration role                                                  |
-| -------------------------- | ------------------------------------------------------------------- |
-| `platform@demo.lux.test`   | Organization operations, CMS, approved team/contact content         |
-| `luxfinance@demo.lux.test` | LUX fee records                                                     |
-| `facility@demo.lux.test`   | Combined synthetic facility clinician/claims/admin/finance workflow |
-| `facility2@demo.lux.test`  | Unrelated facility for tenant-denial checks                         |
-| `reviewer@demo.lux.test`   | Insurer human review and decisions                                  |
-| `finance@demo.lux.test`    | Insurer payment maker/executor                                      |
-| `checker@demo.lux.test`    | Independent insurer payment checker                                 |
-| `insurer2@demo.lux.test`   | Unrelated insurer for tenant-denial checks                          |
+| Login                    | Demonstration roles                                                         |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `facility@demo.lux.test` | Facility claims, administration, finance and clinician roles                |
+| `insurer@demo.lux.test`  | Insurer administration, review, finance and audit roles                     |
+| `admin@demo.lux.test`    | LUX platform administration, LUX finance, support and Orange observer roles |
 
-Use separate browser profiles for maker/checker or sign out before switching. Enter only the **displayed generated demo code** at simulated payment confirmation. Never enter a real Orange Money PIN; no actual funds move. Real-data use of these combined demo roles is prohibited.
+Each login exposes its full role set in one dashboard and sidebar. The seeded `internal.checker@demo.lux.test` identity has no auth account and exists only to attribute historical and explicit demo self-check steps; it is not a fourth login. Production still requires separate human maker and checker accounts. Enter only the **displayed generated demo code** at simulated payment confirmation. Never enter a real Orange Money PIN; no actual funds move. Real-data use of these combined demo roles is prohibited.
 
 ## Verification and deliverables
 

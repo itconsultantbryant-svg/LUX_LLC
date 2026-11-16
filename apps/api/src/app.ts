@@ -140,6 +140,9 @@ export class ApiController {
       let result: any;
       if (path === "/overview" && method === "GET")
         result = await ops.overview(ctx);
+      else if (path === "/nav" && method === "GET") result = await ops.nav(ctx);
+      else if (path === "/notifications/read" && method === "POST")
+        result = await ops.markNotificationsRead(ctx);
       else if (path === "/claim-drafts" && method === "GET")
         result = await getDraft(ctx);
       else if (path === "/claim-drafts" && method === "PUT")
@@ -248,7 +251,13 @@ export class ApiController {
       else if (path === "/payments" && method === "GET")
         result = await payments.list(ctx);
       else if (/^\/payments\/[^/]+\/approve$/.test(path) && method === "POST")
-        result = await payments.check(ctx, path.split("/")[2], key, version);
+        result = await payments.check(
+          ctx,
+          path.split("/")[2],
+          key,
+          version,
+          body,
+        );
       else if (/^\/payments\/[^/]+\/execute$/.test(path) && method === "POST")
         result = await payments.execute(
           ctx,
@@ -340,6 +349,9 @@ export class ApiController {
           y -= 25;
         }
         return res.send(Buffer.from(await doc.save()));
+      } else if (path === "/admin/metrics" && method === "GET") {
+        requirePermission(ctx, "organizations");
+        result = await ops.adminMetrics();
       } else if (path.startsWith("/admin/") && method === "GET")
         result = await ops.admin(ctx, path.split("/")[2]);
       else if (
@@ -492,14 +504,12 @@ export async function buildApplication() {
       next: (error?: unknown) => void,
     ) => {
       if (error?.type === "entity.too.large" || error instanceof SyntaxError)
-        return res
-          .status(error?.type === "entity.too.large" ? 413 : 400)
-          .json({
-            code: "INVALID_REQUEST_BODY",
-            message: "Use a valid JSON body within the 1 MB limit.",
-            correlationId: crypto.randomUUID(),
-            fieldErrors: {},
-          });
+        return res.status(error?.type === "entity.too.large" ? 413 : 400).json({
+          code: "INVALID_REQUEST_BODY",
+          message: "Use a valid JSON body within the 1 MB limit.",
+          correlationId: crypto.randomUUID(),
+          fieldErrors: {},
+        });
       next(error);
     },
   );
