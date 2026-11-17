@@ -11,6 +11,7 @@
 - `pnpm build`: **passed**.
 - Browser suite: **17/17 passed** against the optimized production build, including the new journey that signs in as each role and opens every authorized designed section, checks its heading and four metrics, and guards against horizontal overflow.
 - Automated accessibility (axe, WCAG 2 A/AA/2.1/2.2): **0 violations on all 13 designed section pages** for the three roles.
+- The login form now declares a POST submit fallback, so a click before hydration cannot place the password in the URL query string.
 
 ## Team profiles and hosted three-login alignment — 17 November 2026
 

@@ -217,7 +217,7 @@ export function AuthForm({ action = "login" }: { action?: string }) {
               </Link>
             </div>
           ) : (
-            <form onSubmit={submit}>
+            <form onSubmit={submit} method="post">
               {mfa ? (
                 <label>
                   Authenticator code
