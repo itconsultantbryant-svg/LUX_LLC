@@ -80,7 +80,15 @@ export const auth = betterAuth({
   },
   session: { expiresIn: 60 * 60 * 8, updateAge: 60 * 30, freshAge: 60 * 10 },
   plugins: [twoFactor({ issuer: "LUX HealthPay" })],
-  rateLimit: { enabled: true, storage: "database" },
+  rateLimit: {
+    enabled: true,
+    storage: "database",
+    // Reviewers and automated demo checks sign in repeatedly from one address.
+    // Production keeps Better Auth's stricter 3-per-10-seconds sign-in rule.
+    ...(mode === "demo"
+      ? { customRules: { "/sign-in/email": { window: 60, max: 12 } } }
+      : {}),
+  },
   databaseHooks: {
     session: {
       create: {

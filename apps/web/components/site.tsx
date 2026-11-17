@@ -596,7 +596,7 @@ export function TeamSection({ preview = false }: { preview?: boolean }) {
         <SectionHeading
           eyebrow="The people behind LUX"
           title="Real people. Clear responsibilities."
-          sub="Meet the team bringing research, product, community and technology perspectives to LUX HealthPay."
+          sub="Meet the co-founders leading strategy, product, marketing, provider network and finance at LUX HealthPay."
           id="team-title"
         />
         <TeamCards preview={preview} />

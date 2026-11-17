@@ -166,10 +166,10 @@ test("team text and supplied portraits, no fabricated biography", async ({
   await page.goto("/team");
   for (const name of [
     "Maryann Duncan",
-    "Boakai K. C Hina",
+    "Samson Byrant",
+    "Sade Odiaji",
+    "Boakai K. C. Hina",
     "Jedidiah Kromah",
-    "Sade Odiaja",
-    "Samson Bryant",
   ])
     await expect(
       page.getByRole("heading", { name, exact: true }),
@@ -178,9 +178,12 @@ test("team text and supplied portraits, no fabricated biography", async ({
     .locator("article")
     .filter({ has: page.getByRole("heading", { name: "Maryann Duncan" }) });
   await expect(maryann.locator(".team-role")).toHaveText(
-    "Team Lead and Arbiter",
+    "Co-founder & Chief Executive Officer (CEO)",
   );
-  await expect(maryann.locator(".team-copy>p")).toHaveCount(1);
+  await expect(maryann.locator(".team-copy>p")).toHaveCount(2);
+  await expect(maryann.locator(".team-copy>p").nth(1)).toContainText(
+    "strategic vision and overall leadership",
+  );
   await expect(page.getByText("Biography pending approval")).toHaveCount(0);
 });
 test("mobile menu supports focus and Escape; pages do not overflow", async ({

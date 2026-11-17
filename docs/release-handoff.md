@@ -1,5 +1,9 @@
 # LUX HealthPay demo handoff
 
+## Team profiles and hosted alignment status
+
+The public team page now follows the supplied five-person structure: Maryann Duncan (Co-founder & CEO), Samson Byrant (Co-founder & CTO / Product), Sade Odiaji (Co-founder & Head of Marketing), Boakai K. C. Hina (Co-founder & Head of Provider Network, Operations and Compliance) and Jedidiah Kromah (Co-founder & Head of Finance and Growth), each with an approved biography. The isolated hosted demo database was reseeded for the three-login model, and the `luxapi` and `luxworker` functions were redeployed from this revision. Verification on 17 November 2026 passed **42/42 domain/PostgreSQL tests**, type checks, the optimized build and **16/16 browser cases** locally, plus **3/3 hosted workspace browser checks** and the hosted three-login synthetic smoke. The legacy `healthwallet-liberia` project was not changed.
+
 ## Authenticated workspace redesign status
 
 The authenticated demo was rebuilt around **three tested logins** with the shared local demo password `LuxTest231@`: `facility@demo.lux.test`, `insurer@demo.lux.test` and `admin@demo.lux.test`. Each login carries every role for its organization, and each dashboard/sidebar exposes the full workflow. Local verification on 15 November 2026 passed **42/42 domain/PostgreSQL tests**, type checks, the optimized build and the **full 16-case browser suite**. Production-facing public pages and public copy were preserved. The hidden `internal.checker@demo.lux.test` identity has no auth account and records only historical or explicit demo self-check steps; normal API calls still return `SEPARATE_CHECKER_REQUIRED`. No hosted database or Neon function was changed in this pass; redeploy the API/worker bundles from the same revision before hosted dashboard verification.
@@ -31,7 +35,7 @@ Each login exposes its full role set in one dashboard and sidebar. The seeded `i
 
 ## Verification and deliverables
 
-The 15 November 2026 local redesign verification passed 39 backend/domain tests, type checks, the production build and 13 browser cases, including every public page hero, production-facing copy checks, the split-image auth screens, patient and facility enquiries, the authenticated claim journey and responsive/axe checks. The earlier 11 November hosted release recorded 7 public browser cases plus the end-to-end synthetic API/auth/claim/Orange Money simulation/report smoke; scheduled worker execution was also verified. Detailed records: `docs/test-results.md`.
+The 17 November 2026 verification passed 42 backend/domain tests, type checks, the production build and 16 browser cases, covering every public page, the updated five-person team profiles, patient and facility enquiries, the split-image auth screens and the three authenticated workspaces with responsive and accessibility checks. Hosted checks after redeployment passed 3/3 workspace browser cases and the full synthetic API/claim/payment smoke at `https://luxllc.vercel.app`. Detailed records: `docs/test-results.md`.
 
 - Detailed product requirements: `docs/PRD.md`.
 - Implemented versus remaining scope: `docs/capabilities.md`.
@@ -46,6 +50,14 @@ This is **not** a completed live Orange Money integration or an approved clinica
 The user-authorized legacy source reset is part of this rebuild; old source history remains available in Git. Demo source deployment does not authorize deletion of legacy hosted records. A frontend push does not automatically update separately deployed Neon API/worker bundles—redeploy them from the same release when domain code changes.
 
 ## Repository release verification
+
+### 17 November 2026 team profiles and hosted three-login alignment
+
+- Team content updated to the supplied five co-founder roles and biographies, in the supplied order; portrait provenance remains recorded in `docs/assets.md`.
+- Local verification: **42/42 tests**, type checks, optimized build and **16/16 browser cases**.
+- Hosted isolated demo database reset and reseeded with only the three demonstration logins; snapshot branch `pre-three-login-reset-20261116` (`br-dry-cell-bcl0mtw9`) preserves the prior synthetic demo state. Legacy `healthwallet-liberia` untouched.
+- `luxapi` deployment 4 and `luxworker` deployment 3 deployed from this revision. Hosted health 200, unauthenticated worker 401.
+- Hosted three-login API checks passed for `/me`, `/overview`, `/nav` and `/admin/metrics`; hosted workspace browser checks **3/3**; hosted synthetic smoke passed at 03:37 UTC, including demo self-check and simulated settlement with no real funds.
 
 ### 15 November 2026 public redesign
 
