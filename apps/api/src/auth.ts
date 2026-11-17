@@ -83,10 +83,10 @@ export const auth = betterAuth({
   rateLimit: {
     enabled: true,
     storage: "database",
-    // Reviewers and automated demo checks sign in repeatedly from one address.
-    // Production keeps Better Auth's stricter 3-per-10-seconds sign-in rule.
+    // Reviewers and automated demo checks switch accounts repeatedly from one
+    // address. Production keeps Better Auth's stricter 3-per-10-seconds rule.
     ...(mode === "demo"
-      ? { customRules: { "/sign-in/email": { window: 60, max: 12 } } }
+      ? { customRules: { "/sign-in/email": { window: 60, max: 30 } } }
       : {}),
   },
   databaseHooks: {

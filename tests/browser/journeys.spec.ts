@@ -458,7 +458,7 @@ test("LUX admin sees a comprehensive platform command centre and network tools",
   ).toBeVisible();
   await nav.getByRole("link", { name: "Organizations", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Organizations", exact: true }),
+    page.getByRole("heading", { name: "Organizations.", exact: true }),
   ).toBeVisible();
 });
 test("facility navigation groups all four facility roles and their destinations", async ({
@@ -521,6 +521,58 @@ test("key workspace screens fit supported widths and expose accessible controls"
     }
   }
   await page.goto("/app/claims");
+  const result = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(result.violations).toEqual([]);
+});
+test("every designed sidebar section renders for its authorized role", async ({
+  page,
+}) => {
+  test.setTimeout(420000);
+  test.skip(!process.env.DEMO_PASSWORD, "Local seed password is required");
+  const sections: Record<string, [string, string][]> = {
+    "facility@demo.lux.test": [
+      ["returned", "Returned claims."],
+      ["contracts", "Contracted organizations."],
+    ],
+    "insurer@demo.lux.test": [
+      ["flagged", "Flagged claims."],
+      ["decisions", "Decisions & appeals."],
+      ["coverage", "Coverage & tariffs."],
+      ["contracts", "Contracted organizations."],
+      ["audit", "Audit history."],
+    ],
+    "admin@demo.lux.test": [
+      ["organizations", "Organizations."],
+      ["organization-requests", "Organization requests."],
+      ["enquiries", "Public enquiries."],
+      ["integrations", "Integration health."],
+      ["jobs", "Validation operations."],
+      ["audit", "Audit history."],
+    ],
+  };
+  for (const [email, routes] of Object.entries(sections)) {
+    await signIn(page, email);
+    for (const [route, heading] of routes) {
+      const response = await page.goto(`/app/${route}`, {
+        waitUntil: "networkidle",
+      });
+      expect(response?.status(), route).toBe(200);
+      await expect(
+        page.getByRole("heading", { name: heading, level: 1 }),
+      ).toBeVisible();
+      await expect(page.locator(".dash-metric")).toHaveCount(4);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        `${route} must not overflow`,
+      ).toBe(true);
+    }
+  }
+  await signIn(page, "insurer@demo.lux.test");
+  await page.goto("/app/coverage");
   const result = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
     .analyze();

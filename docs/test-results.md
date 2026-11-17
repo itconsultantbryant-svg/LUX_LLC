@@ -1,9 +1,23 @@
 # Verification results
 
+## Designed workspace sections — 17 November 2026
+
+- Every remaining sidebar destination now uses the same authenticated design system as the dashboards: an image-backed section header, four live metric cards, search and status filters, designed tables or cards, explicit empty states, and compliance notes where a record could be misread.
+- Designed sections: returned claims, flagged claims, decisions and appeals, coverage and tariffs, contracted organizations, organizations, organization requests, public enquiries, integration health, validation operations and audit history. The coverage page retains the controlled tariff-publication form; organization requests retain explicit approval; decisions retain separate appeal review.
+- Shared primitives in `apps/web/components/modules.tsx` provide the section hero, metric strip, panel, toolbar, focusable table region and card grid. Section styles live in `apps/web/app/globals.css` under the `sec-` prefix and reuse the navy, orange and surface tokens.
+- Insurer-controlled decisions, maker/checker separation, the demo-only payment boundary and the rule that LUX never holds customer money are stated in the affected sections. No section claims live Orange Money success or requests a real Orange Money PIN.
+- `pnpm typecheck`: **passed**.
+- `pnpm test`: **42/42 domain/PostgreSQL tests passed**.
+- `pnpm build`: **passed**.
+- Browser suite: **17/17 passed** against the optimized production build, including the new journey that signs in as each role and opens every authorized designed section, checks its heading and four metrics, and guards against horizontal overflow.
+- Automated accessibility (axe, WCAG 2 A/AA/2.1/2.2): **0 violations on all 13 designed section pages** for the three roles.
+
+## Team profiles and hosted three-login alignment — 17 November 2026
+
 ## Team profiles and hosted three-login alignment — 17 November 2026
 
 - Public team content now follows the supplied structure and order: Maryann Duncan (Co-founder & CEO), Samson Bryant (Co-founder & CTO / Product), Sade Odiaji (Co-founder & Head of Marketing), Boakai K. C. Hina (Co-founder & Head of Provider Network, Operations and Compliance) and Jedidiah Kromah (Co-founder & Head of Finance and Growth). Every profile has an approved role and biography in `packages/config/team.ts`; the seed and hosted `team_members` records carry the same content, and `docs/assets.md` records the portrait provenance.
-- Demo mode allows up to 12 sign-ins per minute from one address so reviewers and automated checks can switch accounts quickly; production keeps Better Auth's 3-per-10-seconds sign-in limit.
+- Demo mode allows up to 30 sign-ins per minute from one address so reviewers and automated checks can switch accounts quickly; production keeps Better Auth's 3-per-10-seconds sign-in limit.
 - `pnpm typecheck`: **passed**.
 - `pnpm test`: **42/42 domain/PostgreSQL tests passed** against a freshly recreated isolated `lux_healthpay_test` database.
 - `pnpm build`: **passed** with Next.js 16.4.6 optimized compilation and route generation.

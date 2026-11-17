@@ -1,5 +1,11 @@
 # LUX HealthPay demo handoff
 
+## Workspace section design status
+
+All sidebar destinations now match the dashboard design system. Returned claims, flagged claims, decisions and appeals, coverage and tariffs, contracted organizations, organizations, organization requests, public enquiries, integration health, validation operations and audit history each have an image-backed header, live metric cards, search and status filters, a designed table or card view, explicit empty states, and permission-scoped records. Insurer control of coverage and decisions, maker/checker separation, simulated-payment labeling and the no-customer-money rule remain visible where they apply. Verification on 17 November 2026 passed 42/42 domain/PostgreSQL tests, type checks, the production build, 17/17 browser cases and axe checks with zero violations across all designed section pages.
+
+## Team profiles and hosted alignment status
+
 ## Team profiles and hosted alignment status
 
 The public team page now follows the supplied five-person structure: Maryann Duncan (Co-founder & CEO), Samson Bryant (Co-founder & CTO / Product), Sade Odiaji (Co-founder & Head of Marketing), Boakai K. C. Hina (Co-founder & Head of Provider Network, Operations and Compliance) and Jedidiah Kromah (Co-founder & Head of Finance and Growth), each with an approved biography. The isolated hosted demo database was reseeded for the three-login model, and the `luxapi` and `luxworker` functions were redeployed from this revision. Verification on 17 November 2026 passed **42/42 domain/PostgreSQL tests**, type checks, the optimized build and **16/16 browser cases** locally, plus **3/3 hosted workspace browser checks** and the hosted three-login synthetic smoke. The legacy `healthwallet-liberia` project was not changed.
