@@ -2,7 +2,7 @@
 
 ## Team profiles and hosted alignment status
 
-The public team page now follows the supplied five-person structure: Maryann Duncan (Co-founder & CEO), Samson Byrant (Co-founder & CTO / Product), Sade Odiaji (Co-founder & Head of Marketing), Boakai K. C. Hina (Co-founder & Head of Provider Network, Operations and Compliance) and Jedidiah Kromah (Co-founder & Head of Finance and Growth), each with an approved biography. The isolated hosted demo database was reseeded for the three-login model, and the `luxapi` and `luxworker` functions were redeployed from this revision. Verification on 17 November 2026 passed **42/42 domain/PostgreSQL tests**, type checks, the optimized build and **16/16 browser cases** locally, plus **3/3 hosted workspace browser checks** and the hosted three-login synthetic smoke. The legacy `healthwallet-liberia` project was not changed.
+The public team page now follows the supplied five-person structure: Maryann Duncan (Co-founder & CEO), Samson Bryant (Co-founder & CTO / Product), Sade Odiaji (Co-founder & Head of Marketing), Boakai K. C. Hina (Co-founder & Head of Provider Network, Operations and Compliance) and Jedidiah Kromah (Co-founder & Head of Finance and Growth), each with an approved biography. The isolated hosted demo database was reseeded for the three-login model, and the `luxapi` and `luxworker` functions were redeployed from this revision. Verification on 17 November 2026 passed **42/42 domain/PostgreSQL tests**, type checks, the optimized build and **16/16 browser cases** locally, plus **3/3 hosted workspace browser checks** and the hosted three-login synthetic smoke. The legacy `healthwallet-liberia` project was not changed.
 
 ## Authenticated workspace redesign status
 
@@ -57,7 +57,7 @@ The user-authorized legacy source reset is part of this rebuild; old source hist
 - Local verification: **42/42 tests**, type checks, optimized build and **16/16 browser cases**.
 - Hosted isolated demo database reset and reseeded with only the three demonstration logins; snapshot branch `pre-three-login-reset-20261116` (`br-dry-cell-bcl0mtw9`) preserves the prior synthetic demo state. Legacy `healthwallet-liberia` untouched.
 - Commit `cf099ca` (`cf099cae12a458bf954379e6a7138af4dc16a5c6`) pushed to `origin/main`; Vercel production deployment `lux-eswhs7jiw` identifies that SHA and serves the canonical alias with the new team copy.
-- `luxapi` deployment 4 and `luxworker` deployment 3 deployed from this revision. Hosted health 200, unauthenticated worker 401.
+- `luxapi` deployment 5 and `luxworker` deployment 4 deployed from this revision. Hosted health 200, unauthenticated worker 401.
 - Hosted team browser checks **2/2** passed (keyboard dialog and supplied portraits/biographies).
 - Hosted three-login API checks passed for `/me`, `/overview`, `/nav` and `/admin/metrics`; hosted workspace browser checks **3/3**; hosted synthetic smoke passed at 03:37 UTC, including demo self-check and simulated settlement with no real funds.
 

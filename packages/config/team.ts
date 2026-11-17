@@ -8,9 +8,9 @@ export const team = [
   },
   {
     slug: "samson",
-    name: "Samson Byrant",
+    name: "Samson Bryant",
     role: "Co-founder & Chief Technology Officer (CTO) / Product",
-    bio: "Samson Byrant leads technology and product innovation at LUX HealthPay. He oversees platform development, digital infrastructure, user experience, and system integration, ensuring the solution is secure, reliable, and accessible.",
+    bio: "Samson Bryant leads technology and product innovation at LUX HealthPay. He oversees platform development, digital infrastructure, user experience, and system integration, ensuring the solution is secure, reliable, and accessible.",
     photo: "samson.jpeg",
   },
   {

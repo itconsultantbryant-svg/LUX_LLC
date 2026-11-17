@@ -166,7 +166,7 @@ test("team text and supplied portraits, no fabricated biography", async ({
   await page.goto("/team");
   for (const name of [
     "Maryann Duncan",
-    "Samson Byrant",
+    "Samson Bryant",
     "Sade Odiaji",
     "Boakai K. C. Hina",
     "Jedidiah Kromah",

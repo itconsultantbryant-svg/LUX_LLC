@@ -2,14 +2,14 @@
 
 ## Team profiles and hosted three-login alignment — 17 November 2026
 
-- Public team content now follows the supplied structure and order: Maryann Duncan (Co-founder & CEO), Samson Byrant (Co-founder & CTO / Product), Sade Odiaji (Co-founder & Head of Marketing), Boakai K. C. Hina (Co-founder & Head of Provider Network, Operations and Compliance) and Jedidiah Kromah (Co-founder & Head of Finance and Growth). Every profile has an approved role and biography in `packages/config/team.ts`; the seed and hosted `team_members` records carry the same content, and `docs/assets.md` records the portrait provenance.
+- Public team content now follows the supplied structure and order: Maryann Duncan (Co-founder & CEO), Samson Bryant (Co-founder & CTO / Product), Sade Odiaji (Co-founder & Head of Marketing), Boakai K. C. Hina (Co-founder & Head of Provider Network, Operations and Compliance) and Jedidiah Kromah (Co-founder & Head of Finance and Growth). Every profile has an approved role and biography in `packages/config/team.ts`; the seed and hosted `team_members` records carry the same content, and `docs/assets.md` records the portrait provenance.
 - Demo mode allows up to 12 sign-ins per minute from one address so reviewers and automated checks can switch accounts quickly; production keeps Better Auth's 3-per-10-seconds sign-in limit.
 - `pnpm typecheck`: **passed**.
 - `pnpm test`: **42/42 domain/PostgreSQL tests passed** against a freshly recreated isolated `lux_healthpay_test` database.
 - `pnpm build`: **passed** with Next.js 16.4.6 optimized compilation and route generation.
 - Browser suite against the production build: **16/16 passed**, including the updated team page (new names, roles and biographies, with no pending-biography placeholder) and the full authenticated workspace journeys.
 - The isolated hosted demo database (`lux-healthpay-demo`, branch `main`) was reset and reseeded so it contains only the three demonstration logins plus the hidden checker identity. Snapshot branch `pre-three-login-reset-20261116` (`br-dry-cell-bcl0mtw9`) preserves the previous synthetic demo state. The legacy `healthwallet-liberia` project was not touched.
-- Neon function bundles were rebuilt from this revision and deployed: `luxapi` deployment 4 and `luxworker` deployment 3. Hosted `/api/v1/health` returned 200 and unauthenticated worker execution returned 401.
+- Neon function bundles were rebuilt from this revision and deployed: `luxapi` deployment 5 and `luxworker` deployment 4. Hosted `/api/v1/health` returned 200 and unauthenticated worker execution returned 401.
 - Hosted three-login verification: `facility`, `insurer` and `admin` authenticate through the canonical proxy with their full role sets; `/api/v1/overview`, `/api/v1/nav` and `/api/v1/admin/metrics` returned 200, and the public team endpoint served the new profiles.
 - Commit `cf099ca` was pushed to `origin/main`; the Git-triggered Vercel production deployment `lux-eswhs7jiw` identifies that SHA and serves the new copy at the canonical alias.
 - Hosted workspace browser checks: **3/3 passed** against `https://luxllc.vercel.app` for the insurer workspace, the LUX admin command centre and facility role navigation; hosted team checks passed **2/2** for the keyboard dialog and supplied portraits/biographies.
