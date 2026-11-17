@@ -56,7 +56,9 @@ The user-authorized legacy source reset is part of this rebuild; old source hist
 - Team content updated to the supplied five co-founder roles and biographies, in the supplied order; portrait provenance remains recorded in `docs/assets.md`.
 - Local verification: **42/42 tests**, type checks, optimized build and **16/16 browser cases**.
 - Hosted isolated demo database reset and reseeded with only the three demonstration logins; snapshot branch `pre-three-login-reset-20261116` (`br-dry-cell-bcl0mtw9`) preserves the prior synthetic demo state. Legacy `healthwallet-liberia` untouched.
+- Commit `cf099ca` (`cf099cae12a458bf954379e6a7138af4dc16a5c6`) pushed to `origin/main`; Vercel production deployment `lux-eswhs7jiw` identifies that SHA and serves the canonical alias with the new team copy.
 - `luxapi` deployment 4 and `luxworker` deployment 3 deployed from this revision. Hosted health 200, unauthenticated worker 401.
+- Hosted team browser checks **2/2** passed (keyboard dialog and supplied portraits/biographies).
 - Hosted three-login API checks passed for `/me`, `/overview`, `/nav` and `/admin/metrics`; hosted workspace browser checks **3/3**; hosted synthetic smoke passed at 03:37 UTC, including demo self-check and simulated settlement with no real funds.
 
 ### 15 November 2026 public redesign

@@ -11,7 +11,8 @@
 - The isolated hosted demo database (`lux-healthpay-demo`, branch `main`) was reset and reseeded so it contains only the three demonstration logins plus the hidden checker identity. Snapshot branch `pre-three-login-reset-20261116` (`br-dry-cell-bcl0mtw9`) preserves the previous synthetic demo state. The legacy `healthwallet-liberia` project was not touched.
 - Neon function bundles were rebuilt from this revision and deployed: `luxapi` deployment 4 and `luxworker` deployment 3. Hosted `/api/v1/health` returned 200 and unauthenticated worker execution returned 401.
 - Hosted three-login verification: `facility`, `insurer` and `admin` authenticate through the canonical proxy with their full role sets; `/api/v1/overview`, `/api/v1/nav` and `/api/v1/admin/metrics` returned 200, and the public team endpoint served the new profiles.
-- Hosted workspace browser checks: **3/3 passed** against `https://luxllc.vercel.app` for the insurer workspace, the LUX admin command centre and facility role navigation.
+- Commit `cf099ca` was pushed to `origin/main`; the Git-triggered Vercel production deployment `lux-eswhs7jiw` identifies that SHA and serves the new copy at the canonical alias.
+- Hosted workspace browser checks: **3/3 passed** against `https://luxllc.vercel.app` for the insurer workspace, the LUX admin command centre and facility role navigation; hosted team checks passed **2/2** for the keyboard dialog and supplied portraits/biographies.
 - Hosted synthetic smoke passed at 03:37 UTC: three logins, claim submission, durable validation, human insurer decision, explicit demo checker substitution, mandatory demo confirmation, idempotent execution, simulated settlement, PDF statement, reconciliation and admin metrics. No real funds moved and no real Orange Money PIN was requested.
 
 ## Authenticated workspace redesign and three-login demo — 15 November 2026
