@@ -3,6 +3,7 @@
 ## Workspace section design status
 
 All sidebar destinations now match the dashboard design system. Returned claims, flagged claims, decisions and appeals, coverage and tariffs, contracted organizations, organizations, organization requests, public enquiries, integration health, validation operations and audit history each have an image-backed header, live metric cards, search and status filters, a designed table or card view, explicit empty states, and permission-scoped records. Insurer control of coverage and decisions, maker/checker separation, simulated-payment labeling and the no-customer-money rule remain visible where they apply. Verification on 17 November 2026 passed 42/42 domain/PostgreSQL tests, type checks, the production build, 17/17 browser cases and axe checks with zero violations across all designed section pages.
+Commit `eb6cf94` (sections) and `a2b4ddc` (pre-hydration credential hardening) are deployed through Vercel `lux-qgoyke1tp`; `luxapi` deployment 6 and `luxworker` deployment 5 carry the matching API. Hosted section checks passed 13/13 across the three demo roles.
 
 ## Team profiles and hosted alignment status
 

@@ -9,9 +9,12 @@
 - `pnpm typecheck`: **passed**.
 - `pnpm test`: **42/42 domain/PostgreSQL tests passed**.
 - `pnpm build`: **passed**.
-- Browser suite: **17/17 passed** against the optimized production build, including the new journey that signs in as each role and opens every authorized designed section, checks its heading and four metrics, and guards against horizontal overflow.
+- Browser suite: **17/17 passed** against the optimized production build, including the new journey that signs in as each role and opens every authorized designed section, checks its heading and four metrics, and guards against horizontal overflow. A later repeat run hit one aborted local API connection during sign-in; the affected journey passed immediately on isolated rerun, and no product error was recorded.
 - Automated accessibility (axe, WCAG 2 A/AA/2.1/2.2): **0 violations on all 13 designed section pages** for the three roles.
 - The login form now declares a POST submit fallback, so a click before hydration cannot place the password in the URL query string.
+- Commit `eb6cf94` carries the section design and commit `a2b4ddc` the auth-form hardening. Vercel production deployment `lux-qgoyke1tp` identifies `a2b4ddc` and serves the canonical alias.
+- Neon functions were rebuilt and redeployed from this revision: `luxapi` deployment 6 and `luxworker` deployment 5.
+- Hosted section checks passed **13/13** against `https://luxllc.vercel.app`, covering every designed section for facility, insurer and admin with a 200 response, the expected level-one heading, four live metrics and no horizontal overflow.
 
 ## Team profiles and hosted three-login alignment — 17 November 2026
 
