@@ -138,7 +138,7 @@ export class PayrollService {
       await Promise.all([
         pool.query(
           `SELECT p.*,
-                  (SELECT count(*)::int FROM payroll_subscriptions s WHERE s.package_id=p.id AND s.status='ACTIVE') members
+                  (SELECT count(*)::int FROM payroll_subscriptions s WHERE s.package_id=p.id AND s.status='ACTIVE' AND ${subscriptionFilter(scope, "s").sql}) members
              FROM insurance_packages p
             WHERE p.status='ACTIVE' AND ${pkgFilter.sql}
             ORDER BY p.monthly_premium_minor,p.name`,
@@ -146,7 +146,7 @@ export class PayrollService {
         ),
         pool.query(
           `SELECT b.*,p.name package_name,p.code package_code,p.monthly_premium_minor,
-                  (SELECT count(*)::int FROM payroll_subscriptions s WHERE s.band_id=b.id AND s.status='ACTIVE') members
+                  (SELECT count(*)::int FROM payroll_subscriptions s WHERE s.band_id=b.id AND s.status='ACTIVE' AND ${subscriptionFilter(scope, "s").sql}) members
              FROM payroll_bands b
              JOIN insurance_packages p ON p.id=b.package_id
             WHERE p.status='ACTIVE' AND ${pkgFilter.sql}

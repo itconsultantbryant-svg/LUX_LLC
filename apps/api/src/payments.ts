@@ -28,12 +28,25 @@ import {
 export class PaymentsService {
   async list(ctx: Context) {
     requirePermission(ctx, "payments.read");
-    return (
+    const rows = (
       await pool.query(
         `SELECT p.*,c.reference claim_reference,pa.maker_id,pa.checker_id,pa.authorized_at,(pa.maker_id=$2) is_maker,mu.name maker_name,cu.name checker_name FROM payments p JOIN claims c ON c.id=p.claim_id LEFT JOIN payment_authorizations pa ON pa.payment_id=p.id LEFT JOIN "user" mu ON mu.id=pa.maker_id LEFT JOIN "user" cu ON cu.id=pa.checker_id WHERE p.facility_id=$1 OR p.insurer_id=$1 ORDER BY p.created_at DESC LIMIT 100`,
         [ctx.orgId, ctx.userId],
       )
     ).rows;
+    // Maker/checker identity belongs to the paying insurer's own staff. A
+    // facility sees the payment and its own settlement facts, never the
+    // identities of the insurer's users.
+    if (ctx.orgType === "INSURER") return rows;
+    return rows.map((p) => ({
+      ...p,
+      created_by: null,
+      maker_id: null,
+      checker_id: null,
+      maker_name: null,
+      checker_name: null,
+      is_maker: false,
+    }));
   }
   async authorize(
     ctx: Context,

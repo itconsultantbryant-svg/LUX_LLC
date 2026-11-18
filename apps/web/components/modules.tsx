@@ -1537,10 +1537,12 @@ export function WalletModule() {
     ? d.transactions
     : [];
   const totals: any[] = Array.isArray(d?.totals) ? d.totals : [];
+  const feeShare: any[] = Array.isArray(d?.feeShare) ? d.feeShare : [];
   const payable: any[] = Array.isArray(d?.payableClaims)
     ? d.payableClaims
     : [];
   const platform = d?.scope === "PLATFORM";
+  const partner = d?.scope === "PARTNER";
   const ownBalance = wallets
     .filter((wallet) => !platform || wallet.organization_type === "INSURER")
     .reduce((sum, wallet) => sum + BigInt(wallet.balance_minor || 0), 0n);
@@ -1564,6 +1566,67 @@ export function WalletModule() {
     (sum, row) => sum + Number(row.count || 0),
     0,
   );
+  const shareCount = feeShare.reduce(
+    (sum, row) => sum + Number(row.count || 0),
+    0,
+  );
+  const shareOrange = feeShare.reduce(
+    (sum, row) => sum + BigInt(row.orangeMinor || 0),
+    0n,
+  );
+  const metrics = partner
+    ? [
+        {
+          icon: Wallet,
+          label: "Available balance",
+          value: money(ownBalance),
+          note: "Simulated wallet",
+          tone: "green",
+        },
+        {
+          icon: ReceiptText,
+          label: "Settled transfers",
+          value: shareCount,
+          note: "Aggregate only",
+          tone: "navy",
+        },
+        {
+          icon: Building2,
+          label: "Orange fee share",
+          value: money(shareOrange),
+          note: "Simulated accrual",
+          tone: "orange",
+        },
+      ]
+    : [
+        {
+          icon: Wallet,
+          label: platform ? "Insurer demo float" : "Available balance",
+          value: money(ownBalance),
+          note: "Simulated wallet",
+          tone: "green",
+        },
+        {
+          icon: ReceiptText,
+          label: "Settled transfers",
+          value: transfersCount,
+          note: "Settlement less reversals",
+          tone: "navy",
+        },
+        {
+          icon: Building2,
+          label: "Credited to facilities",
+          value: money(facilityCredited),
+          note: "Facility net of fees",
+          tone: "orange",
+        },
+        {
+          icon: BadgeDollarSign,
+          label: "LUX / Orange share",
+          value: `${money(lux)} / ${money(orange)}`,
+          note: `${money(fees)} total service fees`,
+        },
+      ];
   return (
     <>
       <SectionHero
@@ -1590,37 +1653,7 @@ export function WalletModule() {
             <div className="notice">
               {d.simulationNotice} This view refreshes every three seconds.
             </div>
-            <SectionMetrics
-              items={[
-                {
-                  icon: Wallet,
-                  label: platform ? "Insurer demo float" : "Available balance",
-                  value: money(ownBalance),
-                  note: "Simulated wallet",
-                  tone: "green",
-                },
-                {
-                  icon: ReceiptText,
-                  label: "Settled transfers",
-                  value: transfersCount,
-                  note: "Settlement less reversals",
-                  tone: "navy",
-                },
-                {
-                  icon: Building2,
-                  label: "Credited to facilities",
-                  value: money(facilityCredited),
-                  note: "Facility net of fees",
-                  tone: "orange",
-                },
-                {
-                  icon: BadgeDollarSign,
-                  label: "LUX / Orange share",
-                  value: `${money(lux)} / ${money(orange)}`,
-                  note: `${money(fees)} total service fees`,
-                },
-              ]}
-            />
+            <SectionMetrics items={metrics} />
             <SectionPanel
               eyebrow="Balances"
               title="Simulated Orange Money wallets"
@@ -1657,30 +1690,59 @@ export function WalletModule() {
             </SectionPanel>
             <SectionPanel
               eyebrow="Fee split"
-              title="LUX and Orange shared percentages"
-              count={`${transfersCount} transfers`}
+              title={
+                partner
+                  ? "Your Orange fee share"
+                  : "LUX and Orange shared percentages"
+              }
+              count={
+                partner ? `${shareCount} transfers` : `${transfersCount} transfers`
+              }
             >
-              <dl className="key-values">
-                {totals.map((row) => (
-                  <div key={row.currency}>
-                    <dt>{row.currency} service fees</dt>
-                    <dd>
-                      {money(row.feesMinor, row.currency)} total ·{" "}
-                      {money(row.luxMinor, row.currency)} LUX ·{" "}
-                      {money(row.orangeMinor, row.currency)} Orange
-                    </dd>
-                  </div>
-                ))}
-                {!totals.length && (
-                  <div>
-                    <dt>No settled transfers</dt>
-                    <dd>
-                      The 1% LUX and 1% Orange shares appear here after the
-                      first instant payment.
-                    </dd>
-                  </div>
-                )}
-              </dl>
+              {partner ? (
+                <dl className="key-values">
+                  {feeShare.map((row) => (
+                    <div key={row.currency}>
+                      <dt>{row.currency} Orange service-fee share</dt>
+                      <dd>
+                        {money(row.orangeMinor, row.currency)} across{" "}
+                        {row.count} simulated settlements
+                      </dd>
+                    </div>
+                  ))}
+                  {!feeShare.length && (
+                    <div>
+                      <dt>No settled transfers</dt>
+                      <dd>
+                        Your 1% Orange share appears here after the first
+                        simulated instant payment.
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              ) : (
+                <dl className="key-values">
+                  {totals.map((row) => (
+                    <div key={row.currency}>
+                      <dt>{row.currency} service fees</dt>
+                      <dd>
+                        {money(row.feesMinor, row.currency)} total ·{" "}
+                        {money(row.luxMinor, row.currency)} LUX ·{" "}
+                        {money(row.orangeMinor, row.currency)} Orange
+                      </dd>
+                    </div>
+                  ))}
+                  {!totals.length && (
+                    <div>
+                      <dt>No settled transfers</dt>
+                      <dd>
+                        The 1% LUX and 1% Orange shares appear here after the
+                        first instant payment.
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              )}
             </SectionPanel>
             {payable.length > 0 && (
               <SectionPanel
@@ -1823,7 +1885,11 @@ export function WalletModule() {
                 empty={
                   <Empty
                     title="No transfers yet."
-                    text="Open an approved claim and complete the four-digit demo confirmation to see an instant settlement."
+                    text={
+                      partner
+                        ? "Your Orange fee credits are included in your wallet balance. Individual counterparties and their balances are not shown."
+                        : "Open an approved claim and complete the four-digit demo confirmation to see an instant settlement."
+                    }
                   />
                 }
               />

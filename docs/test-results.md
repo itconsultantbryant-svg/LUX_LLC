@@ -1,5 +1,19 @@
 # Verification results
 
+## Cross-tenant dashboard and sidebar isolation — 18 November 2026
+
+- Audited every authenticated dashboard, sidebar destination and backing API query. Tenant-owned records are scoped by the caller's `organization_id`, and platform-wide views remain limited to LUX platform roles.
+- Fixed a payment-list over-exposure: a facility could receive the paying insurer's `maker_id`, `checker_id`, maker/checker names and `created_by` user ID. Maker/checker identity is now returned only to the insurer; a facility receives the payment and its own settlement facts with those fields redacted.
+- Fixed an Orange partner over-exposure: an `ORANGE` organization previously inherited the platform-wide wallet query and could see every facility and insurer wallet balance, funding record and counterparty transfer. Orange now sees only its own wallet, its own funding records and transfers where it is a party. Its fee panel shows only an aggregate Orange share per currency, without counterparties, principal or the LUX share.
+- Scoped payroll package/band member counts to the caller's tenant. A facility no longer sees counts that include other facilities' members.
+- Hid the facility-only **Encounters** sidebar item from insurer reviewers and auditors, whose clinical permission had exposed a destination that could only return an empty facility-scoped list.
+- Added PostgreSQL isolation coverage: facility-to-facility payroll, insurer-to-insurer claims/payments/wallets, facility masking of insurer staff identities, and Orange wallet/fee aggregation. The suite now runs **51/51 tests**.
+- `pnpm typecheck`: **passed**.
+- `pnpm test`: **51/51 passed**.
+- `pnpm build`: **passed** with Next.js 16.4.6.
+- Browser suite against the optimized production build: **17/17 passed**, including facility and insurer navigation, scoped dashboards, responsive widths and automated accessibility checks.
+- No database migration, hosted reset, real salary deduction or real Orange Money transfer was performed. Platform operator roles retain their documented network-level oversight.
+
 ## Payroll cover, AI validation and instant wallet settlement — 18 November 2026
 
 - Salary-funded cover is modelled as insurer packages with employment bands (`db/migrations/006_payroll_wallet_instant_payments.sql`). The current month's deduction is recorded automatically for every active subscription, once per calendar month, and the payroll ledger keeps gross, deduction and net salary together. All of it is explicitly simulated; no employer payroll system is contacted and no real salary is deducted.

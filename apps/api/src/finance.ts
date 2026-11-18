@@ -232,7 +232,10 @@ export async function paymentWalletSummary(db: DB, paymentId: string) {
 }
 
 function transactionScope(ctx: Context) {
-  const platform = ctx.orgType === "LUX" || ctx.orgType === "ORANGE";
+  // Only the platform operator may see the whole network ledger. A partner
+  // (Orange) or a participant organization sees only transfers where it is a
+  // party, never other organizations' balances or counterparties.
+  const platform = ctx.orgType === "LUX";
   return {
     platform,
     sql: platform
@@ -246,24 +249,26 @@ export class FinanceService {
   async wallet(ctx: Context) {
     requirePermission(ctx, "wallet.read");
     const scope = transactionScope(ctx);
-    const platform = ctx.orgType === "LUX" || ctx.orgType === "ORANGE";
-    const [wallets, fundings, transfers, aggregates, payable] = await Promise.all([
-      pool.query(
-        `SELECT w.*,o.name organization_name,o.type organization_type
+    const platform = ctx.orgType === "LUX";
+    const partner = ctx.orgType === "ORANGE";
+    const [wallets, fundings, transfers, aggregates, payable, share] =
+      await Promise.all([
+        pool.query(
+          `SELECT w.*,o.name organization_name,o.type organization_type
            FROM organization_wallets w JOIN organizations o ON o.id=w.organization_id
           WHERE $1::boolean OR w.organization_id=$2
           ORDER BY o.type,o.name,w.currency`,
-        [platform, ctx.orgId],
-      ),
-      pool.query(
-        `SELECT f.*,o.name organization_name
+          [platform, ctx.orgId],
+        ),
+        pool.query(
+          `SELECT f.*,o.name organization_name
            FROM wallet_fundings f JOIN organizations o ON o.id=f.organization_id
           WHERE $1::boolean OR f.organization_id=$2
           ORDER BY f.created_at DESC LIMIT 50`,
-        [platform, ctx.orgId],
-      ),
-      pool.query(
-        `SELECT w.*,fo.name from_organization_name,too.name to_organization_name,
+          [platform, ctx.orgId],
+        ),
+        pool.query(
+          `SELECT w.*,fo.name from_organization_name,too.name to_organization_name,
                 CASE WHEN w.from_organization_id=$1 THEN 'OUT'
                      WHEN w.to_organization_id=$1 THEN 'IN'
                      ELSE 'PLATFORM' END direction
@@ -272,10 +277,10 @@ export class FinanceService {
            JOIN organizations too ON too.id=w.to_organization_id
           WHERE ${scope.sql}
           ORDER BY w.created_at DESC LIMIT 60`,
-        scope.params,
-      ),
-      pool.query(
-        `SELECT currency,kind,count(*)::int count,
+          scope.params,
+        ),
+        pool.query(
+          `SELECT currency,kind,count(*)::int count,
                 sum(principal_minor)::text principal,
                 sum(fee_total_minor)::text fees,
                 sum(lux_minor)::text lux,
@@ -285,11 +290,11 @@ export class FinanceService {
            FROM wallet_transactions w
           WHERE ${scope.sql}
           GROUP BY currency,kind`,
-        scope.params,
-      ),
-      ctx.orgType === "INSURER"
-        ? pool.query(
-            `SELECT * FROM (
+          scope.params,
+        ),
+        ctx.orgType === "INSURER"
+          ? pool.query(
+              `SELECT * FROM (
                SELECT c.id,c.reference,c.currency,c.submitted_minor,c.approved_minor,c.state,
                       p.display_name patient_name,f.name facility_name,
                       c.approved_minor - COALESCE((
@@ -301,10 +306,21 @@ export class FinanceService {
                  JOIN organizations f ON f.id=c.facility_id
                 WHERE c.insurer_id=$1 AND c.state IN ('APPROVED','PARTIALLY_APPROVED')
              ) q WHERE payable_minor>0 ORDER BY reference`,
-            [ctx.orgId],
-          )
-        : Promise.resolve({ rows: [] as any[] }),
-    ]);
+              [ctx.orgId],
+            )
+          : Promise.resolve({ rows: [] as any[] }),
+        // A partner sees only its own accrual aggregate, never the paying or
+        // receiving organization, the principal or the other fee share.
+        partner
+          ? pool.query(
+              `SELECT currency,
+                      sum(CASE WHEN kind='REVERSAL' THEN -1 ELSE 1 END)::int count,
+                      sum(CASE WHEN kind='REVERSAL' THEN -orange_minor ELSE orange_minor END)::text orange
+                 FROM wallet_transactions
+                GROUP BY currency`,
+            )
+          : Promise.resolve({ rows: [] as any[] }),
+      ]);
 
     const totals = new Map<
       string,
@@ -347,10 +363,15 @@ export class FinanceService {
       simulated: true,
       simulationNotice:
         "All wallet balances and transfers are simulated Orange Money records. No live Orange Money API is configured, no real PIN is accepted and no real funds move.",
-      scope: platform ? "PLATFORM" : "ORGANIZATION",
+      scope: platform ? "PLATFORM" : partner ? "PARTNER" : "ORGANIZATION",
       wallets: wallets.rows,
       fundings: fundings.rows,
       transactions: transfers.rows,
+      feeShare: share.rows.map((r: any) => ({
+        currency: r.currency,
+        count: Number(r.count),
+        orangeMinor: String(r.orange || 0),
+      })),
       totals: [...totals.values()].map((t) => ({
         currency: t.currency,
         count: t.count,

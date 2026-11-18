@@ -25,6 +25,8 @@ let facility: any,
   financeOnly: any,
   checker: any,
   platform: any,
+  otherInsurer: any,
+  orange: any,
   otherEmail: string;
 const testPassword = process.env.DEMO_PASSWORD || "LuxTest231@";
 
@@ -106,6 +108,30 @@ beforeAll(async () => {
   om.type = "FACILITY";
   om.permissions = permissions(om.roles);
   other = ctx(om);
+  const otherInsurerOrg = await one(
+    pool,
+    "SELECT id FROM organizations WHERE name='Demo Palm Insurance'",
+  );
+  const oim = await one(
+    pool,
+    "INSERT INTO memberships(user_id,organization_id,roles) VALUES($1,$2,'{INSURER_FINANCE}') RETURNING *",
+    [created.user.id, otherInsurerOrg.id],
+  );
+  oim.type = "INSURER";
+  oim.permissions = permissions(oim.roles);
+  otherInsurer = ctx(oim);
+  const orangeOrg = await one(
+    pool,
+    "SELECT id FROM organizations WHERE type='ORANGE' ORDER BY created_at LIMIT 1",
+  );
+  const omg = await one(
+    pool,
+    "INSERT INTO memberships(user_id,organization_id,roles) VALUES($1,$2,'{ORANGE_OBSERVER}') RETURNING *",
+    [created.user.id, orangeOrg.id],
+  );
+  omg.type = "ORANGE";
+  omg.permissions = permissions(omg.roles);
+  orange = ctx(omg);
   const C = await import("../apps/api/src/claims.ts"),
     P = await import("../apps/api/src/payments.ts"),
     O = await import("../apps/api/src/operations.ts");
@@ -614,6 +640,118 @@ describe("real PostgreSQL tenant authorization", () => {
       ),
     ).rejects.toMatchObject({ status: 403 });
   });
+  it("hides insurer maker and checker identities from the payee facility", async () => {
+    const c = await freshClaim();
+    const p = await payments.authorize(
+      finance,
+      c.id,
+      { amountMinor: "10000", reason: "Synthetic identity-isolation test" },
+      randomUUID(),
+      String(c.version),
+    );
+    const insurerView = (await payments.list(finance)).find(
+      (r: any) => r.id === p.id,
+    );
+    expect(insurerView.maker_id).toBe(finance.userId);
+    expect(insurerView.maker_name).toBeTruthy();
+    const facilityView = (await payments.list(facility)).find(
+      (r: any) => r.id === p.id,
+    );
+    expect(facilityView).toBeTruthy();
+    expect(facilityView.maker_id).toBeNull();
+    expect(facilityView.checker_id).toBeNull();
+    expect(facilityView.maker_name).toBeNull();
+    expect(facilityView.checker_name).toBeNull();
+    expect(facilityView.created_by).toBeNull();
+    expect(facilityView.is_maker).toBe(false);
+  });
+  it("does not expose one insurer's claims, payments or wallets to another insurer", async () => {
+    const c = await freshClaim();
+    const p = await payments.authorize(
+      finance,
+      c.id,
+      { amountMinor: "12000", reason: "Synthetic second-insurer isolation" },
+      randomUUID(),
+      String(c.version),
+    );
+    await expect(claims.detail(otherInsurer, c.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    expect(
+      (await claims.list(otherInsurer, { search: c.reference })).data,
+    ).toHaveLength(0);
+    expect(
+      (await payments.list(otherInsurer)).find((r: any) => r.id === p.id),
+    ).toBeFalsy();
+    const { FinanceService } = await import("../apps/api/src/finance.ts");
+    const view = await new FinanceService().wallet(otherInsurer);
+    expect(view.scope).toBe("ORGANIZATION");
+    expect(view.payableClaims).toEqual([]);
+    for (const wallet of view.wallets)
+      expect(wallet.organization_id).toBe(otherInsurer.orgId);
+    for (const funding of view.fundings)
+      expect(funding.organization_id).toBe(otherInsurer.orgId);
+    for (const transfer of view.transactions)
+      expect([
+        transfer.from_organization_id,
+        transfer.to_organization_id,
+      ]).toContain(otherInsurer.orgId);
+  });
+  it("limits an Orange observer to its own wallet and aggregate fee share", async () => {
+    const { FinanceService } = await import("../apps/api/src/finance.ts");
+    const view = await new FinanceService().wallet(orange);
+    expect(view.scope).toBe("PARTNER");
+    expect(view.canFund).toBe(false);
+    expect(view.payableClaims).toEqual([]);
+    for (const wallet of view.wallets)
+      expect(wallet.organization_id).toBe(orange.orgId);
+    for (const funding of view.fundings)
+      expect(funding.organization_id).toBe(orange.orgId);
+    for (const transfer of view.transactions)
+      expect([
+        transfer.from_organization_id,
+        transfer.to_organization_id,
+      ]).toContain(orange.orgId);
+    for (const row of view.feeShare) {
+      expect(Object.keys(row).sort()).toEqual([
+        "count",
+        "currency",
+        "orangeMinor",
+      ]);
+      expect(row).not.toHaveProperty("from_organization_name");
+      expect(row).not.toHaveProperty("to_organization_name");
+    }
+  });
+  it("does not expose another facility's payroll members", async () => {
+    const { PayrollService } = await import("../apps/api/src/payroll.ts");
+    const view = await new PayrollService().dashboard(other);
+    expect(view.scope).toBe("FACILITY");
+    expect(view.subscriptions.length).toBeGreaterThan(0);
+    const ownPatients = new Set(
+      (
+        await pool.query("SELECT id FROM patients WHERE facility_id=$1", [
+          other.orgId,
+        ])
+      ).rows.map((r: any) => r.id),
+    );
+    const otherPatients = new Set(
+      (
+        await pool.query("SELECT id FROM patients WHERE facility_id=$1", [
+          facility.orgId,
+        ])
+      ).rows.map((r: any) => r.id),
+    );
+    for (const subscription of view.subscriptions) {
+      expect(ownPatients.has(subscription.patient_id)).toBe(true);
+      expect(otherPatients.has(subscription.patient_id)).toBe(false);
+    }
+    const scopedSubscriptions = new Set(
+      view.subscriptions.map((s: any) => s.id),
+    );
+    for (const deduction of view.deductions)
+      expect(scopedSubscriptions.has(deduction.subscription_id)).toBe(true);
+    expect(view.eligiblePatients).toEqual([]);
+  });
   it("does not give a platform administrator clinical access", async () => {
     const c = await freshClaim();
     await expect(claims.detail(platform, c.id)).rejects.toMatchObject({
@@ -1054,6 +1192,12 @@ describe("payroll cover, AI validation risk and instant wallet settlement", () =
     expect(scoped.scope).toBe("FACILITY");
     for (const subscription of scoped.subscriptions)
       expect(subscription.facility_name).toBe("Demo Monrovia Clinic");
+    for (const band of scoped.bands)
+      expect(band.members).toBe(
+        scoped.subscriptions.filter(
+          (s: any) => s.band_id === band.id && s.status === "ACTIVE",
+        ).length,
+      );
   });
 
   it("a new employment band creates a simulated subscription and current deduction", async () => {

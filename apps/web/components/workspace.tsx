@@ -112,6 +112,7 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/app/encounters",
         icon: ClipboardCheck,
         permission: "clinical",
+        orgTypes: ["FACILITY"],
       },
       {
         label: "Claims",
