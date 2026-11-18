@@ -11,7 +11,7 @@
 - Demo float is recorded in the append-only `wallet_fundings` ledger. The backfill funds each insurer with USD 50,000 (5,000,000 minor) once and is idempotent; no customer money is involved and LUX holds no customer money.
 - The public homepage was reduced to a hero, a three-role summary, a compact four-step journey, a trust/Orange/AI summary and a final call to action. Detailed journeys, checks, partner content, roadmap and team remain on `/how-it-works`, `/services`, `/partners` and `/about`.
 - `pnpm typecheck`: **passed**.
-- `pnpm test`: **46/47 tests passed** on the full run; the single failure was a 30-second timeout in an existing dashboard overview test under concurrent local API/web load, and the same test passed on isolated rerun in 9.2 seconds. The new payroll, validation, instant-settlement, fee-split and wrong-code tests all passed.
+- `pnpm test`: **47/47 tests passed**, including payroll scoping and automatic deductions, new subscriptions, clean and flagged AI validation, instant settlement split and wallet deltas, and wrong-code no-movement. An earlier run under concurrent local load hit one 30-second timeout in an existing dashboard test; it passed on isolated rerun and the full suite then passed cleanly.
 - `pnpm build`: **passed** with Next.js 16.4.6.
 - Browser suite against the optimized production build: **17/17 passed**, including the simplified homepage, the new payroll and wallet navigation, both new sections and the accessibility/overflow checks.
 - Migrations `001`–`006` were applied to the isolated hosted demo database. The idempotent payroll/wallet backfill created 4 packages, 16 bands, 12 subscriptions, 48 deductions and 2 funded insurer wallets, and created the ORANGE partner ledger organization.
