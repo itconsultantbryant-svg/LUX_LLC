@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { pool, transaction, one } from "../packages/db/index.ts";
 import { auth, mode } from "../apps/api/src/auth.ts";
 import { team } from "../packages/config/team.ts";
+import { seedDemoPayroll } from "./demo-payroll.ts";
 import { readFile } from "node:fs/promises";
 if (
   process.env.NODE_ENV === "production" ||
@@ -97,6 +98,7 @@ await transaction(async (db) => {
     ["facility", "Demo Monrovia Clinic", "FACILITY"],
     ["facility2", "Demo River Care Centre", "FACILITY"],
     ["facility3", "Demo Coastal Health", "FACILITY"],
+    ["orange", "Orange Money (Liberia)", "ORANGE"],
   ]) {
     const o = await one(
       db,
@@ -568,6 +570,10 @@ await transaction(async (db) => {
       { syntheticOnly: true, liveBusinessDisbursement: false, feeSplit: false },
     ],
   );
+  await seedDemoPayroll(db, {
+    insurers: [organizations.insurer, organizations.insurer2],
+    actorId: users.admin,
+  });
 });
 console.log(
   "Synthetic seed created. Accounts (passwords are supplied privately by environment/file):",

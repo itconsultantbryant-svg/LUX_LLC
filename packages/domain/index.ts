@@ -98,14 +98,34 @@ export function transitionPayment(from: PaymentState, to: PaymentState) {
   return to;
 }
 export const roles = {
-  PLATFORM_ADMIN: ["organizations", "cms", "operations", "audit", "support"],
+  PLATFORM_ADMIN: [
+    "organizations",
+    "cms",
+    "operations",
+    "audit",
+    "support",
+    "payroll",
+    "wallet.read",
+  ],
   SUPPORT: ["support", "operations"],
-  LUX_FINANCE: ["fees", "reconciliation", "reports"],
+  LUX_FINANCE: [
+    "fees",
+    "reconciliation",
+    "reports",
+    "payroll",
+    "wallet.read",
+  ],
   FACILITY_ADMIN: ["users", "settings", "contracts", "destination"],
   FACILITY_CLINICIAN: ["clinical", "encounters.write"],
-  FACILITY_CLAIMS: ["claims", "eligibility", "clinical"],
-  FACILITY_FINANCE: ["payments.read", "reconciliation", "reports"],
-  INSURER_ADMIN: ["users", "settings", "contracts", "coverage"],
+  FACILITY_CLAIMS: ["claims", "eligibility", "clinical", "payroll"],
+  FACILITY_FINANCE: [
+    "payments.read",
+    "reconciliation",
+    "reports",
+    "payroll",
+    "wallet.read",
+  ],
+  INSURER_ADMIN: ["users", "settings", "contracts", "coverage", "payroll"],
   INSURER_REVIEWER: ["review", "claims", "clinical"],
   INSURER_FINANCE: [
     "payments.read",
@@ -113,9 +133,18 @@ export const roles = {
     "payments.execute",
     "reconciliation",
     "reports",
+    "payroll",
+    "wallet.read",
   ],
-  INSURER_AUDITOR: ["claims", "clinical", "payments.read", "audit", "reports"],
-  ORANGE_OBSERVER: ["fees"],
+  INSURER_AUDITOR: [
+    "claims",
+    "clinical",
+    "payments.read",
+    "audit",
+    "reports",
+    "wallet.read",
+  ],
+  ORANGE_OBSERVER: ["fees", "wallet.read"],
 } as const;
 export type Role = keyof typeof roles;
 export function permissions(names: string[]) {

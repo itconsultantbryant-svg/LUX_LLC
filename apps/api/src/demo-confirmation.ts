@@ -14,6 +14,45 @@ function digest(id: string, code: string) {
     .update(`lux-demo-only:${id}:${code}`)
     .digest("hex");
 }
+
+/**
+ * Issue a short-lived four-digit demo confirmation challenge for an authorized
+ * payment. The generated digits are displayed once and are never an Orange
+ * Money PIN. The raw code is not stored; only an HMAC digest is persisted.
+ */
+export async function issueDemoChallenge(db: DB, ctx: Context, p: any) {
+  const rate = await one(
+    db,
+    `SELECT count(*)::int n FROM demo_payment_challenges WHERE actor_id=$1 AND payment_id=$2 AND created_at>now()-interval '5 minutes'`,
+    [ctx.userId, p.id],
+  );
+  if (rate.n >= 5)
+    throw new DomainError("DEMO_CONFIRMATION_RATE_LIMITED", 429);
+  await db.query(
+    "UPDATE demo_payment_challenges SET consumed_at=now() WHERE payment_id=$1 AND actor_id=$2 AND consumed_at IS NULL",
+    [p.id, ctx.userId],
+  );
+  const code = String(randomInt(0, 10000)).padStart(4, "0");
+  const challenge = await one(
+    db,
+    `INSERT INTO demo_payment_challenges(payment_id,organization_id,actor_id,payment_version,code_hmac,expires_at) VALUES($1,$2,$3,$4,'pending',now()+interval '2 minutes') RETURNING id,expires_at`,
+    [p.id, ctx.orgId, ctx.userId, p.version],
+  );
+  await db.query(
+    "UPDATE demo_payment_challenges SET code_hmac=$2 WHERE id=$1",
+    [challenge.id, digest(challenge.id, code)],
+  );
+  await audit(db, ctx, "DemoConfirmationIssued", p.id);
+  return {
+    challengeId: challenge.id,
+    demoCode: code,
+    expiresAt: challenge.expires_at,
+    paymentVersion: p.version,
+    warning:
+      "SIMULATION ONLY. Enter the displayed demo code, never your real Orange Money PIN. No real funds move.",
+  };
+}
+
 export async function issueDemoConfirmation(ctx: Context, id: string) {
   requirePermission(ctx, "payments.execute");
   if (!ctx.fresh) throw new DomainError("REAUTHENTICATION_REQUIRED", 403);
@@ -25,36 +64,7 @@ export async function issueDemoConfirmation(ctx: Context, id: string) {
       throw new DomainError("PERMISSION_DENIED", 403);
     if (p.state !== "AUTHORIZED")
       throw new DomainError("INVALID_PAYMENT_TRANSITION");
-    const rate = await one(
-      db,
-      `SELECT count(*)::int n FROM demo_payment_challenges WHERE actor_id=$1 AND payment_id=$2 AND created_at>now()-interval '5 minutes'`,
-      [ctx.userId, id],
-    );
-    if (rate.n >= 5)
-      throw new DomainError("DEMO_CONFIRMATION_RATE_LIMITED", 429);
-    await db.query(
-      "UPDATE demo_payment_challenges SET consumed_at=now() WHERE payment_id=$1 AND actor_id=$2 AND consumed_at IS NULL",
-      [id, ctx.userId],
-    );
-    const code = String(randomInt(0, 10000)).padStart(4, "0");
-    const challenge = await one(
-      db,
-      `INSERT INTO demo_payment_challenges(payment_id,organization_id,actor_id,payment_version,code_hmac,expires_at) VALUES($1,$2,$3,$4,'pending',now()+interval '2 minutes') RETURNING id,expires_at`,
-      [id, ctx.orgId, ctx.userId, p.version],
-    );
-    await db.query(
-      "UPDATE demo_payment_challenges SET code_hmac=$2 WHERE id=$1",
-      [challenge.id, digest(challenge.id, code)],
-    );
-    await audit(db, ctx, "DemoConfirmationIssued", id);
-    return {
-      challengeId: challenge.id,
-      demoCode: code,
-      expiresAt: challenge.expires_at,
-      paymentVersion: p.version,
-      warning:
-        "SIMULATION ONLY. Enter the displayed demo code, never your real Orange Money PIN. No real funds move.",
-    };
+    return issueDemoChallenge(db, ctx, p);
   });
 }
 export const confirmationSchema = z.object({

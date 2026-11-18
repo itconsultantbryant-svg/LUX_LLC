@@ -20,6 +20,7 @@ import {
 } from "./access.ts";
 import { paymentAdapter, type PaymentResult } from "./adapters.ts";
 import { mode } from "./auth.ts";
+import { settleWallets, reverseWallets } from "./finance.ts";
 import {
   consumeDemoConfirmation,
   confirmationSchema,
@@ -387,6 +388,7 @@ export async function applyVerifiedResult(
     [p.id, state, result.reference],
   );
   if (state === "SETTLED") {
+    await settleWallets(db, p);
     await db.query(
       `UPDATE claim_payment_allocations SET status='CONFIRMED' WHERE payment_id=$1`,
       [p.id],
@@ -411,6 +413,7 @@ export async function applyVerifiedResult(
       [p.id],
     );
   else if (state === "REVERSED") {
+    await reverseWallets(db, p);
     await db.query(
       `UPDATE claim_payment_allocations SET status='REVERSED' WHERE payment_id=$1`,
       [p.id],

@@ -14,6 +14,10 @@ import { DomainError, permissions } from "../../../packages/domain/index.ts";
 import { ClaimsService } from "./claims.ts";
 import { PaymentsService } from "./payments.ts";
 import { OperationsService } from "./operations.ts";
+import { PayrollService } from "./payroll.ts";
+import { FinanceService } from "./finance.ts";
+import { InstantPaymentService } from "./instant-payments.ts";
+import { validateClaimNow } from "./validation.ts";
 import { upload, completeUpload, download } from "./storage.ts";
 import { openapi } from "./openapi.ts";
 import { scopedRecords, saveTariff, resolveAppeal } from "./catalogue.ts";
@@ -33,6 +37,9 @@ import {
 } from "./onboarding.ts";
 const claims = new ClaimsService(),
   payments = new PaymentsService(),
+  payroll = new PayrollService(),
+  finance = new FinanceService(),
+  instant = new InstantPaymentService(),
   ops = new OperationsService();
 export interface ApiRequest {
   path: string;
@@ -188,6 +195,37 @@ export class ApiController {
         result = await claims.create(ctx, body);
       else if (/^\/claims\/[^/]+$/.test(path) && method === "GET")
         result = await claims.detail(ctx, path.split("/")[2]);
+      else if (
+        /^\/claims\/[^/]+\/validation-runs$/.test(path) &&
+        method === "POST"
+      )
+        result = await validateClaimNow(ctx, path.split("/")[2]);
+      else if (
+        /^\/claims\/[^/]+\/instant-payment$/.test(path) &&
+        method === "POST"
+      )
+        result = await instant.prepare(ctx, path.split("/")[2], body, key);
+      else if (path === "/payroll" && method === "GET")
+        result = await payroll.dashboard(ctx);
+      else if (path === "/payroll/run" && method === "POST")
+        result = await payroll.run(ctx, body);
+      else if (path === "/payroll/subscriptions" && method === "POST")
+        result = await payroll.subscribe(ctx, body);
+      else if (path === "/finance/wallet" && method === "GET")
+        result = await finance.wallet(ctx);
+      else if (path === "/finance/wallet/fundings" && method === "POST")
+        result = await finance.fund(ctx, body);
+      else if (
+        /^\/payments\/[^/]+\/instant-payment$/.test(path) &&
+        method === "POST"
+      )
+        result = await instant.confirm(
+          ctx,
+          path.split("/")[2],
+          body,
+          version,
+          key,
+        );
       else if (/^\/claims\/[^/]+\/submit$/.test(path) && method === "POST")
         result = await claims.submit(ctx, path.split("/")[2], version, key);
       else if (/^\/claims\/[^/]+\/withdraw$/.test(path) && method === "POST")

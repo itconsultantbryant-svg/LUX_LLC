@@ -110,11 +110,24 @@ test("public copy is production-facing without disclaimer footnotes", async ({
     ).toHaveCount(0);
   }
   await page.goto("/");
-  const journey = page.getByRole("region", { name: "Covered in seven steps" });
+  const journey = page.getByRole("region", {
+    name: "From care to payment, without the paper trail",
+  });
   await expect(journey).toBeVisible();
-  await expect(journey.locator("li")).toHaveCount(7);
-  await expect(journey).toContainText("LUX never holds your money");
+  await expect(journey.locator("article")).toHaveCount(4);
+  await expect(journey).toContainText("the insurer keeps the decision");
+  await expect(
+    page.getByRole("heading", { name: "Three accountable views" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Assisted by AI. Decided by people. Paid by Orange.",
+    }),
+  ).toBeVisible();
+  await expect(page.getByText(/LUX never holds customer money/)).toBeVisible();
+  await page.goto("/services");
   await expect(page.locator(".lux-demo-badge")).toHaveText("CLAIMS WORKSPACE");
+  await page.goto("/partners");
   await expect(
     page.getByRole("heading", { name: "Powered by Orange Money" }),
   ).toBeVisible();
@@ -477,6 +490,8 @@ test("facility navigation groups all four facility roles and their destinations"
     "Claims",
     "Returned claims",
     "Wallet destination",
+    "Payroll & salary cover",
+    "Wallet & float",
     "Payments & authorizations",
     "Reconciliation",
     "Reports & statements",
@@ -508,6 +523,8 @@ test("key workspace screens fit supported widths and expose accessible controls"
       "/app",
       "/app/claims",
       "/app/payments",
+      "/app/payroll",
+      "/app/wallet",
       "/app/reconciliation",
     ]) {
       await page.goto(route);
@@ -540,6 +557,8 @@ test("every designed sidebar section renders for its authorized role", async ({
       ["flagged", "Flagged claims."],
       ["decisions", "Decisions & appeals."],
       ["coverage", "Coverage & tariffs."],
+      ["payroll", "Payroll & salary cover."],
+      ["wallet", "Wallet & float."],
       ["contracts", "Contracted organizations."],
       ["audit", "Audit history."],
     ],

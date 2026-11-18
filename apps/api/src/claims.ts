@@ -245,7 +245,7 @@ export class ClaimsService {
     const validationRuns = clinical
       ? (
           await pool.query(
-            "SELECT id,input_version,ruleset_version,model_version,status,processing_error,created_at,completed_at FROM validation_runs WHERE claim_id=$1 ORDER BY created_at DESC",
+            "SELECT id,input_version,ruleset_version,model_version,status,processing_error,risk_score,summary,created_at,completed_at FROM validation_runs WHERE claim_id=$1 ORDER BY created_at DESC",
             [id],
           )
         ).rows
@@ -285,6 +285,41 @@ export class ClaimsService {
           [claim.eligibility_id],
         )
       : undefined;
+    const allocated = await one(
+      pool,
+      `SELECT COALESCE(sum(amount_minor),0)::text total FROM claim_payment_allocations WHERE claim_id=$1 AND status IN ('RESERVED','CONFIRMED')`,
+      [id],
+    );
+    const payrollCover = clinical
+      ? await one(
+          pool,
+          `SELECT s.id,s.status,s.employment_level,s.employer_name,s.gross_salary_minor,s.currency,
+                  s.simulated,pkg.name package_name,pkg.code package_code,b.label band_label,
+                  b.deduction_minor,d.period_start latest_period,d.deduction_minor latest_deduction_minor,
+                  d.net_salary_minor latest_net_minor,d.status latest_status
+             FROM payroll_subscriptions s
+             JOIN insurance_packages pkg ON pkg.id=s.package_id
+             JOIN payroll_bands b ON b.id=s.band_id
+             LEFT JOIN LATERAL (
+               SELECT period_start,deduction_minor,net_salary_minor,status
+                 FROM payroll_deductions WHERE subscription_id=s.id
+                ORDER BY period_start DESC LIMIT 1
+             ) d ON true
+            WHERE s.patient_id=$1 AND s.insurer_id=$2`,
+          [claim.patient_id, claim.insurer_id],
+        )
+      : undefined;
+    const walletSettlements = (
+      await pool.query(
+        `SELECT w.*,fo.name from_organization_name,too.name to_organization_name
+           FROM wallet_transactions w
+           JOIN payments p ON p.id=w.payment_id
+           JOIN organizations fo ON fo.id=w.from_organization_id
+           JOIN organizations too ON too.id=w.to_organization_id
+          WHERE p.claim_id=$1 ORDER BY w.created_at DESC LIMIT 5`,
+        [id],
+      )
+    ).rows;
     const { patient_id, encounter_id, eligibility_id, ...safe } = claim;
     return {
       ...safe,
@@ -294,9 +329,16 @@ export class ClaimsService {
       items,
       findings,
       validationRuns,
+      latestValidation: validationRuns[0] || null,
+      payrollCover: payrollCover || null,
+      walletSettlements,
       attachments,
       decisions,
       timeline,
+      payableMinor: String(
+        BigInt(claim.approved_minor) - BigInt(allocated.total),
+      ),
+      allocatedMinor: allocated.total,
     };
   }
   async submit(

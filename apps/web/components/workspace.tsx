@@ -185,6 +185,18 @@ const NAV_GROUPS: NavGroup[] = [
     title: "Finance & settlement",
     items: [
       {
+        label: "Payroll & salary cover",
+        href: "/app/payroll",
+        icon: BadgeDollarSign,
+        permission: "payroll",
+      },
+      {
+        label: "Wallet & float",
+        href: "/app/wallet",
+        icon: Wallet,
+        permission: "wallet.read",
+      },
+      {
         label: "Payments & authorizations",
         href: "/app/payments",
         icon: Wallet,
@@ -674,7 +686,7 @@ export function Workspace({ children }: { children: ReactNode }) {
     </WorkspaceContext.Provider>
   );
 }
-export function useData(path: string) {
+export function useData(path: string, intervalMs = 20000) {
   const { api, revision } = useWorkspace();
   const [data, setData] = useState<any>(null),
     [error, setError] = useState(""),
@@ -696,12 +708,12 @@ export function useData(path: string) {
     window.addEventListener("focus", onFocus);
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") load();
-    }, 20000);
+    }, intervalMs);
     return () => {
       window.removeEventListener("focus", onFocus);
       clearInterval(timer);
     };
-  }, [load, revision]);
+  }, [load, revision, intervalMs]);
   return { data, error, loading, reload: load };
 }
 export function DataBoundary({

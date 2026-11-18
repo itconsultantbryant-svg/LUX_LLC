@@ -148,6 +148,140 @@ export function HomeHero() {
   );
 }
 
+export function HomeRoles() {
+  return (
+    <section id="roles" className="lux-section" aria-labelledby="roles-title">
+      <div className="lux-wrap">
+        <SectionHeading
+          eyebrow="One connected record"
+          title="Three accountable views"
+          sub="Patients, providers and insurers each see the part of the claim they are responsible for."
+          id="roles-title"
+        />
+        <div className="lux-steps three">
+          {portals.slice(0, 3).map(([title, text], index) => (
+            <article className="lux-card" key={title}>
+              <span className="lux-step-num">{index + 1}</span>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
+        <div className="lux-section-foot">
+          <Link className="lux-text-link" href="/services">
+            Explore the platform <ArrowRight size={17} />
+          </Link>
+          <Link className="lux-text-link" href="/login">
+            Open the workspace <ArrowRight size={17} />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function HomeJourney() {
+  return (
+    <section
+      id="how"
+      className="lux-section lux-soft"
+      aria-labelledby="how-title"
+    >
+      <div className="lux-wrap">
+        <SectionHeading
+          eyebrow="The claim journey"
+          title="From care to payment, without the paper trail"
+          sub="A patient is identified, the claim is verified, the insurer decides and the provider is paid through Orange Money."
+          id="how-title"
+        />
+        <div className="lux-steps">
+          {[
+            [
+              "Verify at the facility",
+              "The provider confirms identity, active cover and the agreed tariff before care.",
+            ],
+            [
+              "Submit one claim",
+              "Encounter notes, medicines and the bill are captured as a single digital record.",
+            ],
+            [
+              "Review with evidence",
+              "Automatic checks and AI assistance surface gaps; the insurer keeps the decision.",
+            ],
+            [
+              "Pay and confirm",
+              "An approved payment reaches the provider wallet, and both sides see the same record.",
+            ],
+          ].map(([title, text], index) => (
+            <article className="lux-card" key={title}>
+              <span className="lux-step-num">{index + 1}</span>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
+        <div className="lux-section-foot">
+          <Link className="lux-text-link" href="/how-it-works">
+            See the seven-step patient journey <ArrowRight size={17} />
+          </Link>
+          <Link className="lux-text-link" href="/services">
+            How the platform fits together <ArrowRight size={17} />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function HomeTrust() {
+  return (
+    <section id="ai" className="lux-section" aria-labelledby="home-trust-title">
+      <div className="lux-wrap">
+        <SectionHeading
+          eyebrow="Built on clear boundaries"
+          title="Assisted by AI. Decided by people. Paid by Orange."
+          sub="Every party keeps its own responsibility, and every transaction leaves an auditable record."
+          id="home-trust-title"
+        />
+        <div className="lux-steps three">
+          <article className="lux-card">
+            <h3>AI assists, people decide</h3>
+            <p>
+              Validation flags missing information, duplicates and
+              inconsistencies. A flag is a reason for review, never proof of
+              fraud, and AI cannot approve a claim or move money.
+            </p>
+            <Link className="lux-text-link" href="/services#ai">
+              How validation works <ArrowRight size={17} />
+            </Link>
+          </article>
+          <article className="lux-card">
+            <h3>Powered by Orange Money</h3>
+            <p>
+              Orange Money provides payment and wallet infrastructure. The
+              insurer authorizes payment, and LUX never holds customer money.
+            </p>
+            <Link className="lux-text-link" href="/partners#orange">
+              Payment responsibilities <ArrowRight size={17} />
+            </Link>
+          </article>
+          <article className="lux-card">
+            <h3>One auditable record</h3>
+            <p>
+              Clinical information stays with the provider, insurance decisions
+              stay with the insurer, and financial and clinical access remain
+              separate.
+            </p>
+            <Link className="lux-text-link" href="/about">
+              Why LUX <ArrowRight size={17} />
+            </Link>
+          </article>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function PageHero({
   label,
   title,

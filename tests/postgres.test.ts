@@ -50,6 +50,17 @@ beforeAll(async () => {
       env: { ...process.env, DATABASE_URL: url, ALLOW_DEMO_SEED: "true" },
       stdio: "pipe",
     });
+  {
+    const { seedDemoPayroll } = await import("../db/demo-payroll.ts");
+    const demoInsurers = (
+      await pool.query(
+        "SELECT id FROM organizations WHERE type='INSURER' ORDER BY created_at",
+      )
+    ).rows.map((r: any) => r.id);
+    await transaction((db: any) =>
+      seedDemoPayroll(db, { insurers: demoInsurers }),
+    );
+  }
   const { permissions } = await import("../packages/domain/index.ts");
   const membership = async (email: string) => {
     const m = await one(
@@ -926,5 +937,322 @@ describe("concurrent reservations and immutable fee snapshots", () => {
     await expect(
       pool.query("DELETE FROM audit_events WHERE id=$1", [a.id]),
     ).rejects.toThrow("immutable");
+  });
+});
+
+describe("payroll cover, AI validation risk and instant wallet settlement", () => {
+  async function validationClaim(amount: string, itemAmount: string) {
+    const facilityId = facility.orgId;
+    const insurerId = finance.orgId;
+    const contract = await one(
+      pool,
+      `SELECT id FROM facility_insurer_contracts
+        WHERE facility_id=$1 AND insurer_id=$2 AND status='ACTIVE'
+          AND current_date BETWEEN starts_on AND ends_on LIMIT 1`,
+      [facilityId, insurerId],
+    );
+    const patient = await one(
+      pool,
+      `INSERT INTO patients(facility_id,display_name,birth_year,processing_basis,created_by)
+       VALUES($1,$2,1990,'SYNTHETIC_DEMO_ONLY',$3) RETURNING id`,
+      [facilityId, "Validation test member " + randomUUID(), facility.userId],
+    );
+    await pool.query(
+      `INSERT INTO insurer_patient_references(patient_id,insurer_id,external_reference,policy_reference,status,effective_from,effective_to,source_updated_at,benefits)
+       VALUES($1,$2,$3,$4,'ACTIVE',current_date-1,current_date+30,now(),'{}')`,
+      [
+        patient.id,
+        insurerId,
+        "VALTEST-" + randomUUID(),
+        "VALTEST-POLICY-" + randomUUID(),
+      ],
+    );
+    const eligibility = await one(
+      pool,
+      `INSERT INTO eligibility_snapshots(patient_id,facility_id,insurer_id,status,source,policy_reference,checked_at,source_updated_at,checked_by)
+       VALUES($1,$2,$3,'ACTIVE','SYNTHETIC_TEST',NULL,now(),now(),$4) RETURNING *`,
+      [patient.id, facilityId, insurerId, facility.userId],
+    );
+    const encounter = await one(
+      pool,
+      `INSERT INTO encounters(patient_id,facility_id,clinician_id,service_date,diagnosis,notes)
+       VALUES($1,$2,$3,current_date-1,'Synthetic validation encounter','Synthetic documentation for validation testing.') RETURNING *`,
+      [patient.id, facilityId, facility.userId],
+    );
+    const band = await one(
+      pool,
+      "SELECT * FROM payroll_bands WHERE insurer_id=$1 ORDER BY deduction_minor LIMIT 1",
+      [insurerId],
+    );
+    await pool.query(
+      `INSERT INTO payroll_subscriptions(patient_id,insurer_id,package_id,band_id,employment_level,employer_name,gross_salary_minor,currency,status,simulated,effective_from)
+       VALUES($1,$2,$3,$4,$5,'Synthetic Employer',120000,'USD','ACTIVE',true,current_date-30)`,
+      [patient.id, insurerId, band.package_id, band.id, band.level],
+    );
+    const c = await one(
+      pool,
+      `INSERT INTO claims(facility_id,insurer_id,contract_id,patient_id,encounter_id,eligibility_id,currency,state,submitted_minor,approved_minor,submission_version,created_by)
+       VALUES($1,$2,$3,$4,$5,$6,'USD','SUBMITTED',$7,0,1,$8) RETURNING *`,
+      [
+        facilityId,
+        insurerId,
+        contract.id,
+        patient.id,
+        encounter.id,
+        eligibility.id,
+        amount,
+        facility.userId,
+      ],
+    );
+    await pool.query(
+      "INSERT INTO claim_versions(claim_id,version,snapshot,actor_id) VALUES($1,1,$2,$3)",
+      [
+        c.id,
+        {
+          claim: c,
+          encounter,
+          eligibility,
+          items: [
+            {
+              id: randomUUID(),
+              code: "PILOT-CONSULT",
+              description: "Synthetic payroll cover test",
+              quantity: 1,
+              unit_minor: itemAmount,
+            },
+          ],
+        },
+        facility.userId,
+      ],
+    );
+    return c;
+  }
+
+  it("insurer and facility payroll dashboards are scoped and deductions are automatic", async () => {
+    const { PayrollService } = await import("../apps/api/src/payroll.ts");
+    const payroll = new PayrollService();
+    const insurer = await payroll.dashboard(finance);
+    expect(insurer.scope).toBe("INSURER");
+    expect(insurer.simulated).toBe(true);
+    expect(insurer.packages.length).toBeGreaterThan(0);
+    expect(insurer.bands.length).toBeGreaterThan(0);
+    expect(insurer.subscriptions.length).toBeGreaterThan(0);
+    expect(insurer.totals.length).toBeGreaterThan(0);
+    const period = insurer.period.start;
+    const deduction = await one(
+      pool,
+      `SELECT d.*,s.insurer_id FROM payroll_deductions d
+         JOIN payroll_subscriptions s ON s.id=d.subscription_id
+        WHERE s.insurer_id=$1 AND d.period_start=$2 LIMIT 1`,
+      [finance.orgId, period],
+    );
+    expect(deduction).toBeTruthy();
+    expect(BigInt(deduction.net_salary_minor)).toBe(
+      BigInt(deduction.gross_salary_minor) - BigInt(deduction.deduction_minor),
+    );
+    const scoped = await payroll.dashboard(facility);
+    expect(scoped.scope).toBe("FACILITY");
+    for (const subscription of scoped.subscriptions)
+      expect(subscription.facility_name).toBe("Demo Monrovia Clinic");
+  });
+
+  it("a new employment band creates a simulated subscription and current deduction", async () => {
+    const { PayrollService } = await import("../apps/api/src/payroll.ts");
+    const payroll = new PayrollService();
+    const band = await one(
+      pool,
+      "SELECT * FROM payroll_bands WHERE insurer_id=$1 AND level='ESSENTIAL_ENTRY'",
+      [finance.orgId],
+    );
+    const patient = await one(
+      pool,
+      `INSERT INTO patients(facility_id,display_name,birth_year,processing_basis,created_by)
+       VALUES($1,'Payroll test member',1991,'SYNTHETIC_DEMO_ONLY',$2) RETURNING id`,
+      [facility.orgId, facility.userId],
+    );
+    await pool.query(
+      `INSERT INTO insurer_patient_references(patient_id,insurer_id,external_reference,policy_reference,status,effective_from,effective_to,source_updated_at,benefits)
+       VALUES($1,$2,$3,$4,'ACTIVE',current_date-1,current_date+30,now(),'{}')`,
+      [
+        patient.id,
+        finance.orgId,
+        "PAYTEST-" + randomUUID(),
+        "PAYTEST-POLICY-" + randomUUID(),
+      ],
+    );
+    const result = await payroll.subscribe(finance, {
+      patientId: patient.id,
+      level: band.level,
+      employerName: "Synthetic Employer",
+      grossSalaryMinor: "25000",
+    });
+    expect(result.subscription.status).toBe("ACTIVE");
+    expect(result.deduction.deduction_minor).toBe(band.deduction_minor);
+    expect(BigInt(result.deduction.net_salary_minor)).toBe(
+      25000n - BigInt(band.deduction_minor),
+    );
+    await expect(
+      payroll.subscribe(finance, {
+        patientId: patient.id,
+        level: band.level,
+        employerName: "Synthetic Employer",
+        grossSalaryMinor: "999999999",
+      }),
+    ).rejects.toMatchObject({ code: "PAYROLL_SALARY_OUTSIDE_BAND" });
+  });
+
+  it("clean claims still require a human decision and inconsistent bills are flagged", async () => {
+    const { validateClaimNow } = await import("../apps/api/src/validation.ts");
+    const clean = await validationClaim("2317", "2317");
+    const cleanRun = await validateClaimNow(reviewer, clean.id);
+    expect(cleanRun.riskScore).toBe(0);
+    expect(cleanRun.automaticDecision).toBe(false);
+    expect(
+      (await one(pool, "SELECT state FROM claims WHERE id=$1", [clean.id]))
+        .state,
+    ).toBe("AWAITING_REVIEW");
+    const summary = await one(
+      pool,
+      "SELECT risk_score,summary FROM validation_runs WHERE claim_id=$1 ORDER BY created_at DESC LIMIT 1",
+      [clean.id],
+    );
+    expect(summary.risk_score).toBe(0);
+    expect(summary.summary.clean).toBe(true);
+    expect(summary.summary.automaticDecision).toBe(false);
+
+    const inconsistent = await validationClaim("2700", "2317");
+    const flagged = await validateClaimNow(reviewer, inconsistent.id);
+    expect(flagged.riskScore).toBeGreaterThan(0);
+    expect(
+      (await one(pool, "SELECT state FROM claims WHERE id=$1", [
+        inconsistent.id,
+      ])).state,
+    ).toBe("AWAITING_REVIEW");
+    const checks = await one(
+      pool,
+      "SELECT summary FROM validation_runs WHERE claim_id=$1 ORDER BY created_at DESC LIMIT 1",
+      [inconsistent.id],
+    );
+    expect(
+      checks.summary.checks.some(
+        (c: any) =>
+          c.status === "REVIEW" && String(c.detail).includes("itemized"),
+      ),
+    ).toBe(true);
+  });
+
+  it("a four-digit demo confirmation instantly settles wallets with LUX and Orange shares", async () => {
+    const { InstantPaymentService } =
+      await import("../apps/api/src/instant-payments.ts");
+    const instant = new InstantPaymentService();
+    const claim = await freshClaim("APPROVED", "100000");
+    const insurerBefore = await one(
+      pool,
+      "SELECT balance_minor FROM organization_wallets WHERE organization_id=$1 AND currency='USD'",
+      [finance.orgId],
+    );
+    const facilityBefore = await one(
+      pool,
+      "SELECT balance_minor FROM organization_wallets WHERE organization_id=$1 AND currency='USD'",
+      [facility.orgId],
+    );
+    const prepared = await instant.prepare(
+      finance,
+      claim.id,
+      { amountMinor: "100000", reason: "Synthetic instant-payment test" },
+      "instant-prepare-" + randomUUID(),
+    );
+    expect(prepared.demoCode).toMatch(/^\d{4}$/);
+    expect(prepared.payment.state).toBe("AUTHORIZED");
+    expect(prepared.warning).toContain("SIMULATION ONLY");
+    const confirmed = await instant.confirm(
+      finance,
+      prepared.payment.id,
+      {
+        challengeId: prepared.challengeId,
+        demoCode: prepared.demoCode,
+      },
+      String(prepared.payment.version),
+      "instant-confirm-" + randomUUID(),
+    );
+    expect(confirmed.payment.state).toBe("SETTLED");
+    expect(confirmed.settledNow).toBe(true);
+    const transfer = await one(
+      pool,
+      "SELECT * FROM wallet_transactions WHERE payment_id=$1 AND kind='SETTLEMENT'",
+      [prepared.payment.id],
+    );
+    expect(transfer).toBeTruthy();
+    expect(BigInt(transfer.lux_minor) + BigInt(transfer.orange_minor)).toBe(
+      BigInt(transfer.fee_total_minor),
+    );
+    expect(
+      BigInt(transfer.facility_credit_minor) +
+        BigInt(transfer.lux_minor) +
+        BigInt(transfer.orange_minor),
+    ).toBe(BigInt(transfer.insurer_debit_minor));
+    const insurerAfter = await one(
+      pool,
+      "SELECT balance_minor FROM organization_wallets WHERE organization_id=$1 AND currency='USD'",
+      [finance.orgId],
+    );
+    const facilityAfter = await one(
+      pool,
+      "SELECT balance_minor FROM organization_wallets WHERE organization_id=$1 AND currency='USD'",
+      [facility.orgId],
+    );
+    expect(BigInt(insurerBefore.balance_minor) - BigInt(insurerAfter.balance_minor)).toBe(
+      BigInt(transfer.insurer_debit_minor),
+    );
+    expect(BigInt(facilityAfter.balance_minor) - BigInt(facilityBefore.balance_minor)).toBe(
+      BigInt(transfer.facility_credit_minor),
+    );
+    const { FinanceService } = await import("../apps/api/src/finance.ts");
+    const financeService = new FinanceService();
+    const wallet = await financeService.wallet(finance);
+    expect(wallet.simulated).toBe(true);
+    const total = wallet.totals.find((t: any) => t.currency === "USD");
+    expect(total).toBeTruthy();
+    expect(BigInt(total!.luxMinor)).toBeGreaterThan(0);
+    expect(BigInt(total!.orangeMinor)).toBeGreaterThan(0);
+  });
+
+  it("a wrong demo code does not move money and no raw code is stored", async () => {
+    const { InstantPaymentService } =
+      await import("../apps/api/src/instant-payments.ts");
+    const instant = new InstantPaymentService();
+    const claim = await freshClaim("APPROVED", "5000");
+    const prepared = await instant.prepare(
+      finance,
+      claim.id,
+      { amountMinor: "5000", reason: "Synthetic wrong-code test" },
+      "instant-prepare-" + randomUUID(),
+    );
+    const wrong = prepared.demoCode === "0000" ? "0001" : "0000";
+    await expect(
+      instant.confirm(
+        finance,
+        prepared.payment.id,
+        { challengeId: prepared.challengeId, demoCode: wrong },
+        String(prepared.payment.version),
+        "instant-confirm-" + randomUUID(),
+      ),
+    ).rejects.toMatchObject({ code: "DEMO_CONFIRMATION_INCORRECT" });
+    const state = await one(pool, "SELECT state FROM payments WHERE id=$1", [
+      prepared.payment.id,
+    ]);
+    expect(state.state).toBe("AUTHORIZED");
+    expect(
+      await one(pool, "SELECT id FROM wallet_transactions WHERE payment_id=$1", [
+        prepared.payment.id,
+      ]),
+    ).toBeFalsy();
+    const stored = await one(
+      pool,
+      "SELECT code_hmac FROM demo_payment_challenges WHERE id=$1",
+      [prepared.challengeId],
+    );
+    expect(stored.code_hmac).not.toBe(prepared.demoCode);
+    expect(stored.code_hmac).toMatch(/^[a-f0-9]{64}$/);
   });
 });

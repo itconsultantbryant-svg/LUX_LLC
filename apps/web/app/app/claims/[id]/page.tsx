@@ -11,6 +11,7 @@ import {
   money,
   date,
 } from "../../../../components/workspace";
+import { InstantPayment } from "../../../../components/instant-payment";
 export default function ClaimDetail({
   params,
 }: {
@@ -145,6 +146,140 @@ export default function ClaimDetail({
                   </>
                 )}
               </section>
+              {c.latestValidation?.summary && (
+                <section className="panel">
+                  <h2>AI-assisted validation summary</h2>
+                  <p>
+                    <b>
+                      Risk {c.latestValidation.summary.riskLevel || "CLEAR"} ·{" "}
+                      {c.latestValidation.risk_score ?? 0}/100
+                    </b>
+                  </p>
+                  <ul className="sec-checks">
+                    {(c.latestValidation.summary.checks || []).map(
+                      (check: any) => (
+                        <li key={check.name}>
+                          <b>{check.name}:</b> {check.status} — {check.detail}
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                  <p>{c.latestValidation.summary.recommendation}</p>
+                  <p className="notice">
+                    {c.latestValidation.summary.advisory} AI assistance never
+                    approves a claim, rejects a claim or moves money. A human
+                    insurer decision is always required.
+                  </p>
+                </section>
+              )}
+              {org.permissions.includes("review") &&
+                ["SUBMITTED", "VALIDATING"].includes(c.state) && (
+                  <section className="panel">
+                    <h2>Validation</h2>
+                    <p>
+                      Run the deterministic checks and advisory extraction now.
+                      The claim still ends at human insurer review.
+                    </p>
+                    <button
+                      className="button secondary"
+                      disabled={action.busy}
+                      onClick={() =>
+                        action.run(`/claims/${id}/validation-runs`, {})
+                      }
+                    >
+                      Run AI-assisted validation
+                    </button>
+                  </section>
+                )}
+              {org.permissions.includes("payroll") && (
+                <section className="panel">
+                  <h2>Salary-funded cover</h2>
+                  {c.payrollCover ? (
+                    <>
+                      <p>
+                        <b>{c.payrollCover.package_name}</b> ·{" "}
+                        {c.payrollCover.band_label} ·{" "}
+                        {c.payrollCover.employment_level}
+                      </p>
+                      <dl className="key-values">
+                        <div>
+                          <dt>Employer</dt>
+                          <dd>{c.payrollCover.employer_name}</dd>
+                        </div>
+                        <div>
+                          <dt>Gross salary</dt>
+                          <dd>
+                            {money(
+                              c.payrollCover.gross_salary_minor,
+                              c.payrollCover.currency,
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Deduction</dt>
+                          <dd>
+                            {money(
+                              c.payrollCover.latest_deduction_minor ||
+                                c.payrollCover.deduction_minor,
+                              c.payrollCover.currency,
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Last period</dt>
+                          <dd>{date(c.payrollCover.latest_period)}</dd>
+                        </div>
+                      </dl>
+                      <div className="notice">
+                        Simulated payroll record. No real salary was deducted.
+                      </div>
+                    </>
+                  ) : (
+                    <div className="notice">
+                      No active payroll subscription is recorded for this
+                      member. Insurer verification is required before cover is
+                      assumed.
+                    </div>
+                  )}
+                </section>
+              )}
+              {["APPROVED", "PARTIALLY_APPROVED"].includes(c.state) &&
+                org.type === "INSURER" &&
+                org.permissions.includes("payments.authorize") &&
+                org.permissions.includes("payments.execute") && (
+                  <InstantPayment claim={c} reload={reload} />
+                )}
+              {c.walletSettlements?.length > 0 && (
+                <section className="panel">
+                  <h2>Wallet settlement history</h2>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Kind</th>
+                          <th>From</th>
+                          <th>To</th>
+                          <th>Principal</th>
+                          <th>LUX</th>
+                          <th>Orange</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {c.walletSettlements.map((row: any) => (
+                          <tr key={row.id}>
+                            <td>{row.kind}</td>
+                            <td>{row.from_organization_name}</td>
+                            <td>{row.to_organization_name}</td>
+                            <td>{money(row.principal_minor, row.currency)}</td>
+                            <td>{money(row.lux_minor, row.currency)}</td>
+                            <td>{money(row.orange_minor, row.currency)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
               {c.patient && (
                 <section className="panel">
                   <h2>Validation findings</h2>

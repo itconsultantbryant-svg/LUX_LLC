@@ -1,141 +1,21 @@
 import { pool, transaction, one, type DB } from "../../../packages/db/index.ts";
 import { assistValidation, paymentAdapter } from "../../api/src/adapters.ts";
 import { applyVerifiedResult } from "../../api/src/payments.ts";
+import { runClaimValidation } from "../../api/src/validation.ts";
 import { scanAttachment } from "../../api/src/storage.ts";
 export async function validateClaimJob(
   db: DB,
   job: any,
   assist = assistValidation,
 ) {
-  const c = await one(
+  return runClaimValidation(
     db,
-    "SELECT * FROM claims WHERE id=$1 AND facility_id=$2 FOR UPDATE",
-    [job.resource_id, job.organization_id],
-  );
-  if (
-    !c ||
-    c.state !== "SUBMITTED" ||
-    c.submission_version !== job.payload.submissionVersion
-  )
-    return;
-  await db.query(
-    `UPDATE claims SET state='VALIDATING',version=version+1 WHERE id=$1`,
-    [c.id],
-  );
-  const version = await one(
-    db,
-    "SELECT snapshot FROM claim_versions WHERE claim_id=$1 AND version=$2",
-    [c.id, c.submission_version],
-  );
-  const run = await one(
-    db,
-    `INSERT INTO validation_runs(claim_id,input_version,ruleset_version,model_version,status) VALUES($1,$2,'pilot-completeness-v1','deterministic-no-clinical-inference-v1','RUNNING') RETURNING id`,
-    [c.id, c.submission_version],
-  );
-  const snapshot = version.snapshot;
-  const findings: any[] = [];
-  const add = (
-    field: string,
-    category: string,
-    reason: string,
-    evidence: string,
-  ) =>
-    findings.push({
-      field,
-      category,
-      reason,
-      evidence,
-      severity: "REVIEW",
-      confidence: null,
-    });
-  if (
-    snapshot.eligibility.status !== "ACTIVE" ||
-    Date.now() - new Date(snapshot.eligibility.checked_at).getTime() > 86400000
-  )
-    add(
-      "eligibility",
-      "COVERAGE",
-      "Coverage is uncertain or stale. Insurer verification is required.",
-      "eligibility snapshot",
-    );
-  if (!snapshot.encounter.notes || !snapshot.encounter.diagnosis)
-    add(
-      "encounter",
-      "COMPLETENESS",
-      "Encounter documentation is incomplete.",
-      "submitted encounter",
-    );
-  for (const item of snapshot.items) {
-    const tariff = await one(
-      db,
-      `SELECT ti.* FROM tariff_items ti JOIN tariff_sets ts ON ts.id=ti.tariff_set_id WHERE ts.insurer_id=$1 AND ti.code=$2 AND ti.currency=$3 AND $4::date BETWEEN ts.effective_from AND ts.effective_to ORDER BY ts.version DESC LIMIT 1`,
-      [c.insurer_id, item.code, c.currency, snapshot.encounter.service_date],
-    );
-    if (!tariff)
-      add(
-        "item." + item.id,
-        "TARIFF",
-        "No applicable pilot tariff found.",
-        "bill item " + item.code,
-      );
-    else if (BigInt(item.unit_minor) > BigInt(tariff.max_unit_minor))
-      add(
-        "item." + item.id,
-        "TARIFF",
-        "Submitted unit charge exceeds the applicable tariff.",
-        "tariff " + tariff.id,
-      );
-  }
-  const duplicate = await one(
-    db,
-    `SELECT reference FROM claims WHERE id<>$1 AND patient_id=$2 AND insurer_id=$3 AND submitted_minor=$4 AND created_at>$5::timestamptz-interval '7 days' AND state<>'DRAFT' LIMIT 1`,
-    [c.id, c.patient_id, c.insurer_id, c.submitted_minor, c.created_at],
-  );
-  if (duplicate)
-    add(
-      "claim",
-      "DUPLICATE",
-      "A similar submission exists; repeat care may still be valid.",
-      "claim " + duplicate.reference,
-    );
-  try {
-    const ai = await assist(snapshot);
-    findings.push(...ai.findings);
-    await db.query(
-      `UPDATE validation_runs SET status='COMPLETED',completed_at=now() WHERE id=$1`,
-      [run.id],
-    );
-  } catch {
-    await db.query(
-      `UPDATE validation_runs SET status='PROCESSING_ERROR',processing_error='AI_ADAPTER_UNAVAILABLE',completed_at=now() WHERE id=$1`,
-      [run.id],
-    );
-  }
-  for (const f of findings)
-    await db.query(
-      "INSERT INTO findings(validation_run_id,field,category,severity,reason,evidence,confidence) VALUES($1,$2,$3,$4,$5,$6,$7)",
-      [
-        run.id,
-        f.field,
-        f.category,
-        f.severity,
-        f.reason,
-        f.evidence,
-        f.confidence,
-      ],
-    );
-  // Even a clean deterministic run always requires an insurer human decision.
-  await db.query(
-    `UPDATE claims SET state='AWAITING_REVIEW',version=version+1,updated_at=now() WHERE id=$1`,
-    [c.id],
-  );
-  await db.query(
-    `INSERT INTO outbox_events(type,organization_id,resource_id) VALUES('ValidationCompleted',$1,$2)`,
-    [c.insurer_id, c.id],
-  );
-  await db.query(
-    `INSERT INTO audit_events(organization_id,action,resource_id) VALUES($1,'ValidationCompleted',$2)`,
-    [c.insurer_id, c.id],
+    {
+      claimId: job.resource_id,
+      facilityId: job.organization_id,
+      submissionVersion: job.payload.submissionVersion,
+    },
+    assist,
   );
 }
 export async function tick() {

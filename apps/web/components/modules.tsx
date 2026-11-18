@@ -1196,6 +1196,645 @@ export function SupportModule() {
     </>
   );
 }
+export function PayrollModule() {
+  const q = useData("/payroll");
+  const action = useAction();
+  const d = q.data;
+  const totals: any[] = Array.isArray(d?.totals) ? d.totals : [];
+  const subscriptions: any[] = Array.isArray(d?.subscriptions)
+    ? d.subscriptions
+    : [];
+  const deductions: any[] = Array.isArray(d?.deductions) ? d.deductions : [];
+  const bands: any[] = Array.isArray(d?.bands) ? d.bands : [];
+  const eligible: any[] = Array.isArray(d?.eligiblePatients)
+    ? d.eligiblePatients
+    : [];
+  const members = totals.reduce(
+    (sum, row) => sum + Number(row.members || 0),
+    0,
+  );
+  const monthly = totals.reduce(
+    (sum, row) => sum + BigInt(row.monthlyDeductionMinor || 0),
+    0n,
+  );
+  const deducted = totals.reduce(
+    (sum, row) => sum + BigInt(row.deductedThisPeriodMinor || 0),
+    0n,
+  );
+  return (
+    <>
+      <SectionHero
+        eyebrow="Finance & settlement"
+        title="Payroll & salary cover."
+        text="Insurer packages are linked to employment bands. The current month's simulated deduction is recorded automatically for every active member, and the cover travels with the patient into claim validation."
+        image="team-at-work"
+        badge={{
+          label: "Active members",
+          value: members,
+          note: "Simulated payroll records",
+        }}
+        actions={[
+          { href: "/app/wallet", label: "Wallet & float", icon: Wallet },
+          { href: "/app/claims", label: "Review claims", icon: FileText },
+        ]}
+      />
+      <Feedback action={action} />
+      <DataBoundary loading={q.loading} error={q.error} retry={q.reload}>
+        {!d ? (
+          <p role="status">Loading payroll records…</p>
+        ) : (
+          <>
+            <div className="notice">
+              {d.simulationNotice} Automatic period: {d.period.label}.
+            </div>
+            <SectionMetrics
+              items={[
+                {
+                  icon: Users,
+                  label: "Active members",
+                  value: members,
+                  note: "With salary-funded cover",
+                  tone: "navy",
+                },
+                {
+                  icon: BadgeDollarSign,
+                  label: "Monthly deductions",
+                  value: money(monthly),
+                  note: d.period.label,
+                  tone: "green",
+                },
+                {
+                  icon: ReceiptText,
+                  label: "Deducted this period",
+                  value: money(deducted),
+                  note: "Simulated only",
+                  tone: "orange",
+                },
+                {
+                  icon: Layers3,
+                  label: "Packages & bands",
+                  value: `${d.packages.length} / ${bands.length}`,
+                  note: "Insurer-defined cover",
+                },
+              ]}
+            />
+            <SectionPanel
+              eyebrow="Catalogue"
+              title="Packages and employment bands"
+              count={`${bands.length} bands`}
+            >
+              <SectionTable
+                caption="Payroll packages and employment bands"
+                rows={bands}
+                columns={[
+                  {
+                    label: "Package",
+                    render: (row) => (
+                      <>
+                        <b>{row.package_name}</b>
+                        <br />
+                        <small>
+                          {row.package_code} ·{" "}
+                          {money(row.monthly_premium_minor)} reference premium
+                        </small>
+                      </>
+                    ),
+                  },
+                  { label: "Employment band", render: (row) => row.label },
+                  {
+                    label: "Salary range",
+                    render: (row) =>
+                      `${money(row.min_salary_minor)} – ${
+                        row.max_salary_minor
+                          ? money(row.max_salary_minor)
+                          : "and above"
+                      }`,
+                  },
+                  {
+                    label: "Deduction",
+                    render: (row) => money(row.deduction_minor),
+                    align: "right",
+                  },
+                  {
+                    label: "Members",
+                    render: (row) => row.members,
+                    align: "right",
+                  },
+                ]}
+                empty={
+                  <Empty
+                    title="No packages configured."
+                    text="Packages and employment bands appear here once the insurer catalogue is available."
+                  />
+                }
+              />
+            </SectionPanel>
+            {d.canManage && (
+              <SectionPanel
+                eyebrow="Enrolment"
+                title="Add a salary-funded member"
+                count={`${eligible.length} eligible`}
+              >
+                <p>
+                  Choose an eligible member and an employment band. The band
+                  fixes the monthly deduction recorded in the demo payroll
+                  ledger. No real employer payroll is contacted.
+                </p>
+                <form
+                  className="stack-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    const form = event.currentTarget;
+                    const data = Object.fromEntries(new FormData(form));
+                    const result = await action.run("/payroll/subscriptions", {
+                      patientId: data.patientId,
+                      level: data.level,
+                      employerName: data.employerName,
+                      grossSalaryMinor: String(data.grossSalaryMinor),
+                    });
+                    if (result) form.reset();
+                  }}
+                >
+                  <label>
+                    Member
+                    <select name="patientId" required defaultValue="">
+                      <option value="" disabled>
+                        Select an eligible member
+                      </option>
+                      {eligible.map((patient) => (
+                        <option value={patient.id} key={patient.id}>
+                          {patient.display_name} · {patient.facility_name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Employment band
+                    <select name="level" required defaultValue="">
+                      <option value="" disabled>
+                        Select a band
+                      </option>
+                      {bands.map((band) => (
+                        <option value={band.level} key={band.level}>
+                          {band.package_name} · {band.label} ·{" "}
+                          {money(band.deduction_minor)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Employer
+                    <input
+                      name="employerName"
+                      minLength={2}
+                      maxLength={120}
+                      required
+                      placeholder="Synthetic employer name"
+                    />
+                  </label>
+                  <label>
+                    Gross monthly salary (minor units)
+                    <input
+                      name="grossSalaryMinor"
+                      inputMode="numeric"
+                      pattern="[0-9]+"
+                      defaultValue="60000"
+                      required
+                    />
+                  </label>
+                  <button className="button" disabled={action.busy}>
+                    Enrol member
+                  </button>
+                </form>
+              </SectionPanel>
+            )}
+            {d.scope === "INSURER" && (
+              <SectionPanel
+                eyebrow="Automation"
+                title="Monthly deduction run"
+                count={d.period.label}
+              >
+                <p>
+                  The demo run is idempotent: a member receives one simulated
+                  deduction per calendar month, even if the dashboard is opened
+                  repeatedly.
+                </p>
+                <button
+                  className="button secondary"
+                  disabled={action.busy}
+                  onClick={() => action.run("/payroll/run", {})}
+                >
+                  Record this month's simulated deductions
+                </button>
+              </SectionPanel>
+            )}
+            <SectionPanel
+              eyebrow="Members"
+              title="Salary-funded subscriptions"
+              count={`${subscriptions.length} records`}
+            >
+              <SectionTable
+                caption="Salary-funded payroll subscriptions"
+                rows={subscriptions}
+                columns={[
+                  { label: "Member", render: (row) => row.patient_name },
+                  { label: "Employer", render: (row) => row.employer_name },
+                  {
+                    label: "Cover",
+                    render: (row) => (
+                      <>
+                        {row.package_name}
+                        <br />
+                        <small>{row.band_label}</small>
+                      </>
+                    ),
+                  },
+                  {
+                    label: "Salary",
+                    render: (row) => money(row.gross_salary_minor, row.currency),
+                    align: "right",
+                  },
+                  {
+                    label: "Deduction",
+                    render: (row) =>
+                      money(
+                        row.latest_deduction_minor || row.deduction_minor,
+                        row.currency,
+                      ),
+                    align: "right",
+                  },
+                  { label: "Period", render: (row) => day(row.latest_period) },
+                  {
+                    label: "Status",
+                    render: (row) => (
+                      <>
+                        <Status value={row.latest_status || row.status} />
+                        {row.simulated && (
+                          <small className="sec-tag"> simulated</small>
+                        )}
+                      </>
+                    ),
+                  },
+                ]}
+                empty={
+                  <Empty
+                    title="No salary-funded members yet."
+                    text="Enrol a member above to link cover to an employment band."
+                  />
+                }
+              />
+            </SectionPanel>
+            <SectionPanel
+              eyebrow="Ledger"
+              title="Recent payroll deductions"
+              count={`${deductions.length} records`}
+            >
+              <SectionTable
+                caption="Recent simulated payroll deductions"
+                rows={deductions}
+                columns={[
+                  { label: "Period", render: (row) => day(row.period_start) },
+                  { label: "Member", render: (row) => row.patient_name },
+                  { label: "Employer", render: (row) => row.employer_name },
+                  {
+                    label: "Gross",
+                    render: (row) => money(row.gross_salary_minor, row.currency),
+                    align: "right",
+                  },
+                  {
+                    label: "Deduction",
+                    render: (row) => money(row.deduction_minor, row.currency),
+                    align: "right",
+                  },
+                  {
+                    label: "Net",
+                    render: (row) => money(row.net_salary_minor, row.currency),
+                    align: "right",
+                  },
+                  { label: "Status", render: (row) => <Status value={row.status} /> },
+                ]}
+                empty={
+                  <Empty
+                    title="No deductions recorded."
+                    text="Deductions appear after the current period run."
+                  />
+                }
+              />
+            </SectionPanel>
+          </>
+        )}
+      </DataBoundary>
+    </>
+  );
+}
+
+export function WalletModule() {
+  const q = useData("/finance/wallet", 3000);
+  const action = useAction();
+  const d = q.data;
+  const wallets: any[] = Array.isArray(d?.wallets) ? d.wallets : [];
+  const transfers: any[] = Array.isArray(d?.transactions)
+    ? d.transactions
+    : [];
+  const totals: any[] = Array.isArray(d?.totals) ? d.totals : [];
+  const payable: any[] = Array.isArray(d?.payableClaims)
+    ? d.payableClaims
+    : [];
+  const platform = d?.scope === "PLATFORM";
+  const ownBalance = wallets
+    .filter((wallet) => !platform || wallet.organization_type === "INSURER")
+    .reduce((sum, wallet) => sum + BigInt(wallet.balance_minor || 0), 0n);
+  const facilityCredited = totals.reduce(
+    (sum, row) => sum + BigInt(row.facilityCreditedMinor || 0),
+    0n,
+  );
+  const fees = totals.reduce(
+    (sum, row) => sum + BigInt(row.feesMinor || 0),
+    0n,
+  );
+  const lux = totals.reduce(
+    (sum, row) => sum + BigInt(row.luxMinor || 0),
+    0n,
+  );
+  const orange = totals.reduce(
+    (sum, row) => sum + BigInt(row.orangeMinor || 0),
+    0n,
+  );
+  const transfersCount = totals.reduce(
+    (sum, row) => sum + Number(row.count || 0),
+    0,
+  );
+  return (
+    <>
+      <SectionHero
+        eyebrow="Finance & settlement"
+        title="Wallet & float."
+        text="A transparent simulation of insurer-funded Orange Money settlement. Facility balances and the LUX/Orange fee shares update as soon as a demo payment settles, and the view refreshes every three seconds."
+        image="team-at-work"
+        badge={{
+          label: platform ? "Insurer demo float" : "Available demo balance",
+          value: money(ownBalance),
+          note: "Simulated · refreshes every 3s",
+        }}
+        actions={[
+          { href: "/app/payroll", label: "Payroll cover", icon: Users },
+          { href: "/app/payments", label: "Payments", icon: ReceiptText },
+        ]}
+      />
+      <Feedback action={action} />
+      <DataBoundary loading={q.loading} error={q.error} retry={q.reload}>
+        {!d ? (
+          <p role="status">Loading wallet records…</p>
+        ) : (
+          <>
+            <div className="notice">
+              {d.simulationNotice} This view refreshes every three seconds.
+            </div>
+            <SectionMetrics
+              items={[
+                {
+                  icon: Wallet,
+                  label: platform ? "Insurer demo float" : "Available balance",
+                  value: money(ownBalance),
+                  note: "Simulated wallet",
+                  tone: "green",
+                },
+                {
+                  icon: ReceiptText,
+                  label: "Settled transfers",
+                  value: transfersCount,
+                  note: "Settlement less reversals",
+                  tone: "navy",
+                },
+                {
+                  icon: Building2,
+                  label: "Credited to facilities",
+                  value: money(facilityCredited),
+                  note: "Facility net of fees",
+                  tone: "orange",
+                },
+                {
+                  icon: BadgeDollarSign,
+                  label: "LUX / Orange share",
+                  value: `${money(lux)} / ${money(orange)}`,
+                  note: `${money(fees)} total service fees`,
+                },
+              ]}
+            />
+            <SectionPanel
+              eyebrow="Balances"
+              title="Simulated Orange Money wallets"
+              count={`${wallets.length} wallets`}
+            >
+              <SectionTable
+                caption="Simulated Orange Money wallet balances"
+                rows={wallets}
+                columns={[
+                  { label: "Organization", render: (row) => row.organization_name },
+                  { label: "Type", render: (row) => humanize(row.organization_type) },
+                  { label: "Currency", render: (row) => row.currency },
+                  {
+                    label: "Balance",
+                    render: (row) => money(row.balance_minor, row.currency),
+                    align: "right",
+                  },
+                  {
+                    label: "Updated",
+                    render: (row) => date(row.updated_at),
+                  },
+                  {
+                    label: "Mode",
+                    render: (row) => (row.simulated ? "Simulated" : "Live"),
+                  },
+                ]}
+                empty={
+                  <Empty
+                    title="No wallet provisioned."
+                    text="A simulated wallet is created when the organization is configured."
+                  />
+                }
+              />
+            </SectionPanel>
+            <SectionPanel
+              eyebrow="Fee split"
+              title="LUX and Orange shared percentages"
+              count={`${transfersCount} transfers`}
+            >
+              <dl className="key-values">
+                {totals.map((row) => (
+                  <div key={row.currency}>
+                    <dt>{row.currency} service fees</dt>
+                    <dd>
+                      {money(row.feesMinor, row.currency)} total ·{" "}
+                      {money(row.luxMinor, row.currency)} LUX ·{" "}
+                      {money(row.orangeMinor, row.currency)} Orange
+                    </dd>
+                  </div>
+                ))}
+                {!totals.length && (
+                  <div>
+                    <dt>No settled transfers</dt>
+                    <dd>
+                      The 1% LUX and 1% Orange shares appear here after the
+                      first instant payment.
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </SectionPanel>
+            {payable.length > 0 && (
+              <SectionPanel
+                eyebrow="Ready to pay"
+                title="Approved claims with a payable remainder"
+                count={`${payable.length} claims`}
+              >
+                <SectionTable
+                  caption="Approved claims ready for instant payment"
+                  rows={payable}
+                  columns={[
+                    {
+                      label: "Claim",
+                      render: (row) => (
+                        <Link href={"/app/claims/" + row.id}>{row.reference}</Link>
+                      ),
+                    },
+                    { label: "Member", render: (row) => row.patient_name },
+                    { label: "Facility", render: (row) => row.facility_name },
+                    {
+                      label: "Payable",
+                      render: (row) => money(row.payable_minor, row.currency),
+                      align: "right",
+                    },
+                    {
+                      label: "Action",
+                      render: (row) => (
+                        <Link className="inline-button" href={"/app/claims/" + row.id}>
+                          Open instant payment
+                        </Link>
+                      ),
+                    },
+                  ]}
+                  empty={<Empty />}
+                />
+              </SectionPanel>
+            )}
+            {d.canFund && (
+              <SectionPanel eyebrow="Platform" title="Add demo float">
+                <p>
+                  Demo float is an append-only simulated funding record. It is
+                  not a customer deposit and LUX holds no customer money.
+                </p>
+                <form
+                  className="stack-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    const form = event.currentTarget;
+                    const data = Object.fromEntries(new FormData(form));
+                    const result = await action.run("/finance/wallet/fundings", {
+                      organizationId: data.organizationId,
+                      currency: "USD",
+                      amountMinor: String(data.amountMinor),
+                      reason: String(data.reason),
+                    });
+                    if (result) form.reset();
+                  }}
+                >
+                  <label>
+                    Organization
+                    <select name="organizationId" required defaultValue="">
+                      <option value="" disabled>
+                        Select an insurer
+                      </option>
+                      {wallets
+                        .filter(
+                          (wallet) =>
+                            wallet.organization_type === "INSURER" &&
+                            wallet.currency === "USD",
+                        )
+                        .map((wallet) => (
+                          <option
+                            value={wallet.organization_id}
+                            key={wallet.organization_id}
+                          >
+                            {wallet.organization_name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label>
+                    Amount (minor units)
+                    <input
+                      name="amountMinor"
+                      inputMode="numeric"
+                      pattern="[0-9]+"
+                      defaultValue="1000000"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Reason
+                    <input
+                      name="reason"
+                      minLength={5}
+                      maxLength={240}
+                      defaultValue="Demo float top-up for settlement testing"
+                      required
+                    />
+                  </label>
+                  <button className="button" disabled={action.busy}>
+                    Record simulated float
+                  </button>
+                </form>
+              </SectionPanel>
+            )}
+            <SectionPanel
+              eyebrow="Ledger"
+              title="Recent wallet transfers"
+              count={`${transfers.length} records`}
+            >
+              <SectionTable
+                caption="Recent simulated wallet transfers"
+                rows={transfers}
+                columns={[
+                  {
+                    label: "Time",
+                    render: (row) => date(row.created_at),
+                  },
+                  { label: "From", render: (row) => row.from_organization_name },
+                  { label: "To", render: (row) => row.to_organization_name },
+                  { label: "Kind", render: (row) => <Status value={row.kind} /> },
+                  {
+                    label: "Principal",
+                    render: (row) => money(row.principal_minor, row.currency),
+                    align: "right",
+                  },
+                  {
+                    label: "Fee",
+                    render: (row) => money(row.fee_total_minor, row.currency),
+                    align: "right",
+                  },
+                  {
+                    label: "LUX / Orange",
+                    render: (row) =>
+                      `${money(row.lux_minor, row.currency)} / ${money(row.orange_minor, row.currency)}`,
+                    align: "right",
+                  },
+                ]}
+                empty={
+                  <Empty
+                    title="No transfers yet."
+                    text="Open an approved claim and complete the four-digit demo confirmation to see an instant settlement."
+                  />
+                }
+              />
+            </SectionPanel>
+          </>
+        )}
+      </DataBoundary>
+    </>
+  );
+}
+
 export function EncountersModule() {
   const q = useData("/encounters");
   const patients = useData("/patients");

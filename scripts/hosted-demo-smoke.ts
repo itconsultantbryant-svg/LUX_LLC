@@ -204,6 +204,113 @@ try {
   results.push(
     "Explicit demo checker substitution, mandatory demo-only confirmation, idempotent execution and simulated settlement",
   );
+  const payroll = await insurer.api("/payroll");
+  expect(payroll.simulated).toBe(true);
+  expect(payroll.packages.length).toBeGreaterThan(0);
+  expect(payroll.bands.length).toBeGreaterThan(0);
+  expect(payroll.subscriptions.length).toBeGreaterThan(0);
+  expect(payroll.totals.length).toBeGreaterThan(0);
+  const facilityPayroll = await facility.api("/payroll");
+  expect(facilityPayroll.scope).toBe("FACILITY");
+  const walletBefore = await facility.api("/finance/wallet");
+  const facilityBefore = walletBefore.wallets.find(
+    (w: any) => w.organization_id === facility.org && w.currency === "USD",
+  );
+  expect(facilityBefore).toBeTruthy();
+
+  const coverage2 = await facility.api("/eligibility-checks", "POST", {
+    patientId,
+    insurerId,
+  });
+  const encounter2 = await facility.api("/encounters", "POST", {
+    patientId,
+    serviceDate: new Date().toISOString().slice(0, 10),
+    diagnosis: "SYNTHETIC HOSTED INSTANT PAYMENT CHECK",
+    notes: "Synthetic instant settlement test only; no real patient information.",
+    prescription: [],
+  });
+  let instantClaim = await facility.api("/claims", "POST", {
+    patientId,
+    insurerId,
+    encounterId: encounter2.id,
+    eligibilityId: coverage2.id,
+    currency: "USD",
+    items: [
+      {
+        code: "PILOT-CONSULT",
+        description: "Synthetic hosted instant settlement consultation",
+        quantity: 1,
+        unitMinor: "4400",
+      },
+    ],
+  });
+  instantClaim = await facility.api(
+    `/claims/${instantClaim.id}/submit`,
+    "POST",
+    {},
+    instantClaim.version,
+  );
+  await drain();
+  instantClaim = await insurer.api("/claims/" + instantClaim.id);
+  instantClaim = await insurer.api(
+    `/claims/${instantClaim.id}/decisions`,
+    "POST",
+    {
+      outcome: "APPROVED",
+      approvedMinor: "4400",
+      reason:
+        "Human synthetic instant-settlement verification; not an actual medical or insurance decision.",
+    },
+    instantClaim.version,
+  );
+  const prepared = await insurer.api(
+    `/claims/${instantClaim.id}/instant-payment`,
+    "POST",
+    {
+      amountMinor: "4400",
+      reason: "Synthetic hosted instant settlement verification only",
+    },
+  );
+  expect(prepared.demoCode).toMatch(/^\d{4}$/);
+  expect(prepared.warning).toContain("SIMULATION ONLY");
+  expect(prepared.payment.state).toBe("AUTHORIZED");
+  const confirmed = await insurer.api(
+    `/payments/${prepared.payment.id}/instant-payment`,
+    "POST",
+    {
+      challengeId: prepared.challengeId,
+      demoCode: prepared.demoCode,
+    },
+    prepared.payment.version,
+  );
+  expect(confirmed.settledNow).toBe(true);
+  expect(confirmed.payment.state).toBe("SETTLED");
+  const transfer = confirmed.wallet;
+  expect(BigInt(transfer.insurer_debit_minor)).toBe(
+    BigInt(transfer.facility_credit_minor) +
+      BigInt(transfer.lux_minor) +
+      BigInt(transfer.orange_minor),
+  );
+  expect(BigInt(transfer.lux_minor) + BigInt(transfer.orange_minor)).toBe(
+    BigInt(transfer.fee_total_minor),
+  );
+  expect(BigInt(transfer.lux_minor)).toBe(BigInt(transfer.orange_minor));
+  const walletAfter = await facility.api("/finance/wallet");
+  const facilityAfter = walletAfter.wallets.find(
+    (w: any) => w.organization_id === facility.org && w.currency === "USD",
+  );
+  expect(
+    BigInt(facilityAfter.balance_minor) - BigInt(facilityBefore.balance_minor),
+  ).toBe(BigInt(transfer.facility_credit_minor));
+  const insurerWallet = await insurer.api("/finance/wallet");
+  const totals = insurerWallet.totals.find((t: any) => t.currency === "USD");
+  expect(totals).toBeTruthy();
+  expect(BigInt(totals.luxMinor)).toBeGreaterThan(0);
+  expect(BigInt(totals.orangeMinor)).toBeGreaterThan(0);
+  expect(insurerWallet.fundings.length).toBeGreaterThan(0);
+  results.push(
+    "Live payroll cover, instant four-digit demo settlement, facility wallet credit and LUX/Orange fee split",
+  );
   const pdf = await insurer.client.get("/api/v1/statements/pdf", {
     headers: { "X-Organization-ID": insurer.org },
   });

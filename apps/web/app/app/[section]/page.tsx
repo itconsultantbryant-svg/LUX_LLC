@@ -13,6 +13,8 @@ import {
   GenericModule,
   EncountersModule,
   DestinationModule,
+  PayrollModule,
+  WalletModule,
 } from "../../../components/modules";
 export default function ModulePage({
   params,
@@ -25,6 +27,10 @@ export default function ModulePage({
       return <EncountersModule />;
     case "payments":
       return <PaymentsModule />;
+    case "payroll":
+      return <PayrollModule />;
+    case "wallet":
+      return <WalletModule />;
     case "eligibility":
       return <EligibilityModule />;
     case "reconciliation":
