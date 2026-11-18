@@ -1,5 +1,13 @@
 # LUX HealthPay demo handoff
 
+## Payroll, validation and instant settlement status
+
+Salary-funded insurance packages now link to employment bands and record a simulated monthly deduction for every active member. Facilities and insurers see scoped payroll dashboards, claim detail shows the member's cover, and the insurer can run the current period's deduction idempotently. AI-assisted validation produces a deterministic risk summary with advisory findings; it never approves, declines or moves money, and every claim still ends at human insurer review.
+
+The demo instant-payment path issues a server-generated four-digit confirmation code, shown once and stored only as an HMAC. It is not a real Orange Money PIN and is never sent to a provider. Confirming it settles the insurer's simulated wallet to the facility wallet and the LUX/Orange fee-share wallets atomically, with 1% LUX and 1% Orange of the 2% service fee. The facility and platform wallet views refresh every three seconds, and every record is labelled simulated. Demo float is recorded in an append-only ledger; LUX holds no customer money.
+
+Verification on 18 November 2026: type checks passed, the production build passed, 17/17 browser cases passed against it, and 46/47 domain/PostgreSQL tests passed on the full run with one pre-existing dashboard test timing out under local load and passing on isolated rerun in 9.2 seconds. Migration `006` and the idempotent payroll/wallet backfill were applied to the hosted demo database. Commit `da9b934` was pushed, and `luxapi` deployment 7 and `luxworker` deployment 6 carry the matching API. The hosted synthetic smoke passed payroll scoping, instant demo settlement, facility wallet credit and fee conservation against `https://luxllc.vercel.app`.
+
 ## Workspace section design status
 
 All sidebar destinations now match the dashboard design system. Returned claims, flagged claims, decisions and appeals, coverage and tariffs, contracted organizations, organizations, organization requests, public enquiries, integration health, validation operations and audit history each have an image-backed header, live metric cards, search and status filters, a designed table or card view, explicit empty states, and permission-scoped records. Insurer control of coverage and decisions, maker/checker separation, simulated-payment labeling and the no-customer-money rule remain visible where they apply. Verification on 17 November 2026 passed 42/42 domain/PostgreSQL tests, type checks, the production build, 17/17 browser cases and axe checks with zero violations across all designed section pages.
@@ -23,7 +31,7 @@ The production-facing redesign was verified locally on 15 November 2026: 39/39 d
 
 - Public site and login: **https://luxllc.vercel.app** and **https://luxllc.vercel.app/login**.
 - Vercel project: `lux_llc`, Next.js `apps/web`, Node 24; server-only API proxy configuration.
-- New isolated Neon project: `lux-healthpay-demo` / `blue-morning-83165791`; branch `main` / `br-calm-lab-bcgucbxy`; PostgreSQL 18, migrations 001–005.
+- New isolated Neon project: `lux-healthpay-demo` / `blue-morning-83165791`; branch `main` / `br-calm-lab-bcgucbxy`; PostgreSQL 18, migrations 001–006.
 - Shared API: `https://br-calm-lab-bcgucbxy-luxapi.compute.c-16.us-east-1.aws.neon.tech`.
 - Durable worker: separate `luxworker` function; `lux-durable-jobs` trigger every minute. Actual scheduled execution is confirmed in Neon logs. Unauthenticated manual invocations are denied.
 - **Legacy `healthwallet-liberia` project remains untouched.** The new foundation schema is not compatible with applying migrations to that legacy database.
