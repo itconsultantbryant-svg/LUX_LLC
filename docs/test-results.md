@@ -12,6 +12,10 @@
 - `pnpm test`: **51/51 passed**.
 - `pnpm build`: **passed** with Next.js 16.4.6.
 - Browser suite against the optimized production build: **17/17 passed**, including facility and insurer navigation, scoped dashboards, responsive widths and automated accessibility checks.
+- Commit `600dcbe` was pushed to `origin/main`. The canonical Vercel project `lux_llc` deployment `dpl_9fDJeGaXPKNZAYMCMXJdrHoXKbuq` identifies that commit and serves `https://luxllc.vercel.app`; the separate legacy `lux` project still reports failure and is not the canonical alias.
+- `luxapi` deployment 8 and `luxworker` deployment 7 were rebuilt and deployed from the same revision.
+- Hosted synthetic smoke passed against `https://luxllc.vercel.app`, including payroll scoping, instant four-digit demo settlement, facility wallet credit, LUX/Orange fee conservation, reports, PDF, admin metrics and worker rejection.
+- Targeted hosted isolation checks passed: facility payment rows contain no maker/checker names or user IDs, the insurer still sees its own maker identity, the facility wallet and transfer history contain only its own records, and the deployed sidebar shows Encounters to the facility but not to the insurer.
 - No database migration, hosted reset, real salary deduction or real Orange Money transfer was performed. Platform operator roles retain their documented network-level oversight.
 
 ## Payroll cover, AI validation and instant wallet settlement — 18 November 2026
