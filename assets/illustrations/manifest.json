@@ -1,5 +1,5 @@
 {
-  "note": "Supplied LUX HealthPay AI concept artwork. These are illustrative, AI-generated images, not documentary photographs, not LUX customers, staff, partners or payment participants. The source files are retained for provenance; only the derivatives listed here are published.",
+  "note": "Supplied LUX HealthPay imagery. The hero-doctor-patient and family-phone images are illustrative AI-generated concept art, not documentary photographs and not LUX customers, staff, partners or payment participants. The team-at-work images are user-supplied photographs of the LUX HealthPay team. The source files are retained for provenance; only the derivatives listed here are published.",
   "images": [
     {
       "key": "hero-doctor-patient",
@@ -27,15 +27,27 @@
     },
     {
       "key": "team-at-work",
-      "suppliedAs": "WhatsApp Image 2026-11-13 at 20.25.22.jpeg",
+      "suppliedAs": "team-at-work.jpeg",
       "source": "assets/illustrations/supplied/team-at-work.jpeg",
-      "sha256": "17902ed36c25f87315d0c1347fbec9d37f2c8eea158a84a9e2a608ad1e44c063",
+      "sha256": "0dfe6fa947c5678dca24c647aa0d911bade5242b7ab65085051ad8d00dd891eb",
       "crop": null,
       "widths": [480, 960, 1600],
-      "alt": "Illustrative AI-generated image of a diverse team collaborating around a laptop in an office.",
-      "title": "Team collaboration · illustrative AI concept art",
+      "alt": "The LUX HealthPay team reviewing work together around a laptop in their office.",
+      "title": "The LUX HealthPay team · supplied team photograph",
       "usage": "Partners and about pages",
-      "disclosure": "Illustrative AI-generated concept art. It is not a photograph of the LUX team; real team portraits appear on the team page."
+      "disclosure": "User-supplied photograph of the LUX HealthPay team. Not AI-generated concept art."
+    },
+    {
+      "key": "team-at-work-2",
+      "suppliedAs": "team-at-work-2.jpeg",
+      "source": "assets/illustrations/supplied/team-at-work-2.jpeg",
+      "sha256": "af8d0764e9032381bf8419a184b7369e8842b9accb6873818fb8bfe7f1d0c78a",
+      "crop": null,
+      "widths": [480, 960, 1600],
+      "alt": "The LUX HealthPay team collaborating around a laptop in their office.",
+      "title": "The LUX HealthPay team at work · supplied team photograph",
+      "usage": "Team page hero background",
+      "disclosure": "User-supplied photograph of the LUX HealthPay team. Not AI-generated concept art."
     }
   ]
 }

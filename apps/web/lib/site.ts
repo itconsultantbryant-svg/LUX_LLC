@@ -231,9 +231,16 @@ export const siteImages = {
   "team-at-work": {
     widths: [480, 960, 1600],
     width: 1600,
-    height: 900,
-    position: "52% 34%",
-    alt: "A team collaborating around a laptop in a bright office.",
+    height: 1264,
+    position: "52% 30%",
+    alt: "The LUX HealthPay team reviewing work together around a laptop in their office.",
+  },
+  "team-at-work-2": {
+    widths: [480, 960, 1600],
+    width: 1600,
+    height: 1313,
+    position: "52% 28%",
+    alt: "The LUX HealthPay team collaborating around a laptop in their office.",
   },
 } as const;
 

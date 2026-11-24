@@ -263,7 +263,7 @@ export default async function ContentPage({
           label="Our team"
           title="Meet the people behind LUX HealthPay."
           text="Five members bringing research, product, community and technology perspectives to a Liberia-first claims platform."
-          image="team-at-work"
+          image="team-at-work-2"
         >
           <div className="lux-cta">
             <Link className="lux-btn" href="/contact">

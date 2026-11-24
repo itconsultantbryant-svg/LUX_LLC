@@ -50,7 +50,7 @@ test("home hero uses page imagery and production proof points", async ({
   const credits = await page.request.get("/media/illustrations/credits.json");
   expect(credits.ok()).toBe(true);
   const manifest = await credits.json();
-  expect(manifest.images).toHaveLength(3);
+  expect(manifest.images).toHaveLength(4);
   for (const image of manifest.images)
     expect(image.sha256).toMatch(/^[a-f0-9]{64}$/);
 });
@@ -63,7 +63,7 @@ test("every public page has an image-backed hero and consistent navigation", asy
     ["/how-it-works", "hero-doctor-patient"],
     ["/about", "team-at-work"],
     ["/partners", "team-at-work"],
-    ["/team", "team-at-work"],
+    ["/team", "team-at-work-2"],
     ["/get-started", "hero-doctor-patient"],
     ["/contact", "family-phone"],
     ["/privacy", "family-phone"],
