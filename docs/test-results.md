@@ -12,7 +12,9 @@
 - `pnpm build`: **passed** with Next.js 16.4.6.
 - Browser suite: **19/19 passed**, including patient scoping, responsive widths and automated axe checks, plus insurer provisioning. The patient and insurer portal tests were rerun after the final claim-amount display adjustment (**2/2 passed**).
 - Fixed a pre-existing team profile focus trap so Shift+Tab from the first control stays inside the modal.
-- No hosted database, Neon function, real Orange Money transfer, real PIN collection or salary deduction was performed.
+- Hosted demo updated from `a7d41ab`: migration 007 was applied to the isolated Neon demo database without resetting it, and `luxapi` deployment 9 and `luxworker` deployment 8 were rebuilt and deployed. The Vercel frontend serves the patient portal navigation and pages.
+- Live end-to-end check at `https://luxllc.vercel.app`: the insurer published version 1 limits for Synthetic Patient 08 / `DEMO-POLICY-7` (USD 1,500 monthly / USD 20,000 annual), invited `patient@demo.lux.test`, and the patient accepted through the single-use link with a self-set password. The live portal showed monthly used USD 1,000 / remaining USD 500 and annual used USD 1,000 / remaining USD 19,000, with one approved and settled claim. `/claims` and `/patients` returned **403** from the patient session, and the sidebar showed exactly three patient links.
+- No real Orange Money transfer, real PIN collection, salary deduction or customer money was involved.
 
 ## Cross-tenant dashboard and sidebar isolation — 18 November 2026
 

@@ -1,5 +1,11 @@
 # LUX HealthPay demo handoff
 
+## Patient portal status
+
+Insured patients can now log in and see their own cover without an organization membership or staff permissions. An insurer publishes structured, versioned monthly and annual coverage limits against an active patient reference, then creates a single-use portal invitation. The patient accepts it with a self-set password; no temporary password is issued and no membership row is created. The patient session carries only the `patient` permission and can read only the records tied to its own `patient_accounts` link: total claims, monthly and annual limits, used and remaining cover, and claim history. Coverage usage is derived from approved claims by encounter service date, never stored or editable by the patient. The portal refreshes every 20 seconds and on window focus, so facility and insurer activity appears without a manual reload.
+
+Verification on 25 November 2026: type checks passed, the production build passed, **55/55** domain/PostgreSQL tests passed and **19/19** browser cases passed, including patient scoping, insurer provisioning, responsive widths and automated axe checks. Commit `a7d41ab` was pushed to `origin/main` and its GitHub Actions run passed. Migration `007_patient_portal.sql` was applied to the isolated Neon demo database without a reset, and `luxapi` deployment 9 and `luxworker` deployment 8 carry the matching API. Live end-to-end check at `https://luxllc.vercel.app`: the insurer published version 1 limits for Synthetic Patient 08 / `DEMO-POLICY-7` (USD 1,500 monthly, USD 20,000 annual), invited the patient, and the patient accepted through the single-use link with a self-set password. The live portal showed monthly used USD 1,000 / remaining USD 500, annual used USD 1,000 / remaining USD 19,000, and one approved and settled claim. From the patient session `/claims` and `/patients` returned **403**, and the sidebar exposed exactly the three patient destinations. No real Orange Money transfer, real PIN collection, salary deduction or customer money was involved.
+
 ## Payroll, validation and instant settlement status
 
 Salary-funded insurance packages now link to employment bands and record a simulated monthly deduction for every active member. Facilities and insurers see scoped payroll dashboards, claim detail shows the member's cover, and the insurer can run the current period's deduction idempotently. AI-assisted validation produces a deterministic risk summary with advisory findings; it never approves, declines or moves money, and every claim still ends at human insurer review.
@@ -35,22 +41,23 @@ The production-facing redesign was verified locally on 15 November 2026: 39/39 d
 
 - Public site and login: **https://luxllc.vercel.app** and **https://luxllc.vercel.app/login**.
 - Vercel project: `lux_llc`, Next.js `apps/web`, Node 24; server-only API proxy configuration.
-- New isolated Neon project: `lux-healthpay-demo` / `blue-morning-83165791`; branch `main` / `br-calm-lab-bcgucbxy`; PostgreSQL 18, migrations 001–006.
+- New isolated Neon project: `lux-healthpay-demo` / `blue-morning-83165791`; branch `main` / `br-calm-lab-bcgucbxy`; PostgreSQL 18, migrations 001–007.
 - Shared API: `https://br-calm-lab-bcgucbxy-luxapi.compute.c-16.us-east-1.aws.neon.tech`.
 - Durable worker: separate `luxworker` function; `lux-durable-jobs` trigger every minute. Actual scheduled execution is confirmed in Neon logs. Unauthenticated manual invocations are denied.
 - **Legacy `healthwallet-liberia` project remains untouched.** The new foundation schema is not compatible with applying migrations to that legacy database.
 
 ## Private credentials
 
-The three demonstration accounts share the local demo password `LuxTest231@`. A readable operator handoff is `.local/hosted-demo-credentials.md`; the optional private map is `.local/hosted-demo-passwords.json`. Local files are ignored and permission-restricted on the development machine. Do not send passwords through public issues, shared screenshots or source control. Password reset mail is unavailable until a sender is configured.
+The three staff demonstration accounts share the local demo password `LuxTest231@`. A readable operator handoff is `.local/hosted-demo-credentials.md`; the optional private map is `.local/hosted-demo-passwords.json`. The patient demonstration login was created through the live invitation flow with a self-set password and is recorded privately in `.local/live-patient.json`. Local files are ignored and permission-restricted on the development machine. Do not send passwords through public issues, shared screenshots or source control. Password reset mail is unavailable until a sender is configured.
 
 | Login                    | Demonstration roles                                                         |
 | ------------------------ | --------------------------------------------------------------------------- |
 | `facility@demo.lux.test` | Facility claims, administration, finance and clinician roles                |
 | `insurer@demo.lux.test`  | Insurer administration, review, finance and audit roles                     |
 | `admin@demo.lux.test`    | LUX platform administration, LUX finance, support and Orange observer roles |
+| `patient@demo.lux.test`  | Insured-patient portal only; own policy, cover and claims                   |
 
-Each login exposes its full role set in one dashboard and sidebar. The seeded `internal.checker@demo.lux.test` identity has no auth account and exists only to attribute historical and explicit demo self-check steps; it is not a fourth login. Production still requires separate human maker and checker accounts. Enter only the **displayed generated demo code** at simulated payment confirmation. Never enter a real Orange Money PIN; no actual funds move. Real-data use of these combined demo roles is prohibited.
+Each staff login exposes its full role set in one dashboard and sidebar. The patient login is not a membership: it sees only its own `DEMO-POLICY-7` records and cannot reach staff claims or patient directories. The seeded `internal.checker@demo.lux.test` identity has no auth account and exists only to attribute historical and explicit demo self-check steps; it is not a fourth staff login. Production still requires separate human maker and checker accounts. Enter only the **displayed generated demo code** at simulated payment confirmation. Never enter a real Orange Money PIN; no actual funds move. Real-data use of these combined demo roles is prohibited.
 
 ## Verification and deliverables
 
@@ -69,6 +76,15 @@ This is **not** a completed live Orange Money integration or an approved clinica
 The user-authorized legacy source reset is part of this rebuild; old source history remains available in Git. Demo source deployment does not authorize deletion of legacy hosted records. A frontend push does not automatically update separately deployed Neon API/worker bundles—redeploy them from the same release when domain code changes.
 
 ## Repository release verification
+
+### 25 November 2026 patient portal and live coverage
+
+- Patient portal committed and pushed to `origin/main`: **`a7d41ab`**; the GitHub Actions run for that commit completed successfully.
+- Local verification before the push: **55/55** domain/PostgreSQL tests, type checks, optimized production build and **19/19** browser cases.
+- Migration `007_patient_portal.sql` applied to the isolated Neon demo database without resetting it; the canonical local database was also migrated, and the legacy `healthwallet-liberia` project was not touched.
+- `luxapi` deployment **9** and `luxworker` deployment **8** rebuilt from this revision and deployed; hosted health returned `{"status":"ok","mode":"demo","database":"connected"}` and the hosted OpenAPI document listed the patient and patient-access routes.
+- Live browser flow at `https://luxllc.vercel.app` passed: insurer published coverage limits version 1, created a single-use invitation, patient accepted with a self-set password, and the portal rendered monthly/annual cover, used and remaining balances and claim history from the patient's own records.
+- Live screenshots: `.local/live-patient-dashboard.png` and `.local/live-patient-coverage.png` (private local files).
 
 ### 17 November 2026 team profiles and hosted three-login alignment
 
