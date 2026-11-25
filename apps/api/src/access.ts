@@ -16,6 +16,9 @@ export interface Context {
   roles: string[];
   correlationId: string;
   fresh: boolean;
+  patientId?: string;
+  patientInsurerId?: string;
+  patientReferenceId?: string;
 }
 export async function context(req: Pick<Request, "headers">): Promise<Context> {
   const session = await auth.api.getSession({
@@ -35,7 +38,39 @@ export async function context(req: Pick<Request, "headers">): Promise<Context> {
     `SELECT m.*,o.type FROM memberships m JOIN organizations o ON o.id=m.organization_id WHERE m.user_id=$1 AND m.organization_id::text=$2 AND m.status='ACTIVE' AND o.status='ACTIVE'`,
     [session.user.id, orgId],
   );
-  if (!membership) throw new DomainError("ORGANIZATION_ACCESS_DENIED", 403);
+  if (!membership) {
+    // A patient account is a separate identity context. It carries no
+    // organization permissions and every patient route derives scope from
+    // patientId, never from an insurer or facility organization id.
+    const patient = await one(
+      pool,
+      `SELECT pa.patient_id,pa.insurer_id,pa.reference_id
+         FROM patient_accounts pa
+         JOIN organizations o ON o.id=pa.insurer_id
+         JOIN patients p ON p.id=pa.patient_id
+        WHERE pa.user_id=$1 AND pa.patient_id::text=$2
+          AND pa.status='ACTIVE' AND o.status='ACTIVE'
+        ORDER BY pa.created_at,pa.id
+        LIMIT 1`,
+      [session.user.id, orgId],
+    );
+    if (!patient) throw new DomainError("ORGANIZATION_ACCESS_DENIED", 403);
+    return {
+      userId: session.user.id,
+      orgId: patient.patient_id,
+      orgType: "PATIENT",
+      roles: ["PATIENT"],
+      permissions: permissions(["PATIENT"]),
+      correlationId: String(
+        req.headers["x-correlation-id"] || randomUUID(),
+      ).slice(0, 80),
+      fresh:
+        Date.now() - new Date(session.session.createdAt).getTime() < 600000,
+      patientId: patient.patient_id,
+      patientInsurerId: patient.insurer_id,
+      patientReferenceId: patient.reference_id,
+    };
+  }
   const perms = permissions(membership.roles);
   const privileged = perms.some((p) =>
     [

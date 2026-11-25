@@ -122,6 +122,7 @@ export async function coverageImport(ctx: Context, input: unknown) {
     effectiveFrom: z.iso.date(),
     effectiveTo: z.iso.date(),
     sourceUpdatedAt: z.iso.datetime(),
+    contactEmail: z.email().optional(),
     benefits: z.object({
       description: z.string().max(1000),
       limitations: z.string().max(1000),
@@ -180,7 +181,7 @@ export async function coverageImport(ctx: Context, input: unknown) {
   return transaction(async (db) => {
     for (const r of valid)
       await db.query(
-        `INSERT INTO insurer_patient_references(patient_id,insurer_id,external_reference,policy_reference,status,effective_from,effective_to,source_updated_at,benefits) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(insurer_id,external_reference) DO UPDATE SET policy_reference=EXCLUDED.policy_reference,status=EXCLUDED.status,effective_from=EXCLUDED.effective_from,effective_to=EXCLUDED.effective_to,source_updated_at=EXCLUDED.source_updated_at,benefits=EXCLUDED.benefits WHERE insurer_patient_references.patient_id=EXCLUDED.patient_id`,
+        `INSERT INTO insurer_patient_references(patient_id,insurer_id,external_reference,policy_reference,status,effective_from,effective_to,source_updated_at,benefits,contact_email) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(insurer_id,external_reference) DO UPDATE SET policy_reference=EXCLUDED.policy_reference,status=EXCLUDED.status,effective_from=EXCLUDED.effective_from,effective_to=EXCLUDED.effective_to,source_updated_at=EXCLUDED.source_updated_at,benefits=EXCLUDED.benefits,contact_email=EXCLUDED.contact_email WHERE insurer_patient_references.patient_id=EXCLUDED.patient_id`,
         [
           r.patientId,
           ctx.orgId,
@@ -191,6 +192,7 @@ export async function coverageImport(ctx: Context, input: unknown) {
           r.effectiveTo,
           r.sourceUpdatedAt,
           r.benefits,
+          r.contactEmail || null,
         ],
       );
     await audit(db, ctx, "CoverageImported", undefined, {

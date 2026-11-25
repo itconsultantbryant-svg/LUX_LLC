@@ -1451,7 +1451,8 @@ export function PayrollModule() {
                   },
                   {
                     label: "Salary",
-                    render: (row) => money(row.gross_salary_minor, row.currency),
+                    render: (row) =>
+                      money(row.gross_salary_minor, row.currency),
                     align: "right",
                   },
                   {
@@ -1498,7 +1499,8 @@ export function PayrollModule() {
                   { label: "Employer", render: (row) => row.employer_name },
                   {
                     label: "Gross",
-                    render: (row) => money(row.gross_salary_minor, row.currency),
+                    render: (row) =>
+                      money(row.gross_salary_minor, row.currency),
                     align: "right",
                   },
                   {
@@ -1511,7 +1513,10 @@ export function PayrollModule() {
                     render: (row) => money(row.net_salary_minor, row.currency),
                     align: "right",
                   },
-                  { label: "Status", render: (row) => <Status value={row.status} /> },
+                  {
+                    label: "Status",
+                    render: (row) => <Status value={row.status} />,
+                  },
                 ]}
                 empty={
                   <Empty
@@ -1533,14 +1538,10 @@ export function WalletModule() {
   const action = useAction();
   const d = q.data;
   const wallets: any[] = Array.isArray(d?.wallets) ? d.wallets : [];
-  const transfers: any[] = Array.isArray(d?.transactions)
-    ? d.transactions
-    : [];
+  const transfers: any[] = Array.isArray(d?.transactions) ? d.transactions : [];
   const totals: any[] = Array.isArray(d?.totals) ? d.totals : [];
   const feeShare: any[] = Array.isArray(d?.feeShare) ? d.feeShare : [];
-  const payable: any[] = Array.isArray(d?.payableClaims)
-    ? d.payableClaims
-    : [];
+  const payable: any[] = Array.isArray(d?.payableClaims) ? d.payableClaims : [];
   const platform = d?.scope === "PLATFORM";
   const partner = d?.scope === "PARTNER";
   const ownBalance = wallets
@@ -1554,10 +1555,7 @@ export function WalletModule() {
     (sum, row) => sum + BigInt(row.feesMinor || 0),
     0n,
   );
-  const lux = totals.reduce(
-    (sum, row) => sum + BigInt(row.luxMinor || 0),
-    0n,
-  );
+  const lux = totals.reduce((sum, row) => sum + BigInt(row.luxMinor || 0), 0n);
   const orange = totals.reduce(
     (sum, row) => sum + BigInt(row.orangeMinor || 0),
     0n,
@@ -1663,8 +1661,14 @@ export function WalletModule() {
                 caption="Simulated Orange Money wallet balances"
                 rows={wallets}
                 columns={[
-                  { label: "Organization", render: (row) => row.organization_name },
-                  { label: "Type", render: (row) => humanize(row.organization_type) },
+                  {
+                    label: "Organization",
+                    render: (row) => row.organization_name,
+                  },
+                  {
+                    label: "Type",
+                    render: (row) => humanize(row.organization_type),
+                  },
                   { label: "Currency", render: (row) => row.currency },
                   {
                     label: "Balance",
@@ -1696,7 +1700,9 @@ export function WalletModule() {
                   : "LUX and Orange shared percentages"
               }
               count={
-                partner ? `${shareCount} transfers` : `${transfersCount} transfers`
+                partner
+                  ? `${shareCount} transfers`
+                  : `${transfersCount} transfers`
               }
             >
               {partner ? (
@@ -1757,7 +1763,9 @@ export function WalletModule() {
                     {
                       label: "Claim",
                       render: (row) => (
-                        <Link href={"/app/claims/" + row.id}>{row.reference}</Link>
+                        <Link href={"/app/claims/" + row.id}>
+                          {row.reference}
+                        </Link>
                       ),
                     },
                     { label: "Member", render: (row) => row.patient_name },
@@ -1770,7 +1778,10 @@ export function WalletModule() {
                     {
                       label: "Action",
                       render: (row) => (
-                        <Link className="inline-button" href={"/app/claims/" + row.id}>
+                        <Link
+                          className="inline-button"
+                          href={"/app/claims/" + row.id}
+                        >
                           Open instant payment
                         </Link>
                       ),
@@ -1792,12 +1803,15 @@ export function WalletModule() {
                     event.preventDefault();
                     const form = event.currentTarget;
                     const data = Object.fromEntries(new FormData(form));
-                    const result = await action.run("/finance/wallet/fundings", {
-                      organizationId: data.organizationId,
-                      currency: "USD",
-                      amountMinor: String(data.amountMinor),
-                      reason: String(data.reason),
-                    });
+                    const result = await action.run(
+                      "/finance/wallet/fundings",
+                      {
+                        organizationId: data.organizationId,
+                        currency: "USD",
+                        amountMinor: String(data.amountMinor),
+                        reason: String(data.reason),
+                      },
+                    );
                     if (result) form.reset();
                   }}
                 >
@@ -1862,9 +1876,15 @@ export function WalletModule() {
                     label: "Time",
                     render: (row) => date(row.created_at),
                   },
-                  { label: "From", render: (row) => row.from_organization_name },
+                  {
+                    label: "From",
+                    render: (row) => row.from_organization_name,
+                  },
                   { label: "To", render: (row) => row.to_organization_name },
-                  { label: "Kind", render: (row) => <Status value={row.kind} /> },
+                  {
+                    label: "Kind",
+                    render: (row) => <Status value={row.kind} />,
+                  },
                   {
                     label: "Principal",
                     render: (row) => money(row.principal_minor, row.currency),
@@ -1897,6 +1917,237 @@ export function WalletModule() {
           </>
         )}
       </DataBoundary>
+    </>
+  );
+}
+
+export function PatientAccessModule() {
+  const q = useData("/patient-access");
+  const action = useAction();
+  const [invitation, setInvitation] = useState<any>(null);
+  const rows = q.data || [];
+  const available = rows.filter((row: any) => !row.account_id);
+  return (
+    <>
+      <ModuleTitle
+        title="Patient portal access"
+        text="Invite an insured patient from your coverage records and publish the monthly and annual limits that appear in their own portal."
+      />
+      <Feedback action={action} />
+      {q.error && (
+        <div className="error-notice" role="alert">
+          {q.error}
+          <br />
+          <button className="inline-button" onClick={q.reload}>
+            Retry loading
+          </button>
+        </div>
+      )}
+      <section className="panel">
+        <h2>Invite an insured patient</h2>
+        <p>
+          The invitation is tied to this insurer&apos;s patient reference. The
+          patient chooses their own password and can only see their own policy,
+          cover and claims. It does not create an organization membership.
+        </p>
+        <form
+          className="stack-form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            const email = String(f.get("email") || "").trim();
+            const result = await action.run("/patient-access/invitations", {
+              referenceId: String(f.get("referenceId")),
+              ...(email ? { email } : {}),
+            });
+            if (result) setInvitation(result);
+          }}
+        >
+          <label>
+            Insured patient
+            <select name="referenceId" required defaultValue="">
+              <option value="" disabled>
+                Select a patient record
+              </option>
+              {available.map((row: any) => (
+                <option key={row.reference_id} value={row.reference_id}>
+                  {row.display_name} · {row.policy_reference}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Email address (optional if already on the insurer record)
+            <input name="email" type="email" autoComplete="email" />
+          </label>
+          <button
+            className="button"
+            disabled={action.busy || !available.length}
+          >
+            Create portal invitation
+          </button>
+          {!available.length && rows.length > 0 && (
+            <p className="dash-panel-note">
+              Every insured patient already has a portal invitation or active
+              account.
+            </p>
+          )}
+        </form>
+        {invitation && (
+          <div className="patient-invite-result" role="status">
+            <strong>
+              Invitation ready for {invitation.patientName} ({invitation.email})
+            </strong>
+            <p>{invitation.message}</p>
+            {invitation.link ? (
+              <>
+                <label>
+                  Demo-only invitation link
+                  <input readOnly value={invitation.link} />
+                </label>
+                <small>
+                  Share this single-use link with the patient. The invitation
+                  expires in 72 hours. In live mode it is sent by email and the
+                  link is not returned to the browser.
+                </small>
+              </>
+            ) : (
+              <small>Delivery: {invitation.delivery}</small>
+            )}
+          </div>
+        )}
+      </section>
+      <section className="panel">
+        <h2>Publish monthly and annual limits</h2>
+        <p>
+          Limits are versioned and insurer-controlled. Usage is not stored in
+          this table; it is calculated from approved claims and their service
+          dates, so the patient sees the same records as the insurer.
+        </p>
+        <form
+          className="stack-form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            await action.run("/patient-access/coverage-limits", {
+              referenceId: String(f.get("referenceId")),
+              currency: String(f.get("currency")),
+              monthlyLimitMinor: String(
+                Math.round(Number(f.get("monthly")) * 100),
+              ),
+              annualLimitMinor: String(
+                Math.round(Number(f.get("annual")) * 100),
+              ),
+              effectiveFrom: String(f.get("effectiveFrom")),
+              effectiveTo: String(f.get("effectiveTo")),
+            });
+          }}
+        >
+          <label>
+            Insured patient
+            <select name="referenceId" required defaultValue="">
+              <option value="" disabled>
+                Select a patient record
+              </option>
+              {rows.map((row: any) => (
+                <option key={row.reference_id} value={row.reference_id}>
+                  {row.display_name} · {row.policy_reference}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="form-grid">
+            <label>
+              Currency
+              <select name="currency" defaultValue="USD">
+                <option value="USD">USD</option>
+                <option value="LRD">LRD</option>
+              </select>
+            </label>
+            <label>
+              Monthly limit (major units)
+              <input
+                name="monthly"
+                type="number"
+                min="0"
+                step="0.01"
+                required
+              />
+            </label>
+            <label>
+              Annual limit (major units)
+              <input name="annual" type="number" min="0" step="0.01" required />
+            </label>
+            <label>
+              Effective from
+              <input name="effectiveFrom" type="date" required />
+            </label>
+            <label>
+              Effective to
+              <input name="effectiveTo" type="date" required />
+            </label>
+          </div>
+          <button className="button secondary" disabled={action.busy}>
+            Publish coverage limits
+          </button>
+        </form>
+      </section>
+      <section className="panel">
+        <h2>Insured patient records</h2>
+        {q.loading && !rows.length ? (
+          <p role="status">Loading records…</p>
+        ) : rows.length ? (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Patient</th>
+                  <th>Member reference</th>
+                  <th>Policy</th>
+                  <th>Coverage</th>
+                  <th>Portal account</th>
+                  <th>Monthly limit</th>
+                  <th>Annual limit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row: any) => (
+                  <tr key={row.reference_id}>
+                    <td>{row.display_name}</td>
+                    <td>{row.external_reference}</td>
+                    <td>{row.policy_reference}</td>
+                    <td>
+                      <Status value={row.status} />
+                    </td>
+                    <td>
+                      {row.account_email
+                        ? row.account_email
+                        : row.invitation_expires_at
+                          ? `Invitation pending until ${date(row.invitation_expires_at)}`
+                          : "Not invited"}
+                    </td>
+                    <td>
+                      {row.monthly_limit_minor
+                        ? money(row.monthly_limit_minor, row.currency)
+                        : "Not published"}
+                    </td>
+                    <td>
+                      {row.annual_limit_minor
+                        ? money(row.annual_limit_minor, row.currency)
+                        : "Not published"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <Empty
+            title="No insured patient records."
+            text="Import coverage for your insured members before inviting them to the patient portal."
+          />
+        )}
+      </section>
     </>
   );
 }

@@ -38,6 +38,7 @@ import {
   money,
   date,
 } from "./workspace";
+import { PatientCoverageCards, PatientClaimsTable } from "./patient";
 
 type Row = Record<string, any>;
 type Segment = { label: string; value: number; color: string };
@@ -416,6 +417,156 @@ function MoneySplit({ moneyRows }: { moneyRows: Row[] }) {
         is not proof of settlement.
       </small>
     </div>
+  );
+}
+
+function PatientDashboard({ data }: { data: Row }) {
+  const patient = data.patient || {};
+  const totals = data.totals || {};
+  const coverage = data.coverage || {};
+  const currency = coverage.currency || undefined;
+  const monthly = coverage.monthly || {};
+  const annual = coverage.annual || {};
+  const amount = (value: string | null | undefined) =>
+    value === null || value === undefined || !currency
+      ? "Not published"
+      : money(value, currency);
+  const firstName = String(patient.displayName || "there").split(" ")[0];
+  return (
+    <>
+      <Hero
+        eyebrow={`Patient portal · ${patient.insurerName || "Your insurer"}`}
+        title={`Your cover, ${firstName}.`}
+        text="See your own claims, monthly and annual cover, used balance and remaining balance as facilities and your insurer update their records."
+        image="family-phone"
+        actions={[
+          {
+            href: "/app/my-coverage",
+            label: "Coverage & balance",
+            icon: ShieldCheck,
+          },
+          {
+            href: "/app/my-claims",
+            label: "Claims history",
+            icon: FileText,
+          },
+        ]}
+        badge={{
+          label: "Claims on record",
+          value: String(totals.total || 0),
+        }}
+      />
+
+      <div className="dash-metrics">
+        <Metric
+          icon={FileText}
+          label="Total claims"
+          value={totals.total || 0}
+          note={`${totals.open || 0} open · ${totals.approved || 0} approved`}
+        />
+        <Metric
+          icon={ShieldCheck}
+          label="Monthly balance"
+          value={amount(monthly.remainingMinor)}
+          note={
+            coverage.published
+              ? `${monthly.utilization || 0}% of the monthly limit used`
+              : "Your insurer has not published a monthly limit"
+          }
+          tone="orange"
+        />
+        <Metric
+          icon={TrendingUp}
+          label="Annual balance"
+          value={amount(annual.remainingMinor)}
+          note={
+            coverage.published
+              ? `${annual.utilization || 0}% of the annual limit used`
+              : "Your insurer has not published an annual limit"
+          }
+          tone="navy"
+        />
+        <Metric
+          icon={CheckCircle2}
+          label="Approved value"
+          value={currency ? money(totals.approved_minor || "0", currency) : "—"}
+          note="Approved against cover, not proof of payment"
+          tone="green"
+        />
+      </div>
+
+      <div className="dash-grid dash-grid-wide">
+        <Panel
+          eyebrow="Your cover"
+          title="Monthly and annual balance"
+          action={{ href: "/app/my-coverage", label: "Details" }}
+        >
+          <PatientCoverageCards coverage={coverage} />
+          <p className="dash-panel-note">{coverage.note}</p>
+        </Panel>
+        <Panel
+          eyebrow="Latest activity"
+          title="Recent claims"
+          action={{ href: "/app/my-claims", label: "See all" }}
+        >
+          <PatientClaimsTable rows={data.recentClaims || []} />
+        </Panel>
+      </div>
+
+      <div className="dash-grid">
+        <Panel eyebrow="Policy record" title="Your insured details">
+          <dl className="patient-facts">
+            <div>
+              <dt>Insurer</dt>
+              <dd>{patient.insurerName || "—"}</dd>
+            </div>
+            <div>
+              <dt>Policy reference</dt>
+              <dd>{patient.policyReference || "—"}</dd>
+            </div>
+            <div>
+              <dt>Member reference</dt>
+              <dd>{patient.memberReference || "—"}</dd>
+            </div>
+            <div>
+              <dt>Coverage status</dt>
+              <dd>
+                <Status value={patient.coverageStatus || "UNKNOWN"} />
+              </dd>
+            </div>
+            <div>
+              <dt>Last refreshed</dt>
+              <dd>{date(data.refreshedAt)}</dd>
+            </div>
+          </dl>
+          <p className="dash-panel-note">
+            The insurer controls coverage and decisions. LUX shows the record;
+            it does not hold patient money or collect a payment PIN.
+          </p>
+        </Panel>
+        <Panel eyebrow="How it updates" title="Real-time claim visibility">
+          <ul className="patient-update-list">
+            <li>
+              A facility submits a claim after care. It appears in your history
+              as awaiting the insurer.
+            </li>
+            <li>
+              An insurer decision changes the claim state and applies approved
+              amounts to your monthly and annual cover.
+            </li>
+            <li>
+              This page refreshes automatically every 20 seconds and whenever
+              you return to the tab.
+            </li>
+          </ul>
+          <p className="dash-panel-note">
+            Only records linked to your own patient reference and insurer policy
+            are returned. No other patient, facility workspace or insurer
+            workspace is visible.
+          </p>
+        </Panel>
+      </div>
+    </>
   );
 }
 
@@ -1040,7 +1191,9 @@ export function Dashboard() {
   return (
     <DataBoundary loading={loading} error={error} retry={reload}>
       {data ? (
-        org.type === "LUX" && data.admin ? (
+        org.type === "PATIENT" ? (
+          <PatientDashboard data={data} />
+        ) : org.type === "LUX" && data.admin ? (
           <AdminDashboard data={data} />
         ) : (
           <OrgDashboard data={data} />

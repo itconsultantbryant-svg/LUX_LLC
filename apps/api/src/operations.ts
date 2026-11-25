@@ -545,17 +545,47 @@ export class OperationsService {
       await db.query('UPDATE "user" SET "emailVerified"=true WHERE id=$1', [
         result.user.id,
       ]);
-      await db.query(
-        "INSERT INTO memberships(user_id,organization_id,roles) VALUES($1,$2,$3)",
-        [result.user.id, i.organization_id, i.roles],
-      );
+      if (locked.patient_id) {
+        const reference = await one(
+          db,
+          `SELECT id FROM insurer_patient_references WHERE id=$1 AND patient_id=$2 AND insurer_id=$3`,
+          [
+            locked.patient_insurer_reference_id,
+            locked.patient_id,
+            locked.organization_id,
+          ],
+        );
+        if (!reference) throw new DomainError("INVITATION_UNAVAILABLE");
+        await db.query(
+          `INSERT INTO patient_accounts(user_id,patient_id,insurer_id,reference_id,created_by)
+           VALUES($1,$2,$3,$4,$5)`,
+          [
+            result.user.id,
+            locked.patient_id,
+            locked.organization_id,
+            reference.id,
+            locked.created_by,
+          ],
+        );
+        await db.query(
+          `INSERT INTO audit_events(organization_id,actor_id,action,resource_id) VALUES($1,$2,'PatientPortalAccessAccepted',$3)`,
+          [locked.organization_id, result.user.id, locked.patient_id],
+        );
+      } else {
+        await db.query(
+          "INSERT INTO memberships(user_id,organization_id,roles) VALUES($1,$2,$3)",
+          [result.user.id, locked.organization_id, locked.roles],
+        );
+      }
       await db.query("UPDATE invitations SET accepted_at=now() WHERE id=$1", [
         i.id,
       ]);
     });
     return {
       status: "ACCEPTED",
-      message: "Invitation accepted. Sign in to continue.",
+      message: i.patient_id
+        ? "Patient portal access accepted. Sign in to see your own cover and claims."
+        : "Invitation accepted. Sign in to continue.",
     };
   }
   async reconciliation(ctx: Context) {

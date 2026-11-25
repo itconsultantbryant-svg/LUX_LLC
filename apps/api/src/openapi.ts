@@ -26,6 +26,18 @@ const requestSchemas: Record<string, z.ZodType> = {
     subject: z.string().min(5).max(160),
     message: z.string().min(10).max(2000),
   }),
+  "/patient-access/invitations": z.object({
+    referenceId: z.uuid(),
+    email: z.email().optional(),
+  }),
+  "/patient-access/coverage-limits": z.object({
+    referenceId: z.uuid(),
+    currency: z.enum(["USD", "LRD"]),
+    monthlyLimitMinor: minor,
+    annualLimitMinor: minor,
+    effectiveFrom: z.iso.date(),
+    effectiveTo: z.iso.date(),
+  }),
 };
 const commands = [
   [
@@ -115,6 +127,42 @@ const commands = [
     "Request approval-based onboarding",
   ],
   ["get", "/patients", "eligibility", "Facility patient directory"],
+  [
+    "get",
+    "/patient/coverage",
+    "PATIENT",
+    "Own coverage, derived usage and insurer-published monthly/annual limits",
+  ],
+  [
+    "get",
+    "/patient/claims",
+    "PATIENT",
+    "Own claim history; drafts and other patients are excluded",
+  ],
+  [
+    "get",
+    "/patient/claims/{id}",
+    "PATIENT",
+    "Own claim detail with decisions and settlement states",
+  ],
+  [
+    "get",
+    "/patient-access",
+    "coverage",
+    "Insurer directory of insured-patient portal access",
+  ],
+  [
+    "post",
+    "/patient-access/invitations",
+    "coverage",
+    "Invite an insured patient from an existing insurer reference",
+  ],
+  [
+    "post",
+    "/patient-access/coverage-limits",
+    "coverage",
+    "Publish versioned monthly and annual patient coverage limits",
+  ],
   ["get", "/contracts", "Membership", "Active permitted contract counterparts"],
   [
     "post",

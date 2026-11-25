@@ -14,6 +14,7 @@ import { DomainError, permissions } from "../../../packages/domain/index.ts";
 import { ClaimsService } from "./claims.ts";
 import { PaymentsService } from "./payments.ts";
 import { OperationsService } from "./operations.ts";
+import { PatientsService } from "./patients.ts";
 import { PayrollService } from "./payroll.ts";
 import { FinanceService } from "./finance.ts";
 import { InstantPaymentService } from "./instant-payments.ts";
@@ -40,6 +41,7 @@ const claims = new ClaimsService(),
   payroll = new PayrollService(),
   finance = new FinanceService(),
   instant = new InstantPaymentService(),
+  patients = new PatientsService(),
   ops = new OperationsService();
 export interface ApiRequest {
   path: string;
@@ -134,9 +136,30 @@ export class ApiController {
             [s.user.id],
           )
         ).rows.map((m) => ({ ...m, permissions: permissions(m.roles) }));
+        const patientAccounts = (
+          await pool.query(
+            `SELECT pa.patient_id,pa.insurer_id,p.display_name,o.name insurer_name,r.policy_reference,r.external_reference
+               FROM patient_accounts pa
+               JOIN patients p ON p.id=pa.patient_id
+               JOIN organizations o ON o.id=pa.insurer_id
+               JOIN insurer_patient_references r ON r.id=pa.reference_id
+              WHERE pa.user_id=$1 AND pa.status='ACTIVE' AND o.status='ACTIVE'
+              ORDER BY p.display_name`,
+            [s.user.id],
+          )
+        ).rows.map((p) => ({
+          id: p.patient_id,
+          name: p.display_name,
+          type: "PATIENT",
+          roles: ["PATIENT"],
+          permissions: permissions(["PATIENT"]),
+          insurerName: p.insurer_name,
+          policyReference: p.policy_reference,
+          memberReference: p.external_reference,
+        }));
         return res.json({
           user: { id: s.user.id, name: s.user.name, email: s.user.email },
-          memberships,
+          memberships: [...memberships, ...patientAccounts],
           mode,
         });
       }
@@ -145,9 +168,41 @@ export class ApiController {
         key = req.header("Idempotency-Key");
       const body = req.body;
       let result: any;
+      if (ctx.orgType === "PATIENT") {
+        // A patient context is deliberately narrow. It has no organization
+        // permissions and cannot reach any facility, insurer, admin, payment,
+        // audit or generic record endpoint.
+        const allowed =
+          method === "GET" &&
+          (path === "/overview" ||
+            path === "/nav" ||
+            path === "/patient/coverage" ||
+            path === "/patient/claims" ||
+            /^\/patient\/claims\/[^/]+$/.test(path));
+        if (!allowed) throw new DomainError("PERMISSION_DENIED", 403);
+      }
       if (path === "/overview" && method === "GET")
-        result = await ops.overview(ctx);
-      else if (path === "/nav" && method === "GET") result = await ops.nav(ctx);
+        result =
+          ctx.orgType === "PATIENT"
+            ? await patients.overview(ctx)
+            : await ops.overview(ctx);
+      else if (path === "/nav" && method === "GET")
+        result =
+          ctx.orgType === "PATIENT"
+            ? { unread: 0, items: [], badges: {} }
+            : await ops.nav(ctx);
+      else if (path === "/patient/coverage" && method === "GET")
+        result = await patients.coverage(ctx);
+      else if (path === "/patient/claims" && method === "GET")
+        result = await patients.claims(ctx);
+      else if (/^\/patient\/claims\/[^/]+$/.test(path) && method === "GET")
+        result = await patients.claim(ctx, path.split("/")[3]);
+      else if (path === "/patient-access" && method === "GET")
+        result = await patients.accessList(ctx);
+      else if (path === "/patient-access/invitations" && method === "POST")
+        result = await patients.invite(ctx, body);
+      else if (path === "/patient-access/coverage-limits" && method === "POST")
+        result = await patients.saveCoverageLimits(ctx, body);
       else if (path === "/notifications/read" && method === "POST")
         result = await ops.markNotificationsRead(ctx);
       else if (path === "/claim-drafts" && method === "GET")

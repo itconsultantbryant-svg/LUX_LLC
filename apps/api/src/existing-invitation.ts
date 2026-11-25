@@ -22,6 +22,31 @@ export async function acceptExistingInvitation(userId: string, input: unknown) {
       user.email.toLowerCase() !== i.email.toLowerCase()
     )
       throw new DomainError("INVITATION_UNAVAILABLE", 400);
+    if (i.patient_id) {
+      const reference = await one(
+        db,
+        `SELECT id FROM insurer_patient_references WHERE id=$1 AND patient_id=$2 AND insurer_id=$3`,
+        [i.patient_insurer_reference_id, i.patient_id, i.organization_id],
+      );
+      if (!reference) throw new DomainError("INVITATION_UNAVAILABLE", 400);
+      await db.query(
+        `INSERT INTO patient_accounts(user_id,patient_id,insurer_id,reference_id,created_by)
+         VALUES($1,$2,$3,$4,$5)`,
+        [userId, i.patient_id, i.organization_id, reference.id, i.created_by],
+      );
+      await db.query("UPDATE invitations SET accepted_at=now() WHERE id=$1", [
+        i.id,
+      ]);
+      await db.query(
+        `INSERT INTO audit_events(organization_id,actor_id,action,resource_id) VALUES($1,$2,'PatientPortalAccessAccepted',$3)`,
+        [i.organization_id, userId, i.patient_id],
+      );
+      return {
+        status: "ACCEPTED",
+        message:
+          "Patient portal access accepted for your signed-in account. Return to your workspace to see your own cover and claims.",
+      };
+    }
     await db.query(
       `INSERT INTO memberships(user_id,organization_id,roles) VALUES($1,$2,$3) ON CONFLICT(user_id,organization_id) DO NOTHING`,
       [userId, i.organization_id, i.roles],

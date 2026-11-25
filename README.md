@@ -34,11 +34,12 @@ pnpm dev
 
 Open <http://localhost:3000>. API: <http://localhost:4000/api/v1/health>. OpenAPI: <http://localhost:4000/api/v1/openapi.json>. Start commands must inherit the root environment; `pnpm dev` loads it for API/worker through dotenv. Set `API_INTERNAL_URL` in `apps/web/.env.local` or the Vercel environment when the API is not at `http://127.0.0.1:4000`.
 
-The synthetic seed creates exactly three demonstration logins. Each combines every role for its organization so the dashboard and sidebar expose the full workflow without switching accounts:
+The synthetic seed creates exactly four demonstration logins. The three organization logins each combine every role for their organization so the dashboard and sidebar expose the full workflow without switching accounts. The patient login is not an organization member:
 
 - `facility@demo.lux.test`: facility claims, administration, finance and clinician roles.
 - `insurer@demo.lux.test`: insurer administration, review, finance and audit roles.
 - `admin@demo.lux.test`: LUX platform administration, LUX finance, support and Orange observer roles.
+- `patient@demo.lux.test`: own coverage and claim history only, linked to one synthetic insured-patient reference; no organization membership or permissions.
 
 The local demo seed defaults to `LuxTest231@` when `DEMO_PASSWORD` is unset; set a different 11+ character value for any non-public demo. Hosted demos may instead supply `DEMO_PASSWORDS_FILE`, a private JSON map of account keys to unique passwords. The seed also creates an internal checker identity with no auth account, used only to attribute historical and demo checker steps; it is not a fourth login.
 

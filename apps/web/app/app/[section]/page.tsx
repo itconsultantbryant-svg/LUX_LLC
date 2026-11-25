@@ -15,14 +15,21 @@ import {
   DestinationModule,
   PayrollModule,
   WalletModule,
+  PatientAccessModule,
 } from "../../../components/modules";
+import { PatientSection } from "../../../components/patient";
+import { useWorkspace } from "../../../components/workspace";
 export default function ModulePage({
   params,
 }: {
   params: Promise<{ section: string }>;
 }) {
   const { section } = use(params);
+  const { org } = useWorkspace();
+  if (org.type === "PATIENT") return <PatientSection section={section} />;
   switch (section) {
+    case "patient-access":
+      return <PatientAccessModule />;
     case "encounters":
       return <EncountersModule />;
     case "payments":

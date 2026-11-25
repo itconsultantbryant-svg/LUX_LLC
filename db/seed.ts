@@ -71,6 +71,29 @@ for (const [key, name] of accounts) {
     r.user.id,
   ]);
 }
+// Patient portal demo login. The account is linked to an insurer patient
+// record below and receives no organization membership or permissions.
+const patientPassword = passwords.patient || password;
+if (!patientPassword || patientPassword.length < 11)
+  throw Error("Supply a unique 11+ character demo password for patient");
+const patientExisting = await one(
+  pool,
+  'SELECT id FROM "user" WHERE email=$1',
+  ["patient@demo.lux.test"],
+);
+const patientAuth = patientExisting
+  ? { user: patientExisting }
+  : await auth.api.signUpEmail({
+      body: {
+        email: "patient@demo.lux.test",
+        name: "Synthetic Patient 08",
+        password: patientPassword,
+      },
+    });
+users.patient = patientAuth.user.id;
+await pool.query('UPDATE "user" SET "emailVerified"=true WHERE id=$1', [
+  patientAuth.user.id,
+]);
 // A seeded system identity used only to attribute the historical synthetic
 // checker step on demo records. It has no auth account and cannot be signed
 // into. Production maker/checker independence is unchanged.
@@ -180,6 +203,7 @@ await transaction(async (db) => {
     "REJECTED",
     "AWAITING_REVIEW",
   ];
+  let demoPatient: any;
   for (let n = 0; n < 15; n++) {
     const fk = n < 12 ? "facility" : "facility2",
       ik = n < 12 ? "insurer" : "insurer2";
@@ -199,8 +223,9 @@ await transaction(async (db) => {
     );
     const status = n % 5 === 0 ? "INACTIVE" : "ACTIVE",
       stale = n % 4 === 0;
-    await db.query(
-      `INSERT INTO insurer_patient_references(patient_id,insurer_id,external_reference,policy_reference,status,effective_from,effective_to,source_updated_at,benefits) VALUES($1,$2,$3,$4,$5,current_date-30,current_date+90,now()-interval '1 day'*$6,$7)`,
+    const reference = await one(
+      db,
+      `INSERT INTO insurer_patient_references(patient_id,insurer_id,external_reference,policy_reference,status,effective_from,effective_to,source_updated_at,benefits,contact_email) VALUES($1,$2,$3,$4,$5,current_date-30,current_date+90,now()-interval '1 day'*$6,$7,$8) RETURNING id`,
       [
         patient.id,
         insurer,
@@ -212,6 +237,7 @@ await transaction(async (db) => {
           outpatient: "Insurer review required",
           limitations: "Synthetic policy record",
         },
+        n === 7 ? "patient@demo.lux.test" : null,
       ],
     );
     const eligibility = await one(
@@ -265,6 +291,16 @@ await transaction(async (db) => {
         n,
       ],
     );
+    if (n === 7)
+      demoPatient = {
+        patient,
+        facility,
+        insurer,
+        contract,
+        eligibility,
+        reference,
+        actor,
+      };
     const item = await one(
       db,
       `INSERT INTO claim_items(claim_id,code,description,quantity,unit_minor) VALUES($1,'PILOT-CONSULT','Synthetic itemized service',1,$2) RETURNING *`,
@@ -395,6 +431,100 @@ await transaction(async (db) => {
           [insurer, p.id],
         );
     }
+  }
+  // Richer claim history for the demo patient, so monthly and annual usage
+  // differ. Every record remains synthetic and is linked to the insurer's
+  // original patient reference.
+  if (demoPatient) {
+    for (const [reference, daysAgo, approved, submitted, state] of [
+      ["DEMO-HIST-0001", 40, "60000", "70000", "PARTIALLY_APPROVED"],
+      ["DEMO-HIST-0002", 70, "50000", "50000", "APPROVED"],
+    ] as const) {
+      const encounter = await one(
+        db,
+        `INSERT INTO encounters(patient_id,facility_id,clinician_id,service_date,diagnosis,notes)
+         VALUES($1,$2,$3,current_date-$4::int,'Synthetic outpatient encounter','Demonstration documentation only; not a real medical record.') RETURNING *`,
+        [
+          demoPatient.patient.id,
+          demoPatient.facility,
+          demoPatient.actor,
+          daysAgo,
+        ],
+      );
+      const c = await one(
+        db,
+        `INSERT INTO claims(reference,facility_id,insurer_id,contract_id,patient_id,encounter_id,eligibility_id,currency,state,submitted_minor,approved_minor,submission_version,created_by,created_at,updated_at)
+         VALUES($1,$2,$3,$4,$5,$6,$7,'USD',$8,$9,$10,1,$11,now()-interval '1 day'*$12,now()-interval '1 day'*$12) RETURNING *`,
+        [
+          reference,
+          demoPatient.facility,
+          demoPatient.insurer,
+          demoPatient.contract.id,
+          demoPatient.patient.id,
+          encounter.id,
+          demoPatient.eligibility.id,
+          state,
+          submitted,
+          approved,
+          demoPatient.actor,
+          daysAgo,
+        ],
+      );
+      const item = await one(
+        db,
+        `INSERT INTO claim_items(claim_id,code,description,quantity,unit_minor) VALUES($1,'PILOT-CONSULT','Synthetic itemized service',1,$2) RETURNING *`,
+        [c.id, submitted],
+      );
+      await db.query(
+        "INSERT INTO claim_versions(claim_id,version,snapshot,actor_id) VALUES($1,1,$2,$3)",
+        [
+          c.id,
+          {
+            claim: c,
+            items: [item],
+            encounter,
+            eligibility: demoPatient.eligibility,
+          },
+          demoPatient.actor,
+        ],
+      );
+      await db.query(
+        `INSERT INTO decisions(claim_id,submission_version,outcome,reason,approved_minor,tariff_snapshot,actor_id)
+         VALUES($1,1,$2,$3,$4,'{}',$5)`,
+        [
+          c.id,
+          state,
+          "Synthetic insurer human review decision.",
+          approved,
+          users.insurer,
+        ],
+      );
+      await db.query(
+        `INSERT INTO audit_events(organization_id,actor_id,action,resource_id) VALUES($1,$2,'DemoHistoricalClaimSeeded',$3)`,
+        [demoPatient.facility, demoPatient.actor, c.id],
+      );
+    }
+    await db.query(
+      `INSERT INTO patient_accounts(user_id,patient_id,insurer_id,reference_id,created_by)
+       VALUES($1,$2,$3,$4,$5)`,
+      [
+        users.patient,
+        demoPatient.patient.id,
+        demoPatient.insurer,
+        demoPatient.reference.id,
+        users.insurer,
+      ],
+    );
+    await db.query(
+      `INSERT INTO patient_coverage_limits(reference_id,patient_id,insurer_id,currency,monthly_limit_minor,annual_limit_minor,effective_from,effective_to,version,created_by)
+       VALUES($1,$2,$3,'USD',150000,2000000,current_date-30,current_date+335,1,$4)`,
+      [
+        demoPatient.reference.id,
+        demoPatient.patient.id,
+        demoPatient.insurer,
+        users.insurer,
+      ],
+    );
   }
   // A payable claim left at the maker stage so the insurer login can complete
   // the full authorization chain in the demo.
@@ -579,4 +709,5 @@ console.log(
   "Synthetic seed created. Accounts (passwords are supplied privately by environment/file):",
 );
 for (const [key] of accounts) console.log(`${key}@demo.lux.test`);
+console.log("patient@demo.lux.test");
 await pool.end();

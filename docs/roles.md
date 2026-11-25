@@ -16,6 +16,9 @@ The executable source of truth is `packages/domain/index.ts`. Multiple membershi
 | INSURER_FINANCE    | minimum-detail payment records, maker/checker authorization, execution, reconciliation | no clinical content                                                                                                 |
 | INSURER_AUDITOR    | authorized clinical and payment evidence, read-only audit/reports                      | no mutations through reviewer/payment commands                                                                      |
 | ORANGE_OBSERVER    | optional fee scope                                                                     | disabled for invitation grants until agreed                                                                         |
+| PATIENT            | own cover, own insurer-published limits and own non-draft claim history                | no organization membership, other patient, facility/insurer workspace, payment, audit or admin access               |
+
+Patient access is not a membership. It is a `patient_accounts` link from a verified user to one facility patient record and one insurer patient reference. The API synthesizes a `PATIENT` context, allows only `/overview`, `/nav` and the patient's own `/patient/*` reads, and never grants organization permissions. An invitation creates that link only after the patient verifies the matching email and sets a password. Insurers provision invitations from their own patient references; they cannot attach a patient to another insurer's record.
 
 Every list/detail/search/export/download command repeats authorization. Direct URLs do not inherit sidebar permission. Membership revocation is queried on each request. Non-demo privileged roles require enrolled MFA; high-risk commands additionally require a session created within ten minutes.
 

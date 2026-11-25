@@ -1,5 +1,19 @@
 # Verification results
 
+## Patient portal, coverage balances and insurer provisioning — 25 November 2026
+
+- Added migration `007_patient_portal.sql`: insured-patient contact email, patient-linked invitations, `patient_accounts` and versioned `patient_coverage_limits`. Migration 007 was applied additively to the canonical local `lux_healthpay` database; no database was reset or reseeded.
+- Patient login is derived from an insurer patient reference. It creates no membership and receives no organization permission. The API synthesizes a `PATIENT` context restricted to `/overview`, `/nav` and the patient's own `/patient/*` reads; `/claims`, `/patients` and all other organization routes return `403`.
+- The portal shows total claims, monthly and annual cover, insurer-approved usage, remaining balance, pending amounts, policy facts and own claim history. Usage is derived from approved claims by encounter service date; balances are never stored. Pages poll every 20 seconds and on focus.
+- Insurers can invite an insured patient from their own reference, publish versioned monthly and annual limits, and see portal status. Cross-insurer references are rejected, and invitation acceptance requires the matching verified email and a self-set password.
+- The demo seed adds `patient@demo.lux.test` (Synthetic Patient 08, policy `DEMO-POLICY-7`, USD 1,500 monthly / USD 20,000 annual) with three synthetic claims and one settled payment.
+- `pnpm typecheck`: **passed**.
+- `pnpm test`: **55/55 passed** on a fresh isolated PostgreSQL database.
+- `pnpm build`: **passed** with Next.js 16.4.6.
+- Browser suite: **19/19 passed**, including patient scoping, responsive widths and automated axe checks, plus insurer provisioning. The patient and insurer portal tests were rerun after the final claim-amount display adjustment (**2/2 passed**).
+- Fixed a pre-existing team profile focus trap so Shift+Tab from the first control stays inside the modal.
+- No hosted database, Neon function, real Orange Money transfer, real PIN collection or salary deduction was performed.
+
 ## Cross-tenant dashboard and sidebar isolation — 18 November 2026
 
 - Audited every authenticated dashboard, sidebar destination and backing API query. Tenant-owned records are scoped by the caller's `organization_id`, and platform-wide views remain limited to LUX platform roles.

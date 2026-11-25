@@ -108,13 +108,7 @@ export const roles = {
     "wallet.read",
   ],
   SUPPORT: ["support", "operations"],
-  LUX_FINANCE: [
-    "fees",
-    "reconciliation",
-    "reports",
-    "payroll",
-    "wallet.read",
-  ],
+  LUX_FINANCE: ["fees", "reconciliation", "reports", "payroll", "wallet.read"],
   FACILITY_ADMIN: ["users", "settings", "contracts", "destination"],
   FACILITY_CLINICIAN: ["clinical", "encounters.write"],
   FACILITY_CLAIMS: ["claims", "eligibility", "clinical", "payroll"],
@@ -145,6 +139,9 @@ export const roles = {
     "wallet.read",
   ],
   ORANGE_OBSERVER: ["fees", "wallet.read"],
+  // Never granted through an organization invitation. The context layer
+  // synthesizes this role from a patient account linked to an insurer record.
+  PATIENT: ["patient"],
 } as const;
 export type Role = keyof typeof roles;
 export function permissions(names: string[]) {

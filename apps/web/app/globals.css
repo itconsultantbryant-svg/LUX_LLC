@@ -3792,3 +3792,183 @@ a.dash-table-row:hover {
     flex-wrap: wrap;
   }
 }
+
+/* Patient portal */
+.patient-cover-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.patient-cover {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e4ecf8;
+  border-radius: 14px;
+  background: #f7faff;
+}
+.patient-cover-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.patient-cover-head span {
+  display: block;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #5f6f8a;
+}
+.patient-cover-head strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  color: #071a40;
+}
+.patient-cover-badge {
+  flex: none;
+  border-radius: 999px;
+  background: #fff0e5;
+  color: #c2410c;
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 5px 8px;
+}
+.patient-cover-amounts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+.patient-cover-amounts span {
+  display: block;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #5f6f8a;
+}
+.patient-cover-amounts strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: #071a40;
+  overflow-wrap: anywhere;
+}
+.patient-meter {
+  height: 9px;
+  border-radius: 999px;
+  background: #e8eefc;
+  overflow: hidden;
+}
+.patient-meter span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f97316, #fb923c);
+}
+.patient-cover small,
+.patient-cover-empty {
+  display: block;
+  margin-top: 8px;
+  font-size: 9.5px;
+  line-height: 1.45;
+  color: #5f6f8a;
+}
+.patient-cover-empty {
+  margin: 0;
+}
+.patient-claim-row {
+  grid-template-columns: minmax(0, 1.5fr) auto auto auto;
+}
+.patient-disclaimer {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #e4ecf8;
+  border-radius: 10px;
+  background: #f7faff;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: #5f6f8a;
+}
+.patient-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0 0 12px;
+}
+.patient-facts dt {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #5f6f8a;
+}
+.patient-facts dd {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #071a40;
+  overflow-wrap: anywhere;
+}
+.patient-update-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: #33415c;
+}
+.patient-update-list li {
+  margin-bottom: 8px;
+}
+.patient-invite-result {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #bfe6d8;
+  border-radius: 12px;
+  background: #f0fbf7;
+}
+.patient-invite-result strong {
+  font-size: 12px;
+  color: #071a40;
+}
+.patient-invite-result p {
+  margin: 6px 0;
+  font-size: 10px;
+  color: #33415c;
+}
+.patient-invite-result label {
+  display: block;
+  margin-top: 8px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #5f6f8a;
+}
+.patient-invite-result input {
+  width: 100%;
+  margin-top: 4px;
+  font-size: 10px;
+}
+.patient-invite-result small {
+  display: block;
+  margin-top: 8px;
+  font-size: 9px;
+  line-height: 1.45;
+  color: #5f6f8a;
+}
+@media (max-width: 900px) {
+  .patient-cover-grid,
+  .patient-facts {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .patient-claim-row {
+    grid-template-columns: minmax(0, 1.4fr) auto auto;
+  }
+  .patient-claim-row .dash-table-time {
+    display: none;
+  }
+  .patient-cover-amounts {
+    grid-template-columns: 1fr 1fr;
+  }
+}

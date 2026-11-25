@@ -16,6 +16,9 @@ let pool: any,
   claims: any,
   payments: any,
   ops: any,
+  patients: any,
+  patient: any,
+  patientReferenceId: string,
   apply: any,
   tick: any;
 let facility: any,
@@ -134,10 +137,102 @@ beforeAll(async () => {
   orange = ctx(omg);
   const C = await import("../apps/api/src/claims.ts"),
     P = await import("../apps/api/src/payments.ts"),
-    O = await import("../apps/api/src/operations.ts");
+    O = await import("../apps/api/src/operations.ts"),
+    Pt = await import("../apps/api/src/patients.ts");
   claims = new C.ClaimsService();
   payments = new P.PaymentsService();
   ops = new O.OperationsService();
+  patients = new Pt.PatientsService();
+  // Keep the portal tests usable on a database seeded before migration 007.
+  let patientUser = await one(pool, 'SELECT id FROM "user" WHERE email=$1', [
+    "patient@demo.lux.test",
+  ]);
+  if (!patientUser) {
+    const { auth } = await import("../apps/api/src/auth.ts");
+    const created = await auth.api.signUpEmail({
+      body: {
+        email: "patient@demo.lux.test",
+        name: "Synthetic Patient 08",
+        password: testPassword,
+      },
+    });
+    patientUser = created.user;
+  }
+  await pool.query('UPDATE "user" SET "emailVerified"=true WHERE id=$1', [
+    patientUser.id,
+  ]);
+  let patientAccount = await one(
+    pool,
+    "SELECT * FROM patient_accounts WHERE user_id=$1",
+    [patientUser.id],
+  );
+  if (!patientAccount) {
+    const reference = await one(
+      pool,
+      `SELECT r.* FROM insurer_patient_references r
+        WHERE r.status='ACTIVE'
+          AND current_date BETWEEN r.effective_from AND r.effective_to
+          AND EXISTS (SELECT 1 FROM claims c WHERE c.patient_id=r.patient_id)
+        ORDER BY (SELECT count(*) FROM claims c WHERE c.patient_id=r.patient_id) DESC,
+                 r.created_at
+        LIMIT 1`,
+    );
+    if (!reference) throw Error("No active insured patient with claims");
+    await pool.query(
+      `INSERT INTO patient_accounts(user_id,patient_id,insurer_id,reference_id,created_by)
+       VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
+      [
+        patientUser.id,
+        reference.patient_id,
+        reference.insurer_id,
+        reference.id,
+        facility.userId,
+      ],
+    );
+    patientAccount = await one(
+      pool,
+      "SELECT * FROM patient_accounts WHERE user_id=$1",
+      [patientUser.id],
+    );
+  }
+  const currentLimit = await one(
+    pool,
+    `SELECT 1 FROM patient_coverage_limits
+      WHERE reference_id=$1 AND current_date BETWEEN effective_from AND effective_to
+      LIMIT 1`,
+    [patientAccount.reference_id],
+  );
+  if (!currentLimit) {
+    const next = await one(
+      pool,
+      "SELECT COALESCE(max(version),0)+1 version FROM patient_coverage_limits WHERE reference_id=$1",
+      [patientAccount.reference_id],
+    );
+    await pool.query(
+      `INSERT INTO patient_coverage_limits(reference_id,patient_id,insurer_id,currency,monthly_limit_minor,annual_limit_minor,effective_from,effective_to,version,created_by)
+       VALUES($1,$2,$3,'USD',150000,2000000,current_date-1,current_date+365,$4,$5)`,
+      [
+        patientAccount.reference_id,
+        patientAccount.patient_id,
+        patientAccount.insurer_id,
+        next.version,
+        facility.userId,
+      ],
+    );
+  }
+  patientReferenceId = patientAccount.reference_id;
+  patient = {
+    userId: patientAccount.user_id,
+    orgId: patientAccount.patient_id,
+    orgType: "PATIENT",
+    roles: ["PATIENT"],
+    permissions: permissions(["PATIENT"]),
+    correlationId: randomUUID(),
+    fresh: true,
+    patientId: patientAccount.patient_id,
+    patientInsurerId: patientAccount.insurer_id,
+    patientReferenceId: patientAccount.reference_id,
+  };
   apply = P.applyVerifiedResult;
   tick = (await import("../apps/worker/src/jobs.ts")).tick;
 });
@@ -378,6 +473,141 @@ describe("maintained authentication against PostgreSQL", () => {
     }
   });
 });
+describe("patient portal scoping and provisioning", () => {
+  it("derives a patient-only context from the insurer patient record", async () => {
+    const { auth } = await import("../apps/api/src/auth.ts");
+    const { context } = await import("../apps/api/src/access.ts");
+    const signed = await auth.api.signInEmail({
+      body: { email: "patient@demo.lux.test", password: testPassword },
+      returnHeaders: true,
+    });
+    const cookie = signed.headers.get("set-cookie")!.split(";")[0];
+    const patientContext = await context({
+      headers: { cookie, "x-organization-id": patient.patientId },
+    } as any);
+    expect(patientContext.orgType).toBe("PATIENT");
+    expect(patientContext.patientId).toBe(patient.patientId);
+    expect(patientContext.patientInsurerId).toBe(patient.patientInsurerId);
+    expect(patientContext.patientReferenceId).toBe(patientReferenceId);
+    expect(patientContext.permissions).toEqual(["patient"]);
+    expect(patientContext.permissions).not.toContain("claims");
+    expect(patientContext.permissions).not.toContain("organizations");
+    await expect(
+      context({
+        headers: { cookie, "x-organization-id": patient.patientInsurerId },
+      } as any),
+    ).rejects.toMatchObject({ code: "ORGANIZATION_ACCESS_DENIED" });
+  });
+
+  it("returns only the patient's own cover and derives usage from claims", async () => {
+    const overview = await patients.overview(patient);
+    expect(overview.patient.id).toBe(patient.patientId);
+    expect(overview.patient.policyReference).toBeTruthy();
+    const expected = await one(
+      pool,
+      `SELECT
+         COALESCE(sum(c.approved_minor) FILTER (
+           WHERE c.state IN ('APPROVED','PARTIALLY_APPROVED')
+             AND e.service_date >= date_trunc('month',current_date)::date
+             AND e.service_date < (date_trunc('month',current_date)+interval '1 month')::date
+         ),0)::text month_used,
+         COALESCE(sum(c.approved_minor) FILTER (
+           WHERE c.state IN ('APPROVED','PARTIALLY_APPROVED')
+             AND e.service_date >= date_trunc('year',current_date)::date
+             AND e.service_date < (date_trunc('year',current_date)+interval '1 year')::date
+         ),0)::text year_used
+       FROM claims c JOIN encounters e ON e.id=c.encounter_id
+       WHERE c.patient_id=$1 AND c.insurer_id=$2
+         AND c.state NOT IN ('DRAFT','WITHDRAWN')`,
+      [patient.patientId, patient.patientInsurerId],
+    );
+    expect(overview.coverage.monthly.usedMinor).toBe(expected.month_used);
+    expect(overview.coverage.annual.usedMinor).toBe(expected.year_used);
+    expect(overview.coverage.monthly.limitMinor).toBeTruthy();
+    expect(overview.coverage.annual.limitMinor).toBeTruthy();
+    const limit = BigInt(overview.coverage.monthly.limitMinor);
+    const used = BigInt(overview.coverage.monthly.usedMinor);
+    expect(BigInt(overview.coverage.monthly.remainingMinor)).toBe(
+      limit > used ? limit - used : 0n,
+    );
+    expect(overview.coverage.monthly.utilization).toBe(
+      limit > 0n ? Number((used * 100n) / limit) : 0,
+    );
+    const listed = await patients.claims(patient);
+    expect(listed.claims.length).toBe(
+      Math.min(Number(listed.totals.total), 200),
+    );
+    expect(
+      listed.claims.every((claim: any) => claim.id && claim.reference),
+    ).toBe(true);
+  });
+
+  it("cannot read another patient's claim or use an organization service", async () => {
+    const otherClaim = await one(
+      pool,
+      `SELECT id FROM claims WHERE patient_id<>$1
+        AND state NOT IN ('DRAFT','WITHDRAWN') LIMIT 1`,
+      [patient.patientId],
+    );
+    expect(otherClaim).toBeTruthy();
+    await expect(patients.claim(patient, otherClaim.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(claims.patients(patient)).rejects.toMatchObject({
+      code: "PERMISSION_DENIED",
+    });
+  });
+
+  it("lets an insurer invite only its own insured patient and creates no membership", async () => {
+    const reference = await one(
+      pool,
+      `SELECT r.* FROM insurer_patient_references r
+        WHERE r.insurer_id=$1 AND r.status='ACTIVE'
+          AND current_date BETWEEN r.effective_from AND r.effective_to
+          AND NOT EXISTS (SELECT 1 FROM patient_accounts pa WHERE pa.reference_id=r.id)
+        LIMIT 1`,
+      [reviewer.orgId],
+    );
+    expect(reference).toBeTruthy();
+    const email = `portal-${randomUUID()}@demo.lux.test`;
+    const invitation = await patients.invite(reviewer, {
+      referenceId: reference.id,
+      email,
+    });
+    expect(invitation.link).toContain("/accept-invitation?token=");
+    const token = new URL(invitation.link).searchParams.get("token")!;
+    await ops.accept({
+      token,
+      name: "Synthetic portal patient",
+      password: testPassword,
+    });
+    const account = await one(
+      pool,
+      `SELECT pa.* FROM patient_accounts pa
+        JOIN "user" u ON u.id=pa.user_id WHERE u.email=$1`,
+      [email],
+    );
+    expect(account.patient_id).toBe(reference.patient_id);
+    const membership = await one(
+      pool,
+      `SELECT m.id FROM memberships m JOIN "user" u ON u.id=m.user_id WHERE u.email=$1`,
+      [email],
+    );
+    expect(membership).toBeUndefined();
+    const otherReference = await one(
+      pool,
+      "SELECT id FROM insurer_patient_references WHERE insurer_id<>$1 LIMIT 1",
+      [reviewer.orgId],
+    );
+    await expect(
+      patients.invite(reviewer, {
+        referenceId: otherReference.id,
+        email: `cross-${randomUUID()}@demo.lux.test`,
+      }),
+    ).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
+  });
+});
+
 describe("dashboard, navigation and platform metrics", () => {
   it("returns scoped 14-day trends, queues and live navigation badges", async () => {
     const overview = await ops.overview(reviewer);
@@ -1268,9 +1498,11 @@ describe("payroll cover, AI validation risk and instant wallet settlement", () =
     const flagged = await validateClaimNow(reviewer, inconsistent.id);
     expect(flagged.riskScore).toBeGreaterThan(0);
     expect(
-      (await one(pool, "SELECT state FROM claims WHERE id=$1", [
-        inconsistent.id,
-      ])).state,
+      (
+        await one(pool, "SELECT state FROM claims WHERE id=$1", [
+          inconsistent.id,
+        ])
+      ).state,
     ).toBe("AWAITING_REVIEW");
     const checks = await one(
       pool,
@@ -1345,12 +1577,13 @@ describe("payroll cover, AI validation risk and instant wallet settlement", () =
       "SELECT balance_minor FROM organization_wallets WHERE organization_id=$1 AND currency='USD'",
       [facility.orgId],
     );
-    expect(BigInt(insurerBefore.balance_minor) - BigInt(insurerAfter.balance_minor)).toBe(
-      BigInt(transfer.insurer_debit_minor),
-    );
-    expect(BigInt(facilityAfter.balance_minor) - BigInt(facilityBefore.balance_minor)).toBe(
-      BigInt(transfer.facility_credit_minor),
-    );
+    expect(
+      BigInt(insurerBefore.balance_minor) - BigInt(insurerAfter.balance_minor),
+    ).toBe(BigInt(transfer.insurer_debit_minor));
+    expect(
+      BigInt(facilityAfter.balance_minor) -
+        BigInt(facilityBefore.balance_minor),
+    ).toBe(BigInt(transfer.facility_credit_minor));
     const { FinanceService } = await import("../apps/api/src/finance.ts");
     const financeService = new FinanceService();
     const wallet = await financeService.wallet(finance);
@@ -1387,9 +1620,11 @@ describe("payroll cover, AI validation risk and instant wallet settlement", () =
     ]);
     expect(state.state).toBe("AUTHORIZED");
     expect(
-      await one(pool, "SELECT id FROM wallet_transactions WHERE payment_id=$1", [
-        prepared.payment.id,
-      ]),
+      await one(
+        pool,
+        "SELECT id FROM wallet_transactions WHERE payment_id=$1",
+        [prepared.payment.id],
+      ),
     ).toBeFalsy();
     const stored = await one(
       pool,

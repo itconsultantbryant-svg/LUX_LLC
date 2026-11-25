@@ -175,6 +175,13 @@ const NAV_GROUPS: NavGroup[] = [
         permission: "contracts",
       },
       {
+        label: "Patient portal access",
+        href: "/app/patient-access",
+        icon: Users,
+        permission: "coverage",
+        orgTypes: ["INSURER"],
+      },
+      {
         label: "Wallet destination",
         href: "/app/destination",
         icon: MapPin,
@@ -317,6 +324,33 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/app/settings",
         icon: Settings,
         permission: "all",
+      },
+    ],
+  },
+];
+// Patient accounts never see an organization navigation tree. These are the
+// only destinations their scoped endpoints can serve.
+const PATIENT_NAV_GROUPS: NavGroup[] = [
+  {
+    title: "My health cover",
+    items: [
+      {
+        label: "Overview",
+        href: "/app",
+        icon: LayoutDashboard,
+        permission: "all",
+      },
+      {
+        label: "Coverage & balance",
+        href: "/app/my-coverage",
+        icon: ShieldCheck,
+        permission: "patient",
+      },
+      {
+        label: "Claims history",
+        href: "/app/my-claims",
+        icon: FileText,
+        permission: "patient",
       },
     ],
   },
@@ -466,10 +500,12 @@ export function Workspace({ children }: { children: ReactNode }) {
         </button>
       </main>
     );
-  const groups = NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => itemVisible(item, org)),
-  })).filter((group) => group.items.length);
+  const groups = (org.type === "PATIENT" ? PATIENT_NAV_GROUPS : NAV_GROUPS)
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => itemVisible(item, org)),
+    }))
+    .filter((group) => group.items.length);
   const initials = String(me.user.name || "LUX")
     .split(" ")
     .map((part: string) => part[0])
@@ -509,7 +545,9 @@ export function Workspace({ children }: { children: ReactNode }) {
           </div>
           <div className="org-control">
             <label>
-              {org.type.replaceAll("_", " ")} context
+              {org.type === "PATIENT"
+                ? "Patient portal"
+                : org.type.replaceAll("_", " ") + " context"}
               <select
                 aria-label="Organization context"
                 value={orgId}
@@ -603,59 +641,61 @@ export function Workspace({ children }: { children: ReactNode }) {
               <strong>{org.name}</strong>
             </div>
             <div className="topbar-actions">
-              <div className="notif-wrap">
-                <button
-                  className="notif-button"
-                  aria-label={
-                    nav.unread
-                      ? `Notifications, ${nav.unread} unread`
-                      : "Notifications"
-                  }
-                  aria-expanded={notificationsOpen}
-                  onClick={() => setNotificationsOpen(!notificationsOpen)}
-                >
-                  <Bell size={18} />
-                  {nav.unread > 0 && (
-                    <span className="notif-dot" aria-hidden="true">
-                      {nav.unread > 9 ? "9+" : nav.unread}
-                    </span>
-                  )}
-                </button>
-                {notificationsOpen && (
-                  <div
-                    className="notif-panel"
-                    role="dialog"
-                    aria-label="Notifications"
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") setNotificationsOpen(false);
-                    }}
+              {org.type !== "PATIENT" && (
+                <div className="notif-wrap">
+                  <button
+                    className="notif-button"
+                    aria-label={
+                      nav.unread
+                        ? `Notifications, ${nav.unread} unread`
+                        : "Notifications"
+                    }
+                    aria-expanded={notificationsOpen}
+                    onClick={() => setNotificationsOpen(!notificationsOpen)}
                   >
-                    <div className="notif-head">
-                      <strong>Notifications</strong>
-                      <button className="inline-button" onClick={markAllRead}>
-                        <CheckCheck size={13} /> Mark all read
-                      </button>
-                    </div>
-                    {nav.items?.length ? (
-                      nav.items.map((n: any) => (
-                        <Link
-                          className={
-                            "notif-item" + (n.read_at ? "" : " unread")
-                          }
-                          href={n.link}
-                          key={n.id}
-                          onClick={() => setNotificationsOpen(false)}
-                        >
-                          <span>{n.title}</span>
-                          <small>{date(n.created_at)}</small>
-                        </Link>
-                      ))
-                    ) : (
-                      <p className="notif-empty">No notifications yet.</p>
+                    <Bell size={18} />
+                    {nav.unread > 0 && (
+                      <span className="notif-dot" aria-hidden="true">
+                        {nav.unread > 9 ? "9+" : nav.unread}
+                      </span>
                     )}
-                  </div>
-                )}
-              </div>
+                  </button>
+                  {notificationsOpen && (
+                    <div
+                      className="notif-panel"
+                      role="dialog"
+                      aria-label="Notifications"
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") setNotificationsOpen(false);
+                      }}
+                    >
+                      <div className="notif-head">
+                        <strong>Notifications</strong>
+                        <button className="inline-button" onClick={markAllRead}>
+                          <CheckCheck size={13} /> Mark all read
+                        </button>
+                      </div>
+                      {nav.items?.length ? (
+                        nav.items.map((n: any) => (
+                          <Link
+                            className={
+                              "notif-item" + (n.read_at ? "" : " unread")
+                            }
+                            href={n.link}
+                            key={n.id}
+                            onClick={() => setNotificationsOpen(false)}
+                          >
+                            <span>{n.title}</span>
+                            <small>{date(n.created_at)}</small>
+                          </Link>
+                        ))
+                      ) : (
+                        <p className="notif-empty">No notifications yet.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="topbar-user">
                 <span className="avatar" aria-hidden="true">
                   {initials}

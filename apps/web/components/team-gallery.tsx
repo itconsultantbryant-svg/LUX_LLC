@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
   ArrowUpRight,
   X,
@@ -51,6 +51,30 @@ export function TeamGallery({ members }: { members: TeamMember[] }) {
     dialog.current?.close();
     setSelected(null);
     opener.current?.focus();
+  }
+  // Native modal dialogs wrap Tab forward but not Shift+Tab from the first
+  // control in every browser. Keep keyboard focus inside the open profile.
+  function trapFocus(e: KeyboardEvent<HTMLDialogElement>) {
+    if (e.key !== "Tab" || !dialog.current) return;
+    const focusable = Array.from(
+      dialog.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    if (!focusable.length) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusable[0],
+      last = focusable[focusable.length - 1],
+      active = document.activeElement;
+    if (e.shiftKey && (active === first || !dialog.current.contains(active))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
   return (
     <>
@@ -106,6 +130,7 @@ export function TeamGallery({ members }: { members: TeamMember[] }) {
         className="team-dialog"
         aria-labelledby="team-dialog-name"
         aria-describedby="team-dialog-role"
+        onKeyDown={trapFocus}
         onCancel={(e) => {
           e.preventDefault();
           close();

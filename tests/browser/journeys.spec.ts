@@ -543,6 +543,83 @@ test("key workspace screens fit supported widths and expose accessible controls"
     .analyze();
   expect(result.violations).toEqual([]);
 });
+test("patient sees only own cover, balances and claims history", async ({
+  page,
+}) => {
+  test.skip(!process.env.DEMO_PASSWORD, "Local seed password is required");
+  test.setTimeout(300000);
+  await signIn(page, "patient@demo.lux.test");
+  const nav = page.getByRole("navigation", { name: "Workspace navigation" });
+  await expect(nav.getByRole("link")).toHaveCount(3);
+  await expect(
+    nav.getByRole("link", { name: "Coverage & balance" }),
+  ).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Claims history" })).toBeVisible();
+  await expect(
+    nav.getByRole("link", { name: /Organizations|Claims queue|Payments/ }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: /Your cover, Synthetic/ }),
+  ).toBeVisible();
+  await expect(page.locator(".patient-cover")).toHaveCount(2);
+  await expect(page.getByText("DEMO-POLICY-7").first()).toBeVisible();
+  await expect(page.getByText("DEMO-LHP-0008")).toBeVisible();
+  await nav.getByRole("link", { name: "Coverage & balance" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Coverage & balance", level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText("Monthly cover")).toBeVisible();
+  await expect(page.getByText("Annual cover")).toBeVisible();
+  await expect(page.getByText("USD 1,500.00").first()).toBeVisible();
+  await expect(page.getByText("USD 500.00").first()).toBeVisible();
+  await nav.getByRole("link", { name: "Claims history" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Claims history", level: 1 }),
+  ).toBeVisible();
+  await expect(page.locator(".patient-claim-row")).toHaveCount(3);
+  for (const width of [360, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of ["/app", "/app/my-coverage", "/app/my-claims"]) {
+      await page.goto(route);
+      await expect(page.locator("main h1")).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        `${route} at ${width}`,
+      ).toBe(true);
+    }
+  }
+  await page.goto("/app/my-coverage");
+  const result = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(result.violations).toEqual([]);
+});
+
+test("insurer can open patient portal provisioning without exposing claims", async ({
+  page,
+}) => {
+  test.skip(!process.env.DEMO_PASSWORD, "Local seed password is required");
+  await signIn(page, "insurer@demo.lux.test");
+  await page.goto("/app/patient-access");
+  await expect(
+    page.getByRole("heading", { name: "Patient portal access", level: 1 }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Invite an insured patient" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Insured patient records" }),
+  ).toBeVisible();
+  await expect(page.locator("table tbody tr").first()).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
 test("every designed sidebar section renders for its authorized role", async ({
   page,
 }) => {
