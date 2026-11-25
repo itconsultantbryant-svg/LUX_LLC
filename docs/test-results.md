@@ -14,6 +14,7 @@
 - Fixed a pre-existing team profile focus trap so Shift+Tab from the first control stays inside the modal.
 - Hosted demo updated from `a7d41ab`: migration 007 was applied to the isolated Neon demo database without resetting it, and `luxapi` deployment 9 and `luxworker` deployment 8 were rebuilt and deployed. The Vercel frontend serves the patient portal navigation and pages.
 - Live end-to-end check at `https://luxllc.vercel.app`: the insurer published version 1 limits for Synthetic Patient 08 / `DEMO-POLICY-7` (USD 1,500 monthly / USD 20,000 annual), invited `patient@demo.lux.test`, and the patient accepted through the single-use link with a self-set password. The live portal showed monthly used USD 1,000 / remaining USD 500 and annual used USD 1,000 / remaining USD 19,000, with one approved and settled claim. `/claims` and `/patients` returned **403** from the patient session, and the sidebar showed exactly three patient links.
+- The hosted patient credential was aligned with the shared demo password so the documented login works. A fresh live sign-in with `patient@demo.lux.test` / `LuxTest231@` passed the dashboard, coverage page, claims history, 403 scoping probes and a clean browser console; `/api/auth/sign-in/email` returned **200**. The invitation flow itself still requires a patient-chosen password.
 - No real Orange Money transfer, real PIN collection, salary deduction or customer money was involved.
 
 ## Cross-tenant dashboard and sidebar isolation — 18 November 2026

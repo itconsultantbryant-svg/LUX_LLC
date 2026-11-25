@@ -41,7 +41,7 @@ The synthetic seed creates exactly four demonstration logins. The three organiza
 - `admin@demo.lux.test`: LUX platform administration, LUX finance, support and Orange observer roles.
 - `patient@demo.lux.test`: own coverage and claim history only, linked to one synthetic insured-patient reference; no organization membership or permissions.
 
-The local demo seed defaults to `LuxTest231@` when `DEMO_PASSWORD` is unset; set a different 11+ character value for any non-public demo. Hosted demos may instead supply `DEMO_PASSWORDS_FILE`, a private JSON map of account keys to unique passwords. The seed also creates an internal checker identity with no auth account, used only to attribute historical and demo checker steps; it is not a fourth login.
+The local demo seed defaults to `LuxTest231@` when `DEMO_PASSWORD` is unset; set a different 11+ character value for any non-public demo. Hosted demos may instead supply `DEMO_PASSWORDS_FILE`, a private JSON map of account keys to unique passwords. The seed also creates an internal checker identity with no auth account, used only to attribute historical and demo checker steps; it is not an additional login.
 
 Each account uses a real Better Auth session cookie. No role selector or public signup grants access. Production still requires separate human maker and checker accounts: the demo-only self-check path is gated by `demoSelfCheck` and records a `DemoCheckerSubstitution` audit event. Without that explicit flag, the API returns `SEPARATE_CHECKER_REQUIRED`.
 
